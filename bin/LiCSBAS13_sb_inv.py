@@ -58,7 +58,8 @@ Outputs in TS_GEOCml*/ :
 =====
 Usage
 =====
-LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] [--gamma float] [--n_para int] [--n_unw_r_thre float] [--keep_incfile] [--gpu] [--singular] [--only_sb] [--nopngs] [--store_patches]
+LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] [--gamma float] [--n_para int] [--n_unw_r_thre float] [--keep_incfile] [--gpu] [--singular] [--only_sb] [--nopngs]
+			      [--no_storepatches] [--load_patches]
 
  -d  Path to the GEOCml* dir containing stack of unw data
  -t  Path to the output TS_GEOCml* dir.
@@ -80,12 +81,13 @@ LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] 
  --singular       Use more economic (unconstrained SBAS) computation (faster and less demanding solution, but considered less precise)
  --only_sb    Perform only SB processing (skipping points with NaNs)
  --nopngs     Avoid generating some (unnecessary) PNG previews of increment residuals etc.
- --store_patches Stroe patches and reload processed patches if restarting a job that was stopped
+ --no_storepatches Don't store completed patch data [default: store patches in case of job timeout]
+ --load_patches Load previously completed patches first [default: No, restart inversion]
 """
 #%% Change log
 '''
 v1.5.4 20230804 Jack McGrath, Leeds Uni
- - Add store patches option
+ - Add store and load patches option
 v1.5.3 20211122 Milan Lazecky, Leeds Uni
  - use singular and only_sb to help make processing computationally economic
 v1.5.2 20210311 Yu Morishita, GSI
@@ -203,7 +205,8 @@ def main(argv=None):
     cmap_wrap = SCM.romaO
     q = multi.get_context('fork')
     compress = 'gzip'
-    store_patches = False
+    store_patches = True
+    load_patches = False
 
 
     #%% Read options
@@ -212,7 +215,7 @@ def main(argv=None):
             opts, args = getopt.getopt(argv[1:], "hd:t:",
                                        ["help",  "mem_size=", "gamma=",
                                         "n_unw_r_thre=", "keep_incfile", "nopngs",
-                                        "inv_alg=", "n_para=", "gpu", "singular", "only_sb", "store_patches"])
+                                        "inv_alg=", "n_para=", "gpu", "singular", "only_sb", "no_storepatches", "load_patches"])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -243,8 +246,11 @@ def main(argv=None):
                 only_sb = True
             elif o == '--nopngs':
                 nopngs = True
-            elif o == '--reload_patches':
-                store_patches = True
+            elif o == '--no_storepatches':
+                store_patches = False
+            elif o == '--load_patches':
+	        load_patches = True
+	      
 
         if not ifgdir:
             raise Usage('No data directory given, -d is not optional!')
@@ -295,9 +301,6 @@ def main(argv=None):
     restxtfile = os.path.join(infodir,'13resid.txt')
 
     cumh5file = os.path.join(tsadir,'cum.h5')
-
-    if store_patches and not os.path.exists(cumh5file):
-        print('\nNo cum.h5 file from a previous run found')
 
     if n_para > 32:
         # Emprically >32 does not make much faster despite using large resource
@@ -519,20 +522,23 @@ def main(argv=None):
 
     #%% Open cum.h5 for output
     ### Decide here what to do re. cumh5file and reloading patches. Need to check that stored cumh5 file is the right size etc
-    if store_patches:
-        cumfile = os.path.join(resultsdir, cum)
+    print('store_patches:', store_patches)
+    if load_patches:
+        cumfile = os.path.join(resultsdir, 'cum')
         if os.path.exists(cumfile):
             try:
                 cum = np.fromfile(cumfile, dtype=np.float32).reshape((n_im, length, width))
-                vel = np.fromfile(os.path.join(resultsdir, 'vel'), dype=np.float32).reshape((length, width))
-                vconst = np.fromfile(os.path.join(resultsdir, 'vconst'), dype=np.float32).reshape((length, width))
-                gap = cumh5.require_dataset('gap', (n_im-1, length, width), dtype=np.int8, compression=compress)
-
-                cumsum = np.nansum(cum, axis=0)
-                processed_rows = np.where((np.nansum(cumsum, axis=0)!=0).any(axis=1))[0][-1]
-            
-                restart = False
+                vel = np.zeros((length, width), dtype=np.float32)
+                vconst = np.zeros((length, width), dtype=np.float32)
+                vel_tmp = np.fromfile(os.path.join(resultsdir, 'vel'), dtype=np.float32)
+                vconst_tmp = np.fromfile(os.path.join(resultsdir, 'vel'), dtype=np.float32)
+                processed_rows = int(vel_tmp.shape[0] / width)
+               
+                vel[:processed_rows, :] = vel_tmp.reshape((processed_rows, width))
+                vconst[:processed_rows, :] = vconst_tmp.reshape((processed_rows, width))
                 cumh5 = h5.File(cumh5file, 'r+')
+                gap = cumh5.require_dataset('gap', (n_im-1, length, width), dtype=np.int8, compression=compress)
+                
                 print(cumh5.keys())
                 if save_mem:
                     # Write loaded patches to cum.h5
@@ -550,12 +556,14 @@ def main(argv=None):
                 print('Processed Patches loaded - {} rows completed'.format(processed_rows))
             except:
                 print('Data doesnt match. Restarting inversion')
-                restart = True
+                processed_rows = 0
         else:
             print('No previous patches found')
-            restart = True
-
-    if restart:
+            processed_rows = 0
+    else:
+      processed_rows = 0
+ 
+    if processed_rows == 0:
         if os.path.exists(cumh5file): os.remove(cumh5file)
         cumh5 = h5.File(cumh5file, 'w')
         cumh5.create_dataset('imdates', data=[np.int32(imd) for imd in imdates])
@@ -589,6 +597,7 @@ def main(argv=None):
     for i_patch, rows in enumerate(patchrow):
         if rows[1] <= processed_rows:
             print('\nAlready Processed {0}/{1}th line ({2}/{3}th patch)...'.format(rows[1], patchrow[-1][-1], i_patch+1, n_patch), flush=True)
+            continue
         else:
             print('\nProcess {0}/{1}th line ({2}/{3}th patch)...'.format(rows[1], patchrow[-1][-1], i_patch+1, n_patch), flush=True)
             start2 = time.time()
@@ -803,11 +812,10 @@ def main(argv=None):
             vconst[rows[0]:rows[1], :] = vconst_patch.reshape((lengththis, width))
             gap[:, rows[0]:rows[1], :] = gap_patch.reshape((n_im-1, lengththis, width))
 
-            begin_save = time.time()
             if store_patches and not save_mem:
                 with open(cumfile, 'w') as f:
                     cum.tofile(f)
-            print('cumfile saved in {:.2f} seconds'.format(time.time() - begin_save))
+
             ### Others
             openmode = 'w' if rows[0] == 0 else 'a' #w only 1st patch
 
