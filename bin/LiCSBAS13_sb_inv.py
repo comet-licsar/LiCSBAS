@@ -454,7 +454,9 @@ def main(argv=None):
         n_store_data = n_ifg*2+n_im*2+n_im*0.3 #not sure
 
     n_patch, patchrow = tools_lib.get_patchrow(width, length, n_store_data, memory_size_patch)
-
+    print('Patch: {}'.format(n_patch))
+    print('Patchrows:')
+    print([row for row in patchrow])
 
     #%% Display and output settings & parameters
     print('')
@@ -531,6 +533,7 @@ def main(argv=None):
             
                 restart = False
                 cumh5 = h5.File(cumh5file, 'r+')
+                print(cumh5.keys())
                 if save_mem:
                     # Write loaded patches to cum.h5
                     cumh5.create_dataset('cum', data=cum, compression=compress)
@@ -800,11 +803,11 @@ def main(argv=None):
             vconst[rows[0]:rows[1], :] = vconst_patch.reshape((lengththis, width))
             gap[:, rows[0]:rows[1], :] = gap_patch.reshape((n_im-1, lengththis, width))
 
-            ### Need to write out cum if not saving memory and storing the patches
+            begin_save = time.time()
             if store_patches and not save_mem:
                 with open(cumfile, 'w') as f:
                     cum.tofile(f)
-
+            print('cumfile saved in {:.2f} seconds'.format(time.time() - begin_save))
             ### Others
             openmode = 'w' if rows[0] == 0 else 'a' #w only 1st patch
 
