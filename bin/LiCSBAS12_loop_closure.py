@@ -55,7 +55,7 @@ Outputs in TS_GEOCml*/ :
 Usage
 =====
 LiCSBAS12_loop_closure.py -d ifgdir [-t tsadir] [-l loop_thre] [--multi_prime]
- [--rm_ifg_list file] [--n_para int] [--nullify] [--nullmask] [--null_both] [--ref_approx lon/lat] [--skip_pngs] [--treat_as_bad]
+ [--rm_ifg_list file] [--n_para int] [--nullify] [--nullmask] [--null_both] [--ref_approx lon/lat] [--skip_pngs] [--treat_as_bad] [--backup_nulls]
 
  -d  Path to the GEOCml* dir containing stack of unw data.
  -t  Path to the output TS_GEOCml* dir. (Default: TS_GEOCml*)
@@ -69,6 +69,7 @@ LiCSBAS12_loop_closure.py -d ifgdir [-t tsadir] [-l loop_thre] [--multi_prime]
  --ref_approx  Approximate geographic coordinates for reference area (lon/lat)
  --skip_pngs Do not generate png previews of loop closures (often takes long)
  --treat_as_bad When nullifying, nullify unless ALL loops are GOOD (default: Only nullify if ALL loops are bad)
+ --backup_nulls Create a backup of nulled data
 """
 #%% Change log
 '''
@@ -145,7 +146,7 @@ def main(argv=None):
 
     global Aloop, ifgdates, ifgdir, length, width, loop_pngdir, cycle, n_ifg, da,\
         multi_prime, bad_ifg, noref_ifg, bad_ifg_all, refy1, refy2, refx1, refx2, cmap_wrap, \
-        treat_as_bad, aggro, conserve  ## for parallel processing
+        treat_as_bad, aggro, conserve, backup_nulls  ## for parallel processing
 
     #%% Set default
     ifgdir = []
@@ -159,6 +160,7 @@ def main(argv=None):
     treat_as_bad = False
     nullmask = False
     null_both = False
+    backup_nulls = False
 
     try:
         n_para = len(os.sched_getaffinity(0))
@@ -176,7 +178,7 @@ def main(argv=None):
         try:
             opts, args = getopt.getopt(argv[1:], "hd:t:l:",
                                        ["help", "multi_prime", "nullify", "nullmask", "skip_pngs", "treat_as_bad", "null_both",
-                                        "rm_ifg_list=", "n_para=", "ref_approx="])
+                                        "backup_nulls", "rm_ifg_list=", "n_para=", "ref_approx="])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -207,6 +209,8 @@ def main(argv=None):
                 treat_as_bad = True
             elif o == '--null_both':
                 null_both = True
+            elif o == '--backup_nulls':
+                backup_nulls = True
 
         if not ifgdir:
             raise Usage('No data directory given, -d is not optional!')
@@ -1284,25 +1288,27 @@ def nullify_unw(ix):
     # this will use only unws with mask having both True and False, i.e. all points False = unw not used in any loop, to check
     if not np.min(mask) and np.max(mask):
         unwfile = os.path.join(ifgdir, ifgd, ifgd+'.unw')
-        # Check for backed up files. THIS ASSUMES ALL DATA HAS BEEN NULLED THE SAME WAY
-        trueorigfile = os.path.join(ifgdir, ifgd, ifgd + '_orig.unw')
-        # If no trueorigfile exists, data is truely untouched
-        if not os.path.exists(trueorigfile):
-            shutil.move(unwfile, trueorigfile)
-            origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig12.unw')
-            # Softlink (used for checking if null has already occurred for LiCSBAS13, softlink to save space)
-            os.symlink(trueorigfile, origfile)
-        else:
-            # True orig exists - check if it is because no loop nullification has occurred
-            origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig13.unw')
-            if os.path.exists(origfile):
-                # orig12 exists - backup unw as orig1213
-                origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig1312.unw')
-                shutil.move(unwfile, origfile)
-            else:
-                # orig12 doesn't exist. There should therefore be orig13 so no need to backup
+        origfile = unwfile
+        if backup_nulls:
+            # Check for backed up files. THIS ASSUMES ALL DATA HAS BEEN NULLED THE SAME WAY
+            trueorigfile = os.path.join(ifgdir, ifgd, ifgd + '_orig.unw')
+            # If no trueorigfile exists, data is truely untouched
+            if not os.path.exists(trueorigfile):
+                shutil.move(unwfile, trueorigfile)
                 origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig12.unw')
-                shutil.move(unwfile, origfile)
+                # Softlink (used for checking if null has already occurred for LiCSBAS13, softlink to save space)
+                os.symlink(trueorigfile, origfile)
+            else:
+                # True orig exists - check if it is because no loop nullification has occurred
+                origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig13.unw')
+                if os.path.exists(origfile):
+                    # orig12 exists - backup unw as orig1213
+                    origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig1312.unw')
+                    shutil.move(unwfile, origfile)
+                else:
+                    # orig12 doesn't exist. There should therefore be orig13 so no need to backup
+                    origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig12.unw')
+                    shutil.move(unwfile, origfile)
 
         if np.mod(ix, 100) == 0:
             print('  {}/{} IFG....'.format(ix, n_ifg))
@@ -1327,25 +1333,26 @@ def nullify_both(ix):
     # this will use only unws with mask having both True and False, i.e. all points False = unw not used in any loop, to check
     if not np.min(maskagg) and np.max(maskagg):
         unwfile = os.path.join(ifgdir, ifgd, ifgd+'.unw')
-        # Check for backed up files. THIS ASSUMES ALL DATA HAS BEEN NULLED THE SAME WAY
-        trueorigfile = os.path.join(ifgdir, ifgd, ifgd + '_orig.unw')
-        # If no trueorigfile exists, data is truely untouched
-        if not os.path.exists(trueorigfile):
-            shutil.move(unwfile, trueorigfile)
-            origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig12.unw')
-            # Softlink (used for checking if null has already occurred for LiCSBAS13, softlink to save space)
-            os.symlink(trueorigfile, origfile)
-        else:
-            # True orig exists - check if it is because no loop nullification has occurred
-            origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig13.unw')
-            if os.path.exists(origfile):
-                # orig12 exists - backup unw as orig1213
-                origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig1312.unw')
-                shutil.move(unwfile, origfile)
-            else:
-                # orig12 doesn't exist. There should therefore be orig13 so no need to backup
+        if backup_nulls:
+            # Check for backed up files. THIS ASSUMES ALL DATA HAS BEEN NULLED THE SAME WAY
+            trueorigfile = os.path.join(ifgdir, ifgd, ifgd + '_orig.unw')
+            # If no trueorigfile exists, data is truely untouched
+            if not os.path.exists(trueorigfile):
+                shutil.move(unwfile, trueorigfile)
                 origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig12.unw')
-                shutil.move(unwfile, origfile)
+                # Softlink (used for checking if null has already occurred for LiCSBAS13, softlink to save space)
+                os.symlink(trueorigfile, origfile)
+            else:
+                # True orig exists - check if it is because no loop nullification has occurred
+                origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig13.unw')
+                if os.path.exists(origfile):
+                    # orig12 exists - backup unw as orig1213
+                    origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig1312.unw')
+                    shutil.move(unwfile, origfile)
+                else:
+                    # orig12 doesn't exist. There should therefore be orig13 so no need to backup
+                    origfile = os.path.join(ifgdir, ifgd, ifgd + '_orig12.unw')
+                    shutil.move(unwfile, origfile)
 
         if np.mod(ix, 100) == 0:
             print('  {}/{} IFG....'.format(ix, n_ifg))
