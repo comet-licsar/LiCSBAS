@@ -141,8 +141,8 @@ def main(argv=None):
             raise Usage('No input directory given, -i is not optional!')
         if not out_dir:
             raise Usage('No output directory given, -o is not optional!')
-        if not range_str and not range_geo_str:
-            raise Usage('No clip area given, use either -r or -g!')
+        if not range_str and not range_geo_str and not poly_file:
+            raise Usage('No clip area given, use either -r, -g or -p!')
         if range_str and range_geo_str:
             raise Usage('Both -r and -g given, use either -r or -g not both!')
         elif not os.path.isdir(in_dir):
