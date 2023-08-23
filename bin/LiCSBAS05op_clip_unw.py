@@ -204,7 +204,7 @@ def main(argv=None):
             x1, x2, y1, y2 = tools_lib.read_range_geo(range_geo_str, width, length, lat1, postlat, lon1, postlon)
             range_str = '{}:{}/{}:{}'.format(x1, x2, y1, y2)
     if poly_file: ## -p
-        print('Clipping using polygon file') 
+        print('Clipping using polygon file: {}'.format(poly_file)) 
         bool_mask = np.zeros((length, width), dtype=bool)
         with open(poly_file) as f:
             poly_strings_all = f.readlines()
@@ -357,7 +357,7 @@ def clip_wrapper(ifgix):
     ### Clip
     try:
         unw[bool_mask] = np.nan
-        coh[bool_mask] = np.nan
+        coh[bool_mask] = 0 # Can't convert int coh to nan
     finally:
         unw = unw[y1:y2, x1:x2]
         coh = coh[y1:y2, x1:x2]
