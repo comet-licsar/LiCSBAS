@@ -224,6 +224,7 @@ def main(argv=None):
         clip_area = np.where(bool_mask)
         if not range_str and not range_geo_str:
             x1, x2, y1, y2 = min(clip_area[1]), max(clip_area[1]), min(clip_area[0]), max(clip_area[0])
+            range_str = '{}:{}/{}:{}'.format(x1, x2, y1, y2)
 
     ### Calc clipped  info
     width_c = x2-x1
