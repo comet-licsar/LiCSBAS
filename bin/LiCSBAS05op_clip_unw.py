@@ -222,6 +222,7 @@ def main(argv=None):
             bool_mask = bool_mask + tools_lib.poly_mask(poly_str, lon, lat)
         
         clip_area = np.where(bool_mask)
+        bool_mask = bool_mask == False # Invert bool mask, so True are areas to be dropped
         if not range_str and not range_geo_str:
             x1, x2, y1, y2 = min(clip_area[1]), max(clip_area[1]), min(clip_area[0]), max(clip_area[0])
             range_str = '{}:{}/{}:{}'.format(x1, x2, y1, y2)
