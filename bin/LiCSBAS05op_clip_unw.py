@@ -203,9 +203,10 @@ def main(argv=None):
         else:
             x1, x2, y1, y2 = tools_lib.read_range_geo(range_geo_str, width, length, lat1, postlat, lon1, postlon)
             range_str = '{}:{}/{}:{}'.format(x1, x2, y1, y2)
+
+    bool_mask = np.zeros((length, width), dtype=bool)
     if poly_file: ## -p
-        print('Clipping using polygon file: {}'.format(poly_file)) 
-        bool_mask = np.zeros((length, width), dtype=bool)
+        print('Clipping using polygon file: {}'.format(poly_file))
         with open(poly_file) as f:
             poly_strings_all = f.readlines()
 
