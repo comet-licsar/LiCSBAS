@@ -8,7 +8,7 @@ This script downloads GeoTIFF files in the specified frame ID from COMET-LiCS we
 By default, unw (unwrapped interferogram) and cc (coherence) files are downloaded
 The -f option is not necessary when the frame ID can be automatically identified from the name of the working directory.
 GACOS data can also be downloaded if available. Existing GeoTIFF files are not re-downloaded to save time, i.e., only the newly available data will be downloaded.
-
+ERA5 data can also be downloaded if available (Fisrts need to run in Jasmin ICAMS to download for each frame)
 ============
 Output files
 ============
@@ -51,7 +51,7 @@ LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] 
 #%% Change log
 '''
 20241001 P. Espin
- - DOwnload ERA5 data fro LiCSAR epoch
+ - Download ERA5 data fro LiCSAR epoch
 20241107 ML, UoL
  - added min/max btemp to download data
 v1.14.2 20230608 Milan Lazecky, UoL
@@ -639,7 +639,33 @@ def check_gacos_wrapper(args):
             return 4
         else:
             return 5
-    
+    #%%
+def check_era5_wrapper(args):
+    """
+    Returns :
+	0 : Local exist, complete, and new (no need to donwload)
+        1 : Local incomplete (need to re-donwload)
+        2 : Local old (no need to re-donwload)
+        3 : Remote not exist  (can not compare, no download)
+        4 : Local not exist and remote exist (need to download)
+        5 : Local not exist but remote not exist (can not download)
+    """
+    i, n_data, url_data, path_data = args
+    bname_data = os.path.basename(path_data)
+
+#    if np.mod(i, 10) == 0:
+#        print("  {0:3}/{1:3}".format(i, n_data), flush=True)
+
+    if os.path.exists(path_data):
+        rc = tools_lib.comp_size_time(url_data, path_data)
+        if rc == 1:
+            print("Size of {} is not identical.".format(bname_data), flush=True)
+        elif rc == 2:
+            print("Newer {} available.".format(bname_data), flush=True)
+        return rc
+    else:
+	return 4
+
 
 #%% main
 if __name__ == "__main__":
