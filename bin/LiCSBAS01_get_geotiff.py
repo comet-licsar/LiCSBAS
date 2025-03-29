@@ -8,7 +8,7 @@ This script downloads GeoTIFF files in the specified frame ID from COMET-LiCS we
 By default, unw (unwrapped interferogram) and cc (coherence) files are downloaded
 The -f option is not necessary when the frame ID can be automatically identified from the name of the working directory.
 GACOS data can also be downloaded if available. Existing GeoTIFF files are not re-downloaded to save time, i.e., only the newly available data will be downloaded.
-ERA5 data can also be downloaded if available (Fisrts need to run in Jasmin ICAMS to download for each frame)
+ERA5 data can also be downloaded if available (Firts need to run in Jasmin ICAMS to download for each frame)
 ============
 Output files
 ============
