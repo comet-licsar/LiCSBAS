@@ -671,7 +671,7 @@ def main(argv=None):
     # create 3D cube - False means presumed error in the loop
     # a = np.full((length, width, len(ifgdates)), False)  # , dtype=bool)
     da = xr.DataArray(
-        data=np.full((length, width, len(ifgdates)), False),
+        data=np.full((length, width, len(ifgdates)),  treat_as_bad),
         dims=["y", "x", "ifgd"],
         coords=dict(y=np.arange(length), x=np.arange(width), ifgd=ifgdates))
     dasize = sys.getsizeof(da) / 1024 / 1024 # MB
@@ -701,6 +701,14 @@ def main(argv=None):
         # recalculating ns_loop_err to be after nullification (long but... ok for now)
         #print('debug 2024/01: keeping n_loop_err from before nullification')
         #ns_loop_err, da = loop_closure_4th([0, len(Aloop)], da)
+
+        da = xr.DataArray(
+            data=np.full((length,width,len(ifgdates)), treat_as_bad),
+            dims=[ "y", "x", "ifgd"],
+            coords=dict(y=np.arange(length),x=np.arange(width),ifgd=ifgdates))
+
+        print('Recalculating n_loop_err statistics')
+        ns_loop_err_null, da = loop_closure_4th([0, len(Aloop)], da)
 
 
 
