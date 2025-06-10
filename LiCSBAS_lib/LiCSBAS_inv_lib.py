@@ -1120,7 +1120,7 @@ def get_model_cum(G, params_sorted):
     #
     return out
 
-
+'''
 def invert_nsbas_optimized(unw, G, dt_cum, gamma, n_core, gpu):
     """
     Optimized NSBAS inversion
@@ -1176,3 +1176,4 @@ def solve_partial_point(args):
     unw = unw * mask  # Apply mask
     return np.linalg.lstsq(Gall[mask], unw[mask], rcond=None)[0]
 
+'''
