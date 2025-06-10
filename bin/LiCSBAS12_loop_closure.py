@@ -77,6 +77,8 @@ LiCSBAS12_loop_closure.py -d ifgdir [-t tsadir] [-l loop_thre] [--multi_prime]
 """
 # %% Change log
 '''
+20250610 P.Espin
+ - Add the agressive nullify from Jack M.
 20241221 Muhammet Nergizci
  - check the baseline file empty or not
 v1.6.4 20230901 Lin Shen
