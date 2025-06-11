@@ -98,7 +98,8 @@ skipping here as will do it as post-processing:
 '''
 #%% Change log
 '''
-
+20250611 Pedro Espin
+ - add the no loop files to bad files 
 20241221 Muhammet Nergizci
  - check baseline file empty or not
 20241207 ML
@@ -413,6 +414,11 @@ def main(argv=None):
                 raise Usage('No 12bad_ifg.txt file exists in {}!'.format(infodir))
         if not os.path.exists(reffile):
             raise Usage('No 12ref.txt file exists in {}!'.format(infodir))
+
+        ###loopfile
+        if not os.path.exists(bad_ifg12fileno): ##loop file
+            raise Usage('No 12no_loop_ifg.txt file exists in {}'.format(infodir))
+		
     except Usage as err:
         print("\nERROR:", file=sys.stderr, end='')
         print("  "+str(err.msg), file=sys.stderr)
@@ -487,7 +493,7 @@ def main(argv=None):
     bad_ifg11 = io_lib.read_ifg_list(bad_ifg11file)
     if not sbovl:
         bad_ifg12 = io_lib.read_ifg_list(bad_ifg12file)
-        if os.path.exists(bad_ifg120file):
+	if os.path.exists(bad_ifg120file):
             print('adding also ifgs listed as bad in the optional 120 step')
             bad_ifg120 = io_lib.read_ifg_list(bad_ifg120file)
             bad_ifg12 = list(set(bad_ifg12 + bad_ifg120))
@@ -497,8 +503,12 @@ def main(argv=None):
             print('adding also ifgs listed as bad in the optional 120 step')
             bad_ifg120 = io_lib.read_ifg_list(bad_ifg120file)
             bad_ifg12 = list(set(bad_ifg12 + bad_ifg120))
-    
-    bad_ifg_all = list(set(bad_ifg11+bad_ifg12))
+
+    ###add also no loop file error PE
+    bad_ifg12no = io_lib.read_ifg_list(bad_ifg12fileno) ## no loop file
+    bad_ifg_all = list(set(bad_ifg11+bad_ifg12+bad_ifg12no))
+        
+    #bad_ifg_all = list(set(bad_ifg11+bad_ifg12))
     # removing coseismic ifgs for standard solutions. this will cause gap that will get interpolated
     # not needed/wanted for 'only_sb' and 'singular_gauss' methods
     if offsetsflag and (not singular_gauss) and (not only_sb):
