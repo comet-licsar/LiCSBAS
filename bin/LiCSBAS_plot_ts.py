@@ -124,6 +124,7 @@ import SCM
 import warnings
 import LiCSBAS_io_lib as io_lib
 import LiCSBAS_tools_lib as tools_lib
+import subprocess
 
 os.environ['LANG'] = 'en_US.UTF-8'
 
@@ -247,9 +248,17 @@ def find_refvel(vel, mask, refy1, refy2, refx1, refx2, auto_crange, vmin, vmax):
 
 
 
-import subprocess
+
 
 def run_licsbass_script(resultsdir: str):
+    """
+    Runs the LiCSBAS_flt2geotiff.py script with paths based on the results directory.
+
+    Args:
+        resultsdir (str): The base directory for the results.
+
+    Returns:
+        str: The stdef run_licsbass_script(resultsdir: str):
     """
     Runs the LiCSBAS_flt2geotiff.py script with paths based on the results directory.
 
@@ -262,26 +271,28 @@ def run_licsbass_script(resultsdir: str):
     Raises:
         RuntimeError: If the script fails to execute.
     """
-    # Construct the input and parameter file paths
-    input_path = f"{resultsdir}/results/hgt"
-    parameter_file = f"{resultsdir}/info/EQA.dem_par"
-    
-    # Define the command
-    command = [
-          # Call the Python interpreter
-        "LiCSBAS_flt2geotiff.py",  # The script to execute
-        "-i", input_path,  # Input path
-        "-p", parameter_file  # Parameter file path
-    ]
+    out_path = f"{resultsdir}/results/hgt.geo.tif"
+    if not os.path.isfile(out_path):
+        # Construct the input and parameter file paths
+        input_path = f"{resultsdir}/results/hgt"
+        parameter_file = f"{resultsdir}/info/EQA.dem_par"
 
-    try:
-        # Run the command
-        result = subprocess.run(command, check=True, text=True, capture_output=True)
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        # Raise an error if the script fails
-        raise RuntimeError(f"Script execution failed: {e.stderr}") from e
+        # Define the command
+        command = [
+            "LiCSBAS_flt2geotiff.py",  # The script to execute
+            "-i", input_path,  # Input path
+            "-p", parameter_file  # Parameter file path
+        ]
 
+        try:
+            # Run the command
+            result = subprocess.run(command, check=True, text=True, capture_output=True)
+            return result.stdout
+        except subprocess.CalledProcessError as e:
+            # Raise an error if the script fails
+            raise RuntimeError(f"Script execution failed: {e.stderr}") from e
+    else:
+        return f"Output file {out_path} already exists, skipping execution."
 
 
 
