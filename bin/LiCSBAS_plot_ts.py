@@ -260,17 +260,6 @@ def run_licsbass_script(resultsdir: str):
     Returns:
         str: The stdef run_licsbass_script(resultsdir: str):
     """
-    Runs the LiCSBAS_flt2geotiff.py script with paths based on the results directory.
-
-    Args:
-        resultsdir (str): The base directory for the results.
-
-    Returns:
-        str: The standard output of the script.
-
-    Raises:
-        RuntimeError: If the script fails to execute.
-    """
     out_path = f"{resultsdir}/results/hgt.geo.tif"
     if not os.path.isfile(out_path):
         # Construct the input and parameter file paths
