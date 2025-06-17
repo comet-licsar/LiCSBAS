@@ -493,7 +493,7 @@ def main(argv=None):
     bad_ifg11 = io_lib.read_ifg_list(bad_ifg11file)
     if not sbovl:
         bad_ifg12 = io_lib.read_ifg_list(bad_ifg12file)
-	if os.path.exists(bad_ifg120file):
+        if os.path.exists(bad_ifg120file):
             print('adding also ifgs listed as bad in the optional 120 step')
             bad_ifg120 = io_lib.read_ifg_list(bad_ifg120file)
             bad_ifg12 = list(set(bad_ifg12 + bad_ifg120))
