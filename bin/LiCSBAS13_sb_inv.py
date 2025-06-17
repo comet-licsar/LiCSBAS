@@ -505,6 +505,8 @@ def main(argv=None):
             bad_ifg12 = list(set(bad_ifg12 + bad_ifg120))
 
     ###add also no loop file error PE
+    print('adding also ifgs listed as no loop from file in info/12no_loop_ifg.txt')
+
     bad_ifg12no = io_lib.read_ifg_list(bad_ifg12fileno) ## no loop file
     bad_ifg_all = list(set(bad_ifg11+bad_ifg12+bad_ifg12no))
         
