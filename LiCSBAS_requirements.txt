@@ -20,4 +20,4 @@ scipy
 cmcrameri
 pygmt
 ipympl
-
+lmfit
