@@ -121,6 +121,11 @@ def fit_model(model, dat, x, sigma):
     model.set_param_hint('p', value=dat[-1])  # guess last dat
     model.set_param_hint('n', value=dat[0])  # guess first dat
     model.set_param_hint('r', value=x[len(x)//2])  # guess mid point distance
+
+    ####limitation for large range value, Dehua Wang, 20250701
+    dmax = np.nanmax(x)
+    model.set_param_hint('r', min=0.01, max=dmax * 0.95)
+
     out = model.fit(dat, d=x, weights=1/sigma)
     return out
 
@@ -254,9 +259,12 @@ if __name__ == "__main__":
         median, std, bincenters = calc_median_std(dist, sig_nonnan)
         # fit variogram model to stats along profile
         spherical_model = Model(spherical)
+        spherical_model.name = 'spherical'
         exponential_model = Model(exponential)
-        linear_model = Model(linear)       
-  
+        exponential_model.name = 'exponential'
+        linear_model = Model(linear)
+        linear_model.name = 'linear'
+
         try:
             # take smaller range
             mask = bincenters < 150
