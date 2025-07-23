@@ -15,6 +15,7 @@ Inputs in TS_GEOCml*/ :
 Outputs in TS_GEOCml*/results/ :
  - vstd[.png] : Std of velocity in mm/yr
  - stc[.png]  : Spatio-temporal consistency in mm
+ - bootvel[.png]  : Bootstrapped velocity in mm/yr
  [- vel2[.png], intercept2: Velocity and intercept after RANSAC outlier-free regression]
 
 =====
@@ -157,10 +158,11 @@ def main(argv=None):
     
     stcfile = os.path.join(resultsdir, 'stc')
     vstdfile = os.path.join(resultsdir, 'vstd')
-    
+    bootvelfile = os.path.join(resultsdir, 'bootvel')
+
     dostc = True
     dovstd = True
-    
+
     if skipexisting:
         if os.path.exists(stcfile):
             dostc = False
@@ -207,16 +209,19 @@ def main(argv=None):
 
             ### Calc vstd by bootstrap
             vstd = np.zeros((n_pt_all), dtype=np.float32)*np.nan
+            bootvel = np.zeros((n_pt_all), dtype=np.float32)*np.nan
 
             print('  Calculating std of velocity by bootstrap...', flush=True)
-            vstd[bool_unnan_pt] = inv_lib.calc_velstd_withnan(cum_patch, dt_cum,
+            vstd[bool_unnan_pt], bootvel[bool_unnan_pt] = inv_lib.calc_velstd_withnan(cum_patch, dt_cum,
                                                               gpu=gpu)
 
             ### Output data and image
 
             openmode = 'w' if i == 0 else 'a' #w only 1st patch
             with open(vstdfile, openmode) as f:
-                    vstd.tofile(f)
+                vstd.tofile(f)
+            with open(bootvelfile, openmode) as f:
+                bootvel.tofile(f)
 
         #%% Finish patch
         elapsed_time2 = int(time.time()-start2)
@@ -283,6 +288,12 @@ def main(argv=None):
         cmin = np.nanpercentile(vstd, 1)
         cmax = np.nanpercentile(vstd, 99)
         plot_lib.make_im_png(vstd, pngfile, cmap_noise_r, title, cmin, cmax)
+        bootvel = io_lib.read_img(bootvelfile, length, width)
+        title = 'Bootstrapped velocity (mm/yr)'
+        cmin = np.nanpercentile(bootvel, 1)
+        cmax = np.nanpercentile(bootvel, 99)
+        cmap_vel = cmc.roma.reversed()
+        plot_lib.make_im_png(bootvel, bootvelfile + '.png', cmap_vel, title, cmin, cmax)
     
     if ransac:
         vel2 = io_lib.read_img(vel2file, length, width)

@@ -815,6 +815,7 @@ def calc_velstd_withnan(cum, dt_cum, gpu=False):
 
     Returns:
       vstd   : Std of Velocity for each point (n_pt)
+      vel   : median of bootstrapped velocity (n_pt)
     """
     global bootcount, bootnum
     n_pt, n_im = cum.shape
@@ -836,10 +837,11 @@ def calc_velstd_withnan(cum, dt_cum, gpu=False):
         bootresult = bootstrap(ixs_day, bootnum, bootfunc=velinv)
 
     vstd = np.nanstd(bootresult, axis=0)
+    vel = np.nanmedian(bootresult, axis=0) # experimental
 
     print('')
 
-    return vstd
+    return vstd, vel
 
 
 def censored_lstsq2(A, B, M, gpu=False):

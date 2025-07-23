@@ -22,6 +22,8 @@ import random
 from lmfit.model import *
 import os
 import time
+import numpy as np
+
 import matplotlib.pyplot as plt
 import sys
 from osgeo import gdal
@@ -34,6 +36,9 @@ ver = "1.1"; date = 20230815; author = "Qi Ou, University of Leeds"
     # choose a better model between spherical and exponential judging from the residuals
     # iteratively reduce the distance over which to fit the model to tackle difficult cases
     # generalise utm zone determination
+ver = '1.2'; date = 20250217; author = 'Yuan Gao, Dehua Wang, Uni of Leeds'
+    #Linear model has beed added by Yuan Gao and output of modeling parameters has been added by Dehua Wang, University of leeds, 20250217
+
 
 # define global variable
 plot_variogram = True
@@ -116,6 +121,11 @@ def fit_model(model, dat, x, sigma):
     model.set_param_hint('p', value=dat[-1])  # guess last dat
     model.set_param_hint('n', value=dat[0])  # guess first dat
     model.set_param_hint('r', value=x[len(x)//2])  # guess mid point distance
+
+    ####limitation for large range value, Dehua Wang, 20250701
+    dmax = np.nanmax(x)
+    model.set_param_hint('r', min=0.01, max=dmax * 0.95)
+
     out = model.fit(dat, d=x, weights=1/sigma)
     return out
 
@@ -127,10 +137,24 @@ def exponential(d, p, n, r):
     @param p: partial sill
     @param n: nugget
     @param r: range
-    @return: spherical variogram model
+    @return: exponential variogram model
     """
+    # r = np.minimum(d, r)
     return n + p * (1 - np.exp(-d * 3/r))
 
+
+def linear(d, p, n, r):
+    """
+    Compute linear variogram model
+    @param d: 1D distance array
+    @param p: partial sill
+    @param n: nugget
+    @param r: range
+    @return: linear variogram model
+    """
+    # d = np.minimum(d, r)
+    # return n + p * (d / r)
+    return np.where(d > r, p + n, n + p * (d / r))
 
 def define_UTM(opentif):
     # Define UTM zone based on the centre of the OpenTif object
@@ -215,6 +239,8 @@ def scale_value_by_variogram_ratio(y, x, model_result, model):
         theoretical_y = spherical(x, best['p'], best['n'], best['r'])
     if model == 'exponential':
         theoretical_y = exponential(x, best['p'], best['n'], best['r'])
+    if model == 'linear':
+        theoretical_y = linear(x, best['p'], best['n'], best['r'])
     scaling_factor = sill / theoretical_y
     y_scaled = y * scaling_factor
     return y_scaled
@@ -223,7 +249,8 @@ def scale_value_by_variogram_ratio(y, x, model_result, model):
 if __name__ == "__main__":
     start()
     init_args()
-
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["Nimbus Sans"]
     tif = OpenTif(args.infile)
     try:
         # prepare profile data
@@ -232,7 +259,11 @@ if __name__ == "__main__":
         median, std, bincenters = calc_median_std(dist, sig_nonnan)
         # fit variogram model to stats along profile
         spherical_model = Model(spherical)
+        spherical_model.name = 'spherical'
         exponential_model = Model(exponential)
+        exponential_model.name = 'exponential'
+        linear_model = Model(linear)
+        linear_model.name = 'linear'
 
         try:
             # take smaller range
@@ -243,6 +274,7 @@ if __name__ == "__main__":
             # weight points nearer to ref more heavily
             result_spherical = fit_model(spherical_model, median, bincenters, std+np.power(bincenters/max(bincenters), 3))
             result_exponential = fit_model(exponential_model, median, bincenters, std+np.power(bincenters/max(bincenters), 3))
+            result_linear = fit_model(linear_model, median, bincenters, std+np.power(bincenters/max(bincenters), 3))
         except:
             try:
                 # take smaller range
@@ -254,6 +286,7 @@ if __name__ == "__main__":
                 # weight points nearer to ref more heavily
                 result_spherical = fit_model(spherical_model, median, bincenters, std+np.power(bincenters/max(bincenters),3))
                 result_exponential = fit_model(exponential_model, median, bincenters, std+np.power(bincenters/max(bincenters),3))
+                result_linear = fit_model(linear_model, median, bincenters, std+np.power(bincenters/max(bincenters),3))
             except:
                 # take smaller range
                 mask = bincenters < 100
@@ -264,15 +297,20 @@ if __name__ == "__main__":
                 # weight points nearer to ref more heavily
                 result_spherical = fit_model(spherical_model, median, bincenters, std+np.power(bincenters/max(bincenters),3))
                 result_exponential = fit_model(exponential_model, median, bincenters, std+np.power(bincenters/max(bincenters),3))
+                result_linear = fit_model(linear_model, median, bincenters, std+np.power(bincenters/max(bincenters),3))
 
-        if result_spherical.chisqr < result_exponential.chisqr:
+        if result_spherical.chisqr < result_exponential.chisqr and result_spherical.chisqr < result_linear.chisqr:
             result = result_spherical
             model = 'spherical'
             print("Choosing spherical model")
-        else:
+        elif result_exponential.chisqr < result_linear.chisqr:
             result = result_exponential
             model = 'exponential'
             print("Choosing exponential model")
+        else:
+            result = result_linear
+            model = 'linear'
+            print("Choosing linear model")
 
         # scale sig_nonnan based on variogram model
         sig_nonnan_scaled = scale_value_by_variogram_ratio(sig_nonnan, dist, result, model)
@@ -282,12 +320,27 @@ if __name__ == "__main__":
         new_map = new_map.reshape(tif.data.shape)
         fit_scaled = scale_value_by_variogram_ratio(result.best_fit, bincenters, result, model)
 
+        ### Output modeling parameters
+        parameters_ifgfile = 'vstd_rescaling_parameters.txt'
+        print()
+        print("Modeling parameters used for rescaling VSTD are saved in 'vstd_rescaling_parameters.txt'.")
+        print("Please check it in the results directory.")
+        print("20250213, Dehua Wang, Leeds")
+        model_str = f"{model} nugget={result.best_values['n']:.1f} " \
+            f"sill={result.best_values['p'] + result.best_values['n']:.1f} " \
+            f"range={result.best_values['r']:.0f}"
+        print(model_str)
+        with open(parameters_ifgfile, 'w') as f:
+            print(model_str, file=f)
+
+
         # plotting
         fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(6.4, 4.8))
 
         # plot scatter with stats of uncertainty values
         subset = random.sample(range(1, len(dist)), min(int(len(dist)/2), 50000))
-        ax1.scatter(dist[subset], sig_nonnan[subset], c=sig_nonnan[subset], s=0.1, vmin=0, vmax=2)
+        ax1.scatter(dist[subset], sig_nonnan[subset], c=sig_nonnan[subset], s=0.1, vmin=0, vmax=np.percentile(sig_nonnan[subset], 95))
+        # ax1.scatter(dist[subset], sig_nonnan[subset], c=sig_nonnan[subset], s=0.1)
         ax1.plot(bincenters, median, linewidth=2, c="gold")
         ax1.plot(bincenters, median+std, linewidth=1, c="gold")
         ax1.plot(bincenters, median-std, linewidth=1, c="gold")
@@ -301,16 +354,18 @@ if __name__ == "__main__":
         ax1.legend(loc=4)
 
         # plot scatter with stats of uncertainty values
-        ax3.scatter(dist[subset], sig_nonnan_scaled[subset], c=sig_nonnan_scaled[subset], s=0.1, vmin=0, vmax=2)
+        # ax3.scatter(dist[subset], sig_nonnan_scaled[subset], c=sig_nonnan_scaled[subset], s=0.1)
+        ax3.scatter(dist[subset], sig_nonnan_scaled[subset], c=sig_nonnan_scaled[subset], s=0.1, vmin=0, vmax=np.percentile(sig_nonnan_scaled[subset], 95))
         ax3.plot(bincenters, fit_scaled, linewidth=2, c="red")
-        ax3.set_ylim((0, min(2, max(median+3*std))))
+        ax3.set_ylim((0, np.percentile(sig_nonnan_scaled[subset], 95)))
         ax3.set_xlabel("Distance to reference, km")
         ax3.set_ylabel("$\sigma$(LOS), mm/yr")
         ax3.set_title("Scaled Uncertainty Profile")
         ax3.set_xlim((0, bincenters[-1]))
 
         # plot uncertainty map with reference location
-        im = ax2.imshow(tif.data, vmin=0, vmax=2)
+        im = ax2.imshow(tif.data, vmin=0, vmax=np.percentile(sig_nonnan[subset], 95), interpolation='nearest')
+        # im = ax2.imshow(tif.data, interpolation='nearest')
         ax2.plot(tif.ref_loc[1], tif.ref_loc[0], marker="o", markersize=5, c='gold')
         divider = make_axes_locatable(ax2)
         cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -318,7 +373,8 @@ if __name__ == "__main__":
         ax2.set_title("Uncertainty Map")
 
         # plot scaled uncertainty map
-        im = ax4.imshow(new_map, vmin=0, vmax=2)
+        # im = ax4.imshow(new_map, interpolation='nearest')
+        im = ax4.imshow(new_map, vmin=0, vmax=np.percentile(sig_nonnan_scaled[subset], 95), interpolation='nearest')
         divider = make_axes_locatable(ax4)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         fig.colorbar(im, cax=cax, label="mm/yr")
@@ -329,9 +385,9 @@ if __name__ == "__main__":
             ax.set_xticks([])
             ax.set_yticks([])
         plt.tight_layout()
-        plt.show()
+        # plt.show()
         # fig.savefig(output_dir+tif.basename+".png", format='PNG', dpi=300, bbox_inches='tight')
-        fig.savefig(args.png, format='PNG', dpi=300, bbox_inches='tight')
+        fig.savefig(args.png, format='PNG', dpi=150, bbox_inches='tight')
 
         # Export scaled uncertainty map to tif format.
         driver = gdal.GetDriverByName("GTiff")
@@ -379,6 +435,7 @@ if __name__ == "__main__":
             ax.set_xticks([])
             ax.set_yticks([])
         plt.tight_layout()
-        plt.show()
+        # plt.show()
+        fig.savefig(args.png, format='PNG', dpi=150, bbox_inches='tight')
 
     finish()

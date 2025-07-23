@@ -403,8 +403,8 @@ def main(argv=None):
             dlat = dlat*nlook
     elif sbovl_ok:
         example_date = None
-        for date in sbovl_ok:
-            unw_tiffile = os.path.join(geocdir, date, f"{date}.geo.sbovldiff.adf.mm.tif")
+        for pair in sbovl_ok:
+            unw_tiffile = os.path.join(geocdir, pair, f"{pair}.geo.sbovldiff.adf.mm.tif")
             geotiff = gdal.Open(unw_tiffile)
             if geotiff is not None:
                 example_date = date
@@ -607,6 +607,7 @@ def convert_wrapper(ifgd, is_sbovl=False):
 
     # Save float outputs
     unw.tofile(unwfile)
+    cc = np.nan_to_num(cc, nan=0)
     cc = cc.astype(np.uint8)  # Convert NaNs to 0, auto-floor to max 255
     cc.tofile(ccfile)
 

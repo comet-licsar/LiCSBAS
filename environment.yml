@@ -1,6 +1,7 @@
 name: licsbas
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   - python>=3.8
   - astropy
@@ -8,7 +9,7 @@ dependencies:
   - gdal>=2.4
   - h5py
   - matplotlib
-  - numpy<2
+  - numpy
   - psutil
   - requests
   - shapely
@@ -24,3 +25,4 @@ dependencies:
   - cmcrameri
   - pygmt
   - ipympl
+  - lmfit

@@ -1130,8 +1130,9 @@ def main(argv=None):
                 bool_unnan_pt = ~np.isnan(cum_patch[1, :])
                 cum_patch[0, bool_unnan_pt] = 0
 
-                # need this below only for nsbas:
-                if method == 'nsbas':
+                # need this below only for methods that interpolate nans
+                # NOTE, this will nullify increment if inbetween two gaps. In fact there is gapfilling through every gap..
+                if method != 'only_sb':  # == 'nsbas':
                     ## Drop (fill with nan) interpolated cum by 2 continuous gaps
                     for i in range(n_im-2): ## from 1->n_im-1
                         gap2 = gap_patch[i, :]+gap_patch[i+1, :]

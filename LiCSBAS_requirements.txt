@@ -4,7 +4,7 @@ beautifulsoup4
 gdal>=2.4
 h5py
 matplotlib
-numpy<2
+numpy
 psutil
 requests
 shapely
@@ -20,4 +20,4 @@ scipy
 cmcrameri
 pygmt
 ipympl
-git+git://github.com/comet-licsar/licsar_extra.git#egg=licsar_extra
+lmfit

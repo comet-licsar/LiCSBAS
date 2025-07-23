@@ -26,7 +26,7 @@ end_step="16"	# 01-05, 11-16
 
 cometdev='0' # shortcut to use COMET's experimental/dev functions. At this moment, '1' will turn on the nullification. Recommended: 0
 # sbovl='n' # if 'y', LiCSBAS will apply on sbovls  ## TODO
-eqoffs="n"  # if 'y', it will do: get_eq_offsets, then invert. if singular_gauss (recommended?), then set use of model.
+eqoffs="n"  # if 'y', it will do: get_eq_offsets, then invert. if singular_gauss, then set use of model (not recommended now, experimental/need some work).
 nlook="1"	# multilook factor, used in step02
 GEOCmldir="GEOCml${nlook}"	# If start from 11 or later after doing 03-05, use e.g., GEOCml${nlook}GACOSmaskclip
 n_para="" # Number of parallel processing in step 02-05,12,13,16. default: number of usable CPU
@@ -169,9 +169,9 @@ p16_n_para=$n_para   # default: # of usable CPU
 
 
 # eqoffs
-eqoffs_minmag="0"  # 0 means skipping the estimation!
-eqoffs_txtfile="eqoffsets.txt"
-eqoffs_buffer="0.1"
+eqoffs_minmag="0"  # min magnitude of earthquakes to auto-find. 0 means skipping the estimation.
+eqoffs_txtfile="eqoffsets.txt"  # path to txt file containing custom-set earthquake dates (if eqoffs_minmag is disabled/0) or that will use results of auto-find
+eqoffs_buffer="0.1"  # buffer (in degrees, assuming work with WGS-84 geocoded data) to search for earthquakes (if eqoffs_minmag is set)
 
 
 #############################
@@ -428,7 +428,7 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
       echo "LiCSBAS120_choose_reference.py $dirset "$extra
     else
       LiCSBAS120_choose_reference.py $dirset $extra 2>&1 | tee -a $log
-      if [ ${PIPESTATUS[0]} -ne 0 ];then exit 1; fi
+      if [ ${PIPESTATUS[0]} -ne 0 ];then echo "WARNING, LiCSBAS120 failed. Reverting to original LiCSBAS ref selection"; fi; #exit 1; fi # this often fails, so only warning message
     fi
   fi
 
@@ -467,7 +467,8 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
           echo "LiCSBAS120_choose_reference.py $dirset "$extra
         else
           LiCSBAS120_choose_reference.py $dirset $extra 2>&1 | tee -a $log
-          if [ ${PIPESTATUS[0]} -ne 0 ];then exit 1; fi
+          if [ ${PIPESTATUS[0]} -ne 0 ];then echo "WARNING, LiCSBAS120 failed. Reverting to original LiCSBAS ref selection"; fi; #
+          # if [ ${PIPESTATUS[0]} -ne 0 ];then exit 1; fi
         fi
       #fi
       fi

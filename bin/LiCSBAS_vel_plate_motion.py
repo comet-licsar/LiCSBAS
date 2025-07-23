@@ -101,10 +101,10 @@ def main(argv=None):
     #%%
     #vfilt_file = tsdir+'/results/vel_filt.mskd'
     vlos_eurfile = tsdir+'/results/vel_eurasia_los.tif'
-    if not os.path.exists(vlos_eurfile):
-        vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', vlos_eurfile)
-    else:
-        vlos_eurasia = lts.load_tif2xr(vlos_eurfile)
+    #if not os.path.exists(vlos_eurfile):
+    vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', vlos_eurfile)
+    #else:
+    #    vlos_eurasia = lts.load_tif2xr(vlos_eurfile)
     vel_tiffile = tsdir+'/results/vel.filt.mskd.tif'
     # if not os.path.exists(vel_tiffile):   # why not to regenerate it....
     cmd = 'LiCSBAS_flt2geotiff.py -i {0}/results/vel.filt.mskd -p {0}/info/EQA.dem_par -o {0}/results/vel.filt.mskd.tif'.format(tsdir)
@@ -121,7 +121,7 @@ def main(argv=None):
         print('\n Fixing to the reference area selected at step 16 \n')
         reffile = os.path.join(tsdir, 'info', '16ref.txt')
         if not os.path.exists(reffile):
-            print('ERROR, no 16ref.txt file exists! Refering to the median of whole scene instead \n')
+            print('ERROR, no 16ref.txt file exists! Referring to the median of whole scene instead \n')
             vlos = vlos - vlos.where(vlos != 0).median()
         else:
             with open(reffile, "r") as f:

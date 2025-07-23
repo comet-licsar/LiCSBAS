@@ -32,6 +32,7 @@ LiCSBAS_cum2vel.py [-s yyyymmdd] [-e yyyymmdd] [-i infile] [-o outfilenamestr] [
  --offsets offsets.txt  Estimate offsets read from external txt file - both yyyymmdd and yyyy-mm-dd form is supported
  --export_model modelfile.h5  Export the model time series to H5 file. Can be used for step 16 (Default: not export)
  --store_to_results  Setting this parameter, outputs will be stored to the results directory (overwriting existing files)
+ --datavar cum   Option to change the input data variable name (standard is 'cum' - will work for any with the expected shape)
 """
 #%% Change log
 '''
@@ -96,6 +97,7 @@ def main(argv=None):
     imd_s = []
     imd_e = []
     cumfile = 'cum_filt.h5'
+    datavar = 'cum'
     outfile = []
     refarea = []
     refarea_geo = []
@@ -121,7 +123,7 @@ def main(argv=None):
     #%% Read options
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "hs:e:i:o:r:", ["help", "store_to_results", "vstd", "sin", "eqoffsets=", "offsets=","export_model=","png", "ref_geo=", "mask="])
+            opts, args = getopt.getopt(argv[1:], "hs:e:i:o:r:", ["help", "datavar=", "store_to_results", "vstd", "sin", "eqoffsets=", "offsets=","export_model=","png", "ref_geo=", "mask="])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -150,6 +152,8 @@ def main(argv=None):
                 maskfile = a
             elif o == '--png':
                 pngflag = True
+            elif o == '--datavar':
+                datavar = a
             elif o == '--eqoffsets':
                 minmag = float(a)
                 eqoffsetsflag = True
@@ -211,7 +215,7 @@ def main(argv=None):
     imdates = cumh5['imdates'][()].astype(str).tolist()
     # cumh5 = xr.open_dataset(cumfile) # future: xr
     # imdates = list(a.time.dt.strftime('%Y%m%d').values)
-    cum = cumh5['cum']
+    cum = cumh5[datavar]
     n_im_all, length, width = cum.shape
 
     if refarea:
@@ -412,16 +416,20 @@ def main(argv=None):
     if vstdflag:
         if store_to_results:
             vstdfile = os.path.join(resultsdir, 'vstd' + suffix_mask)
+            bootvelfile = os.path.join(resultsdir, 'bootvel' + suffix_mask)
         else:
             vstdfile = outfile+'.vstd'+suffix_mask
+            bootvelfile = outfile+'.bootvel'+suffix_mask
         vstd = np.zeros((length, width), dtype=np.float32)*np.nan
+        bootvel = np.zeros((length, width), dtype=np.float32) * np.nan
 
         print('Calc vstd...')
         if offsetsflag or eqoffsetsflag:
             cum_tmp_resh = cum_tmp_resh - model.reshape(n_im, length*width)[:, ~bool_allnan.ravel()].transpose()
 
-        vstd[~bool_allnan] = inv_lib.calc_velstd_withnan(cum_tmp_resh, dt_cum)
+        vstd[~bool_allnan], bootvel[~bool_allnan] = inv_lib.calc_velstd_withnan(cum_tmp_resh, dt_cum)
         vstd.tofile(vstdfile)
+        bootvel.tofile(bootvelfile)
         #
         #_cum = cum[:, rows[0]-row_ex1:rows[1]+row_ex2, :].reshape(n_im, lengththis+row_ex1+row_ex2, width)
 
@@ -462,6 +470,10 @@ def main(argv=None):
             cmin = np.nanpercentile(vstd, 1)
             cmax = np.nanpercentile(vstd, 99)
             plot_lib.make_im_png(vstd, vstdfile+'.png', cmap_vstd, title, cmin, cmax)
+            title = 'Bootstrapped velocity (mm/yr)'
+            cmin = np.nanpercentile(bootvel, 1)
+            cmax = np.nanpercentile(bootvel, 99)
+            plot_lib.make_im_png(bootvel, bootvelfile + '.png', cmap, title, cmin, cmax)
 
         if stcflag:
             title = 'Spatio-temporal consistency (mm)'

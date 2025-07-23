@@ -123,7 +123,7 @@ def main(argv=None):
     get_gacos = False
     get_mli = False
     get_pha = False
-    get_era5 = True
+    get_era5 = False
     sbovl = False
     n_para = 4
     minbtemp = 0
@@ -376,7 +376,7 @@ def main(argv=None):
                  ) for i, imd in enumerate(_imdates)]
     
         p = q.Pool(n_para)
-        rc = p.map(check_era5_wrapper, args)
+        rc = p.map(check_gacos_wrapper, args) # should work?
         p.close()
 
         n_im_existing = 0
