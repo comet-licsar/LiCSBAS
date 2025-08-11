@@ -1183,6 +1183,15 @@ def main(argv=None):
             with open(file, openmode) as f:
                 gap_patch[i].tofile(f)
 
+            # cleaning patch variables from memory:
+            varnames = ['res_patch', 'cum_patch', 'inc_patch', 'hasdatapatch', 'gap_patch', 'unwpatch', 'varpatch', 'wvars']
+            for vn in varnames:
+                if (vn in globals() or vn in locals()):
+                    try:
+                        del vn
+                    except:
+                        print('some issue removing '+vn+' from memory')
+
         #%% Finish patch
         elapsed_time2 = int(time.time()-start2)
         hour2 = int(elapsed_time2/3600)
