@@ -1188,9 +1188,12 @@ def main(argv=None):
             for vn in varnames:
                 if (vn in globals() or vn in locals()):
                     try:
-                        del vn
+                        del globals()[vn]
                     except:
-                        print('some issue removing '+vn+' from memory')
+                        try:
+                            del locals()[vn]
+                        except:
+                            print('some issue removing '+vn+' from memory')
 
         #%% Finish patch
         elapsed_time2 = int(time.time()-start2)
