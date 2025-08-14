@@ -644,14 +644,18 @@ def main(argv=None):
         save_mem = True # read on hdf5
         memory_size_patch = memory_size
 
+    n_store_data = n_ifg*2 + n_im*2 + n_im/4 + 6 + 1 + n_im/2
+    # n_im: cum, gap (1B), inc
+    # n_ifg: unw, resid
+    # and 6 length x width primary outputs
+    # plus few small variables... assuming just length x width x 4B - should be less..
+    # last one for temporary gap calc variable that is 2B with n_im x len x wid
     if inv_alg == 'WLS':
-        n_store_data = n_ifg*3+n_im*2+n_im*0.3 #
-    else:
-        n_store_data = n_ifg*2+n_im*2+n_im*0.3 #not sure
+        n_store_data += n_ifg  # for varpatch
 
     if nullify_noloops:
         n_store_data += n_ifg/4 # 1B boolean
-    
+
     n_patch, patchrow = tools_lib.get_patchrow(width, length, n_store_data, memory_size_patch)
     print('Patch: {}'.format(n_patch))
     print('Patchrows:')
@@ -1187,7 +1191,7 @@ def main(argv=None):
                 gap_patch[i].tofile(f)
 
             # cleaning patch variables from memory:
-            varnames = ['res_patch', 'cum_patch', 'inc_patch', 'hasdatapatch', 'gap_patch', 'unwpatch', 'varpatch', 'wvars']
+            varnames = ['res_patch', 'cum_patch', 'inc_patch', 'hasdatapatch', 'gap_patch', 'unwpatch', 'wvars', 'varpatch']
             varnames += ['vel_patch', 'vconst_patch', 'res_rms_patch', 'ns_gap_patch', 'ns_ifg_noloop_patch', 'maxTlen_patch']
             for vn in varnames:
                 if (vn in globals() or vn in locals()):
