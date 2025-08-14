@@ -649,6 +649,9 @@ def main(argv=None):
     else:
         n_store_data = n_ifg*2+n_im*2+n_im*0.3 #not sure
 
+    if nullify_noloops:
+        n_store_data += n_ifg/4 # 1B boolean
+    
     n_patch, patchrow = tools_lib.get_patchrow(width, length, n_store_data, memory_size_patch)
     print('Patch: {}'.format(n_patch))
     print('Patchrows:')
@@ -1185,6 +1188,7 @@ def main(argv=None):
 
             # cleaning patch variables from memory:
             varnames = ['res_patch', 'cum_patch', 'inc_patch', 'hasdatapatch', 'gap_patch', 'unwpatch', 'varpatch', 'wvars']
+            varnames += ['vel_patch', 'vconst_patch', 'res_rms_patch', 'ns_gap_patch', 'ns_ifg_noloop_patch', 'maxTlen_patch']
             for vn in varnames:
                 if (vn in globals() or vn in locals()):
                     try:
@@ -1192,6 +1196,7 @@ def main(argv=None):
                     except:
                         try:
                             del locals()[vn]
+                            print('debug: removing '+vn+' from local vars')
                         except:
                             print('some issue removing '+vn+' from memory')
 
