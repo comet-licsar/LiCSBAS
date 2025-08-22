@@ -8,6 +8,7 @@ Python3 library of time series analysis tools for LiCSBAS.
 =========
 Changelog
 =========
+2025-08-22 ML: url extractor for the 'future' LiCSAR HTMLs
 2024-12-13 Muhammet Nergizci, ULeeds
  - Add weights to multilooking
 2024-10-22 Milan Lazecky, ULeeds
@@ -47,6 +48,7 @@ import dateutil
 import datetime as dt
 import numpy as np
 import warnings
+from bs4 import BeautifulSoup
 from matplotlib.colors import LinearSegmentedColormap as LSC
 from matplotlib import pyplot as plt
 import matplotlib.path as path
@@ -225,6 +227,29 @@ def convert_size(size_bytes):
    p = np.power(1024, i)
    s = round(size_bytes / p, 2)
    return "%s%s" % (s, size_name[i])
+
+
+def extract_url_licsar(url):
+    ''' new since Aug 2025+: URL gets different from direct to HTML file with a link..
+    '''
+    # first try if the direct url actually works (old version):
+    response = requests.head(url, allow_redirects=True)
+    if response.status_code == 200:
+        return url
+    else:
+        url = os.path.dirname(url)
+        fname = os.path.basename(url)
+        response = requests.get(url)
+        if response.status_code != 200:
+            return None # this does not exist
+        response.encoding = response.apparent_encoding  # avoid garble
+        html_doc = response.text
+        soup = BeautifulSoup(html_doc, "html.parser")
+        tag = soup.find(href=re.compile(fname))
+        if tag:
+            return tag.get('href')
+        else:
+            return None
 
 
 #%%
