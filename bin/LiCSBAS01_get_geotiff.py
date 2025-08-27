@@ -275,7 +275,7 @@ def main(argv=None):
             if url_mli is not None:
                 print('\n{} found as latest.'.format(imd))
                 imd1 = imd
-                url_mli = tag.get('href')
+                #url_mli = tag.get('href')
                 break
     
         ### Download
