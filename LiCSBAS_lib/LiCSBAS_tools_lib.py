@@ -518,9 +518,9 @@ def get_ifgdates(ifgdir):
     """
     ifgdates = [str(k) for k in sorted(os.listdir(ifgdir))
                 if len(k) == 17
-                and k[0] =='2'
+                and k[0] in ('1', '2')  #JF for ERS starting with 19*
                 and k[8] =='_'
-                and k[9] =='2'
+                and k[9] in ('1', '2') # JF
                 and os.path.isdir(os.path.join(ifgdir, k))]
 
     return ifgdates
