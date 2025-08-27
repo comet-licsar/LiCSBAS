@@ -237,12 +237,14 @@ def extract_url_licsar(url):
     if response.status_code == 200:
         return url
     else:
-        url = os.path.dirname(url)
         fname = os.path.basename(url)
+        url = os.path.dirname(url)
+        # transition period - both old and new version exist - try the temporary url:
+        url = url.replace('LiCSAR_products/', 'LiCSAR_products.future/')
         response = requests.get(url)
         if response.status_code != 200:
-            # transition period - both old and new version exist - try the temporary url:
-            url = url.replace('LiCSAR_products', 'LiCSAR_products.future')
+            # perhaps already after the transition? Getting it back:
+            url = url.replace('LiCSAR_products.future/', 'LiCSAR_products/')
             response = requests.get(url)
             if response.status_code != 200:
                 return None # this also does not exist
