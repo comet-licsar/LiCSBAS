@@ -241,7 +241,11 @@ def extract_url_licsar(url):
         fname = os.path.basename(url)
         response = requests.get(url)
         if response.status_code != 200:
-            return None # this does not exist
+            # transition period - both old and new version exist - try the temporary url:
+            url = url.replace('LiCSAR_products', 'LiCSAR_products.future')
+            response = requests.get(url)
+            if response.status_code != 200:
+                return None # this also does not exist
         response.encoding = response.apparent_encoding  # avoid garble
         html_doc = response.text
         soup = BeautifulSoup(html_doc, "html.parser")
