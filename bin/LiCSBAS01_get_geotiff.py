@@ -261,15 +261,18 @@ def main(argv=None):
             if np.mod(i, 10) == 0:
                 print("\r  {0:3}/{1:3}".format(i, len(_imdates)), end='', flush=True)
             url_epoch = os.path.join(url, imd + '/')
-            response = requests.get(url_epoch)
-            if response.status_code != 200:
-                url_epoch = os.path.join(url, imd)  # future LiCSAR webdir version
-                response = requests.get(url_epoch)
-            response.encoding = response.apparent_encoding #avoid garble
-            html_doc = response.text
-            soup = BeautifulSoup(html_doc, "html.parser")
-            tag = soup.find(href=re.compile(r"\d{8}.geo.mli.tif"))
-            if tag is not None:
+            url_mli = os.path.join(url_epoch, imd+'.geo.mli.tif')
+            url_mli = tools_lib.extract_url_licsar(url_mli)
+            #response = requests.get(url_epoch)
+            #if response.status_code != 200:
+            #    url_epoch = os.path.join(url, imd)  # future LiCSAR webdir version
+            #    response = requests.get(url_epoch)
+            #response.encoding = response.apparent_encoding #avoid garble
+            #html_doc = response.text
+            #soup = BeautifulSoup(html_doc, "html.parser")
+            #tag = soup.find(href=re.compile(r"\d{8}.geo.mli.tif"))
+            #if tag is not None:
+            if url_mli is not None:
                 print('\n{} found as latest.'.format(imd))
                 imd1 = imd
                 url_mli = tag.get('href')
@@ -279,6 +282,7 @@ def main(argv=None):
         if imd1:
             print('Downloading {}.geo.mli.tif as {}.geo.mli.tif...'.format(imd1, frameID), flush=True)
             # url_mli = os.path.join(url, imd1, imd1+'.geo.mli.tif')
+            url_mli = tools_lib.extract_url_licsar(url_mli)
             tools_lib.download_data(url_mli, mlitif)
         else:
             print('\nNo mli available on {}'.format(url), file=sys.stderr, flush=True)
