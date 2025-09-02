@@ -926,7 +926,7 @@ def main(argv=None):
                     p = q.Pool(n_para)
                     # ML: simultaneous write to np.array is possible (just careful not to use same rows/cols)
                     # _result = np.array(
-                    p.map(nullify_noloops_from_ori, range(n_para)) #, dtype=float)
+                    p.map(nullify_noloops_wrapper, range(n_para)) #, dtype=float)
                     p.close()
                     afternounw = (~np.isnan(unwpatch)).sum()
 
@@ -1421,15 +1421,15 @@ def count_gaps_wrapper(i):
     return _ns_gap_patch, _gap_patch, _ns_ifg_noloop_patch
 
 #%%
-def nullify_noloops_from_ori(i):
-    # must be run with both unwpatch and hasdatapatch already existing
+def nullify_noloops_wrapper(i):
+    # must be run with both unwpatch and hasdatapatch already existing - i.e. works for either from ori or nulled unws
     print("    Running {:2}/{:2}th patch...".format(i+1, n_para), flush=True)
     n_pt_patch = int(np.ceil(unwpatch.shape[0]/n_para))
-
+    #
     if i*n_pt_patch >= unwpatch.shape[0]:
         # Nothing to do
         return
-
+    #
     ### n_ifg_noloop
     # n_ifg*(n_pt,n_ifg)->(n_loop,n_pt)
     # Number of ifgs for each loop at each point.
