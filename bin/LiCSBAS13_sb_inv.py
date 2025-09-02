@@ -214,9 +214,7 @@ def main(argv=None):
     #noloop = False  # setting this later
     input_units = 'rad'
     nullify_noloops = False
-    #print('NOTE, keeping nullify_noloops ON by default, for testing..')
     nullify_noloops_use_data_after_nullification = False
-    #print('NOTE, variable nullify_noloops_use_data_after_nullification set to False - testing')
     sbovl = False
     
     try:
@@ -920,7 +918,7 @@ def main(argv=None):
             # if still ok, perform the main noloop routine
             if nullify_noloops:
                 print('  removing noloop_ifgs before inversion (in memory)')
-                orignounw = (unwpatch[~np.isnan(unwpatch)]).sum()
+                orignounw = hasdatapatch.sum()
                 # step 2 for nullify_noloops: counting the noloops and nullying data from ifgs not forming any loop
                 try:
                     print('  with {} parallel processing...'.format(n_para), flush=True)
@@ -930,7 +928,7 @@ def main(argv=None):
                     # _result = np.array(
                     p.map(nullify_noloops_from_ori, range(n_para)) #, dtype=float)
                     p.close()
-                    afternounw = (unwpatch[~np.isnan(unwpatch)]).sum()
+                    afternounw = (~np.isnan(unwpatch)).sum()
 
                 except Exception as e:
                     print("ERROR nullifying noloops data:")
@@ -1427,8 +1425,6 @@ def nullify_noloops_from_ori(i):
     # must be run with both unwpatch and hasdatapatch already existing
     print("    Running {:2}/{:2}th patch...".format(i+1, n_para), flush=True)
     n_pt_patch = int(np.ceil(unwpatch.shape[0]/n_para))
-    n_im = G.shape[1]+1
-    n_loop, n_ifg = Aloop.shape
 
     if i*n_pt_patch >= unwpatch.shape[0]:
         # Nothing to do
