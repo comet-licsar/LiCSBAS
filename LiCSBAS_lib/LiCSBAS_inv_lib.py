@@ -106,6 +106,24 @@ def make_sb_matrix2(ifgdates):
     return A
 
 
+def make_sb_matrix_epochs(ifgdates):
+    '''
+    SB matrix with 1 at both primary and secondary
+    '''
+    imdates = tools_lib.ifgdates2imdates(ifgdates)
+    n_im = len(imdates)
+    n_ifg = len(ifgdates)
+    A = np.zeros((n_ifg, n_im), dtype=np.int16)
+    for ifgix, ifgd in enumerate(ifgdates):
+        primarydate = ifgd[:8]
+        primaryix = imdates.index(primarydate)
+        secondarydate = ifgd[-8:]
+        secondaryix = imdates.index(secondarydate)
+        A[ifgix, primaryix] = 1
+        A[ifgix, secondaryix] = 1
+    return A
+
+
 def invert_unws(unw, G, dt_cum, gamma, n_core, gpu, dt_offsets = None,
                 wvars = None, method = 'nsbas', inv_alg = 'LS'):
     ''' Passing to the requested inversion method.

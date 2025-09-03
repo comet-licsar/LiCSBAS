@@ -593,7 +593,7 @@ def main(argv=None):
     ### Construct G and Aloop matrix for increment and n_gap
     G = inv_lib.make_sb_matrix(ifgdates)
     Aloop = loop_lib.make_loop_matrix(ifgdates)
-
+    B = make_sb_matrix_epochs(ifgdates) # useful for returning nans between connections
 
     #%% Plot network
     ## Read bperp data or dummy
@@ -1118,6 +1118,17 @@ def main(argv=None):
                 ## Fill 1st image with 0 at unnan points from 2nd images
                 bool_unnan_pt = ~np.isnan(cum_patch[1, :])
                 cum_patch[0, bool_unnan_pt] = 0
+
+                ## 2025/09: keep the nans between connections
+                print('Setting NaNs to cum values that were not measured by interferograms')
+                print('This is now under testing - might cause issues at reference area?')
+                try:
+                    for indexpx in range(unwpatch.shape[0]):
+                        nonans = np.argwhere(~np.isnan(unwpatch[indexpx]))[:, 1]
+                        Bm = B[nonans, :].sum(axis=0)
+                        cum_patch[Bm == 0, indexpx] = np.nan
+                except:
+                    print('dev functionality on returning nans - error, please fix (let know Milan)')
 
                 # need this below only for methods that interpolate nans
                 # NOTE, this will nullify increment if inbetween two gaps. In fact there is gapfilling through every gap..
