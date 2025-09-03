@@ -1115,10 +1115,6 @@ def main(argv=None):
                 cum_patch = np.zeros((n_im, n_pt_all), dtype=np.float32)*np.nan
                 cum_patch[1:, :] = np.cumsum(inc_patch, axis=0)
 
-                ## Fill 1st image with 0 at unnan points from 2nd images
-                bool_unnan_pt = ~np.isnan(cum_patch[1, :])
-                cum_patch[0, bool_unnan_pt] = 0
-
                 ## 2025/09: keep the nans between connections
                 print('Setting NaNs to cum values that were not measured by interferograms')
                 print('This is now under testing - might cause issues at reference area?')
@@ -1129,6 +1125,10 @@ def main(argv=None):
                         cum_patch[Bm == 0, indexpx] = np.nan
                 except:
                     print('dev functionality on returning nans - error, please fix (let know Milan)')
+
+                ## Fill 1st image with 0 at unnan points from 2nd images
+                bool_unnan_pt = ~np.isnan(cum_patch[1, :])
+                cum_patch[0, bool_unnan_pt] = 0
 
                 # need this below only for methods that interpolate nans
                 # NOTE, this will nullify increment if inbetween two gaps. In fact there is gapfilling through every gap..
