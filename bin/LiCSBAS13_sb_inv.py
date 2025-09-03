@@ -593,7 +593,7 @@ def main(argv=None):
     ### Construct G and Aloop matrix for increment and n_gap
     G = inv_lib.make_sb_matrix(ifgdates)
     Aloop = loop_lib.make_loop_matrix(ifgdates)
-    B = make_sb_matrix_epochs(ifgdates) # useful for returning nans between connections
+    B = inv_lib.make_sb_matrix_epochs(ifgdates) # useful for returning nans between connections
 
     #%% Plot network
     ## Read bperp data or dummy
