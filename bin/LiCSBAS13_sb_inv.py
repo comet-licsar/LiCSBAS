@@ -86,8 +86,8 @@ LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] 
  --load_patches Load previously completed patches first [default: No, restart inversion]
  --input_units Units of the input data. Possible values: ['rad', 'mm', 'm']. Default: rad
  --offsets eqoffsets.txt  Estimate offsets read from external txt file - must have lines in the form of either yyyymmdd or yyyy-mm-dd
- --nullify_noloops   Nullifies data from ifgs not included in any loop BEFORE NULLIFICATION (if happened)
- --nullify_noloops_use_data_after_nullification  Just to test, will probably remove this
+ --nullify_noloops   Nullifies data from ifgs not included in any loop, both ifg and pixel based noloop_ifgs. Uses data before nullification (optional step 12)
+ --nullify_noloops_use_data_after_nullification  This would nullify noloop_ifgs after the nullification (usually not recommended)
 """
 '''
 skipping here as will do it as post-processing:
@@ -98,7 +98,9 @@ skipping here as will do it as post-processing:
 '''
 #%% Change log
 '''
-
+20250903 ML+PEB
+ - nullify_noloops also ignores full source interferograms -> dropping empty epochs
+ - fix for filling no-gap nan values 
 20241221 Muhammet Nergizci
  - check baseline file empty or not
 20241207 ML
@@ -491,7 +493,14 @@ def main(argv=None):
             print('adding also ifgs listed as bad in the optional 120 step')
             bad_ifg120 = io_lib.read_ifg_list(bad_ifg120file)
             bad_ifg12 = list(set(bad_ifg12 + bad_ifg120))
-    
+    if nullify_noloops:
+        # adding also noloop_ifgs as ifgs to skip
+        print('skipping noloop_ifgs')
+        bad_ifg12fileno = os.path.join(infodir, '12no_loop_ifg.txt')
+        if os.path.exists(bad_ifg12fileno):
+            bad_ifg12no = io_lib.read_ifg_list(bad_ifg12fileno)  ## no loop file
+            bad_ifg12 = list(set(bad_ifg12 + bad_ifg12no))
+    #
     bad_ifg_all = list(set(bad_ifg11+bad_ifg12))
     # removing coseismic ifgs for standard solutions. this will cause gap that will get interpolated
     # not needed/wanted for 'only_sb' and 'singular_gauss' methods
