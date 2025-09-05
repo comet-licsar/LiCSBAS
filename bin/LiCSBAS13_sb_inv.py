@@ -1126,12 +1126,13 @@ def main(argv=None):
 
                 ## 2025/09: keep the nans between connections
                 print('Setting NaNs to cum values that were not measured by interferograms')
-                print('This is now under testing - might cause issues at reference area?')
                 try:
-                    for indexpx in range(unwpatch.shape[0]):
+                    cum_tmp = cum_patch[:, ix_unnan_pt]  # cum_patch is of shape (epochs, ALL pixels)
+                    for indexpx in range(unwpatch.shape[0]):   # unwpatch is of shape (UNNAN pixels, unw data)
                         nonans = np.argwhere(~np.isnan(unwpatch[indexpx]))[:, 1]
                         Bm = B[nonans, :].sum(axis=0)
-                        cum_patch[Bm == 0, indexpx] = np.nan
+                        cum_tmp[Bm == 0, indexpx] = np.nan
+                    cum_patch[:, ix_unnan_pt] = cum_tmp
                 except:
                     print('dev functionality on returning nans - error, please fix (let know Milan)')
 
