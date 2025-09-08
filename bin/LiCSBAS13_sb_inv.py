@@ -1129,7 +1129,7 @@ def main(argv=None):
                 try:
                     cum_tmp = cum_patch[:, ix_unnan_pt]  # cum_patch is of shape (epochs, ALL pixels)
                     for indexpx in range(unwpatch.shape[0]):   # unwpatch is of shape (UNNAN pixels, unw data)
-                        nonans = np.argwhere(~np.isnan(unwpatch[indexpx]))[:, 1]
+                        nonans = np.argwhere(~np.isnan(unwpatch[indexpx]))[:, 0]
                         Bm = B[nonans, :].sum(axis=0)
                         cum_tmp[Bm == 0, indexpx] = np.nan
                     cum_patch[:, ix_unnan_pt] = cum_tmp
