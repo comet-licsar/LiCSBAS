@@ -1134,7 +1134,7 @@ def main(argv=None):
                         cum_tmp[Bm == 0, indexpx] = np.nan
                     cum_patch[:, ix_unnan_pt] = cum_tmp
                 except:
-                    print('dev functionality on returning nans - error, please fix (let know Milan)')
+                    print('dev functionality on returning  nans - error, please fix (let know Milan)')
 
                 ## Fill 1st image with 0 at unnan points from 2nd images
                 bool_unnan_pt = ~np.isnan(cum_patch[1, :])
