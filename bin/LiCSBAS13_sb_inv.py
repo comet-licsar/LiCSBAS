@@ -1130,8 +1130,9 @@ def main(argv=None):
                     cum_tmp = cum_patch[:, ix_unnan_pt]  # cum_patch is of shape (epochs, ALL pixels)
                     for indexpx in range(unwpatch.shape[0]):   # unwpatch is of shape (UNNAN pixels, unw data)
                         nonans = np.argwhere(~np.isnan(unwpatch[indexpx]))[:, 0]
-                        Bm = B[nonans, :].sum(axis=0)
-                        cum_tmp[Bm == 0, indexpx] = np.nan
+                        if len(nonans)>0:  # should not happen, but just in case..
+                            Bm = B[nonans, :].sum(axis=0)
+                            cum_tmp[Bm == 0, indexpx] = np.nan
                     cum_patch[:, ix_unnan_pt] = cum_tmp
                 except:
                     print('dev functionality on returning  nans - error, please fix (let know Milan)')
