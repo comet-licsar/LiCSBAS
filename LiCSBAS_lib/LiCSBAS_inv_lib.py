@@ -352,8 +352,11 @@ def singular_nsbas(d,G,m,dt_cum, wvars = None, singular_gauss = False):
         #if np.mod(px, 100) == 0:
         #    print('\r  Running {0:6}/{1:6}th point...'.format(px, m.shape[1]), end='', flush=True)
         #
-        m[:,px] = singular_nsbas_onepoint(d,G,m,dt_cum, wvars, singular_gauss, px)
-    
+        try:
+            m[:,px] = singular_nsbas_onepoint(d,G,m,dt_cum, wvars, singular_gauss, px)
+        except:
+            print('ERROR inverting point '+str(px)+' - filling by nan values')
+            m[:,px] = np.nan
     return m
 
 
