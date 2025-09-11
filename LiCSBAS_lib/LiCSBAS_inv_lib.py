@@ -502,7 +502,15 @@ def singular_nsbas_onepoint(d,G,m,dt_cum, wvars, skip_gapestimate, i):
     
     if not max(badincs):
         # if actually all are fine, just run LS:
-        mpx = np.linalg.lstsq(Gpx_ok, dpx_ok, rcond=None)[0]
+        #mpx = np.linalg.lstsq(Gpx_ok, dpx_ok, rcond=None)[0]
+
+         # if actually all are fine, just run LS:
+        try:
+          mpx = np.linalg.lstsq(Gpx_ok, dpx_ok, rcond=None)[0]
+        except np.linalg.LinAlgError:
+        # fallback to pseudo-inverse if SVD fails
+          mpx = np.dot(np.linalg.pinv(Gpx_ok), dpx_ok)
+     
     else:
         # if there is at least one im with no related ifg (means, it would cause gap):
         mpx[~badincs] = np.linalg.lstsq(Gpx_ok[:,~badincs], dpx_ok, rcond=None)[0]
