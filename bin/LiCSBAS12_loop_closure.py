@@ -207,11 +207,11 @@ def main(argv=None):
             elif o == '--skip_pngs' or o == '--nopngs':
                 do_pngs = False
             elif o == '--ref_approx':
-                ref_approx = a
+                ref_approx = float(a)
             elif o == '--nullify_skip_backup':
                 save_ori_unw = False
             elif o == '--nullify_threshold':
-                nullify_threshold = a
+                nullify_threshold = float(a)
         if not nullify: # debug
             save_ori_unw = False
         if not ifgdir:
