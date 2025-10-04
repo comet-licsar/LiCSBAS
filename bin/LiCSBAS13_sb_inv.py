@@ -88,6 +88,7 @@ LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] 
  --offsets eqoffsets.txt  Estimate offsets read from external txt file - must have lines in the form of either yyyymmdd or yyyy-mm-dd
  --nullify_noloops   Nullifies data from ifgs not included in any loop, both ifg and pixel based noloop_ifgs. Uses data before nullification (optional step 12)
  --nullify_noloops_use_data_after_nullification  This would nullify noloop_ifgs after the nullification (usually not recommended)
+ --ignore_nullification  Use of unwrapped data before the unwrapping error nullification (step 12) if performed.
 """
 '''
 skipping here as will do it as post-processing:
@@ -215,6 +216,7 @@ def main(argv=None):
     nopngs = False
     #noloop = False  # setting this later
     input_units = 'rad'
+    ignore_nullification = False
     nullify_noloops = False
     nullify_noloops_use_data_after_nullification = False
     sbovl = False
@@ -251,7 +253,7 @@ def main(argv=None):
                                        ["help",  "mem_size=", "input_units=", "gamma=",
                                         "n_unw_r_thre=", "keep_incfile", "nopngs", "nullify_noloops", "nullify_noloops_use_data_after_nullification",
                                         "inv_alg=", "n_para=", "gpu", "singular", "singular_gauss","only_sb", "no_storepatches", "load_patches",
-                                        "offsets=", "sbovl"])
+                                        "offsets=", "sbovl", "ignore_nullification"])
                                       #  "step_events="])
         except getopt.error as msg:
             raise Usage(msg)
@@ -269,6 +271,8 @@ def main(argv=None):
                 gamma = float(a)
             elif o == '--input_units':
                 input_units = a
+            elif o == '--ignore_nullification':
+                ignore_nullification = True
             elif o == '--n_unw_r_thre':
                 n_unw_r_thre = float(a)
             elif o == '--keep_incfile':
@@ -843,6 +847,9 @@ def main(argv=None):
                     unwfile = os.path.join(ifgdir, ifgd, ifgd+'.sbovldiff.adf.mm')
                 else:
                     unwfile = os.path.join(ifgdir, ifgd, ifgd+'.unw')
+                if ignore_nullification:
+                    if os.path.exists(unwfile+'.ori'):
+                        unwfile = unwfile+'.ori'
                 f = open(unwfile, 'rb')
                 f.seek(countf*4, os.SEEK_SET) #Seek for >=2nd patch, 4 means byte
 
