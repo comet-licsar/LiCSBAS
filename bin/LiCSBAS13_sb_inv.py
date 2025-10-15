@@ -59,7 +59,7 @@ Outputs in TS_GEOCml*/ :
 Usage
 =====
 LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] [--gamma float] [--n_para int] [--n_unw_r_thre float] [--keep_incfile] [--gpu] [--singular] [--only_sb] [--nopngs] [--sbovl]
-                 [--no_storepatches] [--load_patches] [--nullify_noloops] [--offsets eqoffsets.txt]
+                 [--no_storepatches] [--load_patches] [--nullify_noloops] [--offsets eqoffsets.txt] [--badnoloops]
 
  -d  Path to the GEOCml* dir containing stack of unw data
  -t  Path to the output TS_GEOCml* dir.
@@ -88,6 +88,7 @@ LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] 
  --offsets eqoffsets.txt  Estimate offsets read from external txt file - must have lines in the form of either yyyymmdd or yyyy-mm-dd
  --nullify_noloops   Nullifies data from ifgs not included in any loop BEFORE NULLIFICATION (if happened)
  --nullify_noloops_use_data_after_nullification  Just to test, will probably remove this
+ --badnoloops add to bad IFS the IFS in no loops from file of step 12
 """
 '''
 skipping here as will do it as post-processing:
@@ -98,7 +99,8 @@ skipping here as will do it as post-processing:
 '''
 #%% Change log
 '''
-
+20250611 Pedro Espin
+ - add the no loop files to bad files 
 20241221 Muhammet Nergizci
  - check baseline file empty or not
 20241207 ML
@@ -218,6 +220,7 @@ def main(argv=None):
     nullify_noloops_use_data_after_nullification = False
     #print('NOTE, variable nullify_noloops_use_data_after_nullification set to False - testing')
     sbovl = False
+	badnoloops = True # bad loops step 12
     
     try:
         n_para = len(os.sched_getaffinity(0))
@@ -251,7 +254,7 @@ def main(argv=None):
                                        ["help",  "mem_size=", "input_units=", "gamma=",
                                         "n_unw_r_thre=", "keep_incfile", "nopngs", "nullify_noloops", "nullify_noloops_use_data_after_nullification",
                                         "inv_alg=", "n_para=", "gpu", "singular", "singular_gauss","only_sb", "no_storepatches", "load_patches",
-                                        "offsets=", "sbovl"])
+                                        "offsets=", "sbovl", "badnoloops"])
                                       #  "step_events="])
         except getopt.error as msg:
             raise Usage(msg)
@@ -304,6 +307,8 @@ def main(argv=None):
             elif o == '--offsets':
                 offsetsfile = a
                 offsetsflag = True
+			elif o == '--badnoloops':
+                badnoloops = True 
 	      
 
         if not ifgdir:
@@ -372,6 +377,13 @@ def main(argv=None):
     bad_ifg11file = os.path.join(infodir, '11bad_ifg.txt')
     bad_ifg12file = os.path.join(infodir, '12bad_ifg.txt')
     bad_ifg120file = os.path.join(infodir, '120bad_ifg.txt')
+
+
+    #### file no loop step 12
+    #### file no loop step 1
+    if badnoloops:
+        bad_ifg12fileno = os.path.join(infodir, '12no_loop_ifg.txt') ## no loop ifs
+
     # if ref point selected using LiCSBAS120:
     reffile = os.path.join(infodir, '120ref.txt')
     if not os.path.exists(reffile):
@@ -409,6 +421,11 @@ def main(argv=None):
                 raise Usage('No 12bad_ifg.txt file exists in {}!'.format(infodir))
         if not os.path.exists(reffile):
             raise Usage('No 12ref.txt file exists in {}!'.format(infodir))
+
+        ###loopfile
+        if not os.path.exists(bad_ifg12fileno): ##loop file
+            raise Usage('No 12no_loop_ifg.txt file exists in {}'.format(infodir))
+		
     except Usage as err:
         print("\nERROR:", file=sys.stderr, end='')
         print("  "+str(err.msg), file=sys.stderr)
@@ -493,8 +510,16 @@ def main(argv=None):
             print('adding also ifgs listed as bad in the optional 120 step')
             bad_ifg120 = io_lib.read_ifg_list(bad_ifg120file)
             bad_ifg12 = list(set(bad_ifg12 + bad_ifg120))
-    
-    bad_ifg_all = list(set(bad_ifg11+bad_ifg12))
+
+    ###add also no loop file error PE
+    print('adding also ifgs listed as no loop from file in info/12no_loop_ifg.txt')
+    if badnoloops:
+
+       bad_ifg12no = io_lib.read_ifg_list(bad_ifg12fileno) ## no loop file
+       bad_ifg_all = list(set(bad_ifg11+bad_ifg12+bad_ifg12no))
+	else:
+       bad_ifg_all = list(set(bad_ifg11+bad_ifg12))
+    #bad_ifg_all = list(set(bad_ifg11+bad_ifg12))
     # removing coseismic ifgs for standard solutions. this will cause gap that will get interpolated
     # not needed/wanted for 'only_sb' and 'singular_gauss' methods
     if offsetsflag and (not singular_gauss) and (not only_sb):

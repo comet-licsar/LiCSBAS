@@ -38,7 +38,7 @@ LiCSBAS15_mask_ts.py -t tsadir [-c coh_thre] [-u n_unw_r_thre] [-v vstd_thre]
  -T  Threshold of maxTlen (max time length of connected network (year))
  -g  Threshold of n_gap (number of gaps in network)
  -s  Threshold of stc (spatio-temporal consistency (mm))
- -i  Threshold of n_ifg_noloop (number of ifgs with no loop)
+ -i  Threshold of n_ifg_noloop (number of pixels from ifgs with no loop)
  -l  Threshold of n_loop_err (number of loop_err) - in case of nullification in step 12, this will apply the threshold on n_nullify
  NOTE: we now test and will update the -l parameter to be a ratio (<=1 where 1 means all bad). Future: default: 0.7
  -L  Threshold of n_loop_err_ratio (number of loop_err divided by number of loops). Use number 0-1. (preferred solution)
@@ -104,7 +104,7 @@ import numpy as np
 import cmcrameri.cm as cmc
 import LiCSBAS_io_lib as io_lib
 import LiCSBAS_plot_lib as plot_lib
-
+import re
 import warnings
 import matplotlib
 with warnings.catch_warnings(): ## To silence user warning
@@ -126,6 +126,10 @@ def add_subplot(fig, i, data, vmin, vmax, cmap, title, refarea = None, refcolor 
     ax = fig.add_subplot(3, 5, i+1) #index start from 1
     im = ax.imshow(data, vmin=vmin, vmax=vmax, cmap=cmap, interpolation='nearest')
     fig.colorbar(im)
+    ### replace the title n_ifg_noloop to n_pxl_noloop because using nullify ?
+    if title.startswith("n_ifg_noloop"):
+        title = re.sub(r"^n_ifg_noloop", "n_pxl_noloop", title)
+ 
     ax.set_title('{0}'.format(title))
     ax.set_xticklabels([])
     ax.set_yticklabels([])

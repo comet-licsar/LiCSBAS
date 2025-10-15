@@ -60,7 +60,7 @@ Outputs in TS_GEOCml*/ :
 Usage
 =====
 LiCSBAS12_loop_closure.py -d ifgdir [-t tsadir] [-l loop_thre] [--multi_prime]
- [--rm_ifg_list file] [--n_para int] [--nullify] [--ref_approx lon/lat] [--nopngs] [--nullify_skip_backup]
+ [--rm_ifg_list file] [--n_para int] [--nullify] [--ref_approx lon/lat] [--nopngs] [--nullify_skip_backup] [--treat_as_bad]
 
  -d  Path to the GEOCml* dir containing stack of unw data.
  -t  Path to the output TS_GEOCml* dir. (Default: TS_GEOCml*)
@@ -73,9 +73,12 @@ LiCSBAS12_loop_closure.py -d ifgdir [-t tsadir] [-l loop_thre] [--multi_prime]
  --nopngs Do not generate png previews of loop closures (often takes long)
  --nullify_skip_backup  Do not save original ifgs (before nullification) - by default: save them. Note, skipping this backup would affect no-loop-ifg number (step 13)
  --nullify_threshold Threshold to detect phase loop closure errors (Default: pi) [rad]
+ --treat_as_bad When nullifying, nullify unless ALL loops are GOOD (default: Only nullify if ALL loops are bad)
 """
 # %% Change log
 '''
+20250610 P.Espin
+ - Add the agressive nullify from Jack M.
 20241221 Muhammet Nergizci
  - check the baseline file empty or not
 v1.6.4 20230901 Lin Shen
@@ -154,7 +157,7 @@ def main(argv=None):
     print("{} {}".format(os.path.basename(argv[0]), ' '.join(argv[1:])), flush=True)
 
     global Aloop, resultsdir, ifgdates, ifgdir, length, width, loop_pngdir, cycle, nullify_threshold, save_ori_unw, \
-        multi_prime, bad_ifg, noref_ifg, bad_ifg_all, refy1, refy2, refx1, refx2, cmap_noise_r  ## for parallel processing
+        multi_prime, bad_ifg, noref_ifg, bad_ifg_all, refy1, refy2, refx1, refx2, cmap_noise_r, treat_as_bad  ## for parallel processing
 
     # %% Set default
     ifgdir = []
@@ -167,6 +170,7 @@ def main(argv=None):
     do_pngs = True
     save_ori_unw = True
     nullify_threshold = np.pi
+    treat_as_bad = False
 
     try:
         n_para = len(os.sched_getaffinity(0))
@@ -182,7 +186,7 @@ def main(argv=None):
     try:
         try:
             opts, args = getopt.getopt(argv[1:], "hd:t:l:",
-                                       ["help", "multi_prime", "nullify", "skip_pngs", "nopngs",
+                                       ["help", "multi_prime", "nullify", "skip_pngs", "nopngs", "treat_as_bad",
                                         "rm_ifg_list=", "n_para=", "ref_approx=", "nullify_skip_backup", "nullify_threshold="])
         except getopt.error as msg:
             raise Usage(msg)
@@ -212,6 +216,8 @@ def main(argv=None):
                 save_ori_unw = False
             elif o == '--nullify_threshold':
                 nullify_threshold = a
+            elif o == '--treat_as_bad':
+                treat_as_bad = True
         if not nullify: # debug
             save_ori_unw = False
         if not ifgdir:
@@ -665,7 +671,7 @@ def main(argv=None):
     # create 3D cube - False means presumed error in the loop
     # a = np.full((length, width, len(ifgdates)), False)  # , dtype=bool)
     da = xr.DataArray(
-        data=np.full((length, width, len(ifgdates)), False),
+        data=np.full((length, width, len(ifgdates)),  treat_as_bad),
         dims=["y", "x", "ifgd"],
         coords=dict(y=np.arange(length), x=np.arange(width), ifgd=ifgdates))
     dasize = sys.getsizeof(da) / 1024 / 1024 # MB
@@ -680,6 +686,10 @@ def main(argv=None):
     n_nullify = None
     # ns_loop_err = np.sum(res[:, :, :,], axis=0)
     if nullify:
+        if treat_as_bad:
+            print('Aggresive Nullification: Nullifying all unws associated with a loop error - not parallel now')
+        else:
+            print('Gentle Nullification: Only Nullifying unws where all loops are errors - not parallel now')
         n_nullify = np.zeros((length, width), dtype=np.float32)
         print('nullifying unws with loop errors - not parallel now')
         for ifgd in ifgdates:
@@ -691,6 +701,14 @@ def main(argv=None):
         # recalculating ns_loop_err to be after nullification (long but... ok for now)
         #print('debug 2024/01: keeping n_loop_err from before nullification')
         #ns_loop_err, da = loop_closure_4th([0, len(Aloop)], da)
+
+        da = xr.DataArray(
+            data=np.full((length,width,len(ifgdates)), treat_as_bad),
+            dims=[ "y", "x", "ifgd"],
+            coords=dict(y=np.arange(length),x=np.arange(width),ifgd=ifgdates))
+
+        print('Recalculating n_loop_err statistics')
+        ns_loop_err_null, da = loop_closure_4th([0, len(Aloop)], da)
 
 
 
@@ -1287,9 +1305,21 @@ def loop_closure_4th(args, da):
         loop_ph_wrapped_sum = loop_ph_wrapped_sum + np.angle(np.exp(1j * loop_ph))
         loop_ph_wrapped_sum_abs = loop_ph_wrapped_sum_abs + np.abs(np.angle(np.exp(1j * loop_ph)))
         is_ok = np.abs(loop_ph) < nullify_threshold
-        da.loc[:, :, ifgd12] = np.logical_or(da.loc[:, :, ifgd12], is_ok)
-        da.loc[:, :, ifgd23] = np.logical_or(da.loc[:, :, ifgd23], is_ok)
-        da.loc[:, :, ifgd13] = np.logical_or(da.loc[:, :, ifgd13], is_ok)
+
+     #### MIO
+        if treat_as_bad:
+            #print("AGRESSIVE")
+            # Jack edit - change from logical_or so that only pixels that are perfect throughout are saved
+            da.loc[:,:,ifgd12] = np.logical_and(da.loc[:,:,ifgd12],is_ok)
+            da.loc[:,:,ifgd23] = np.logical_and(da.loc[:,:,ifgd23],is_ok)
+            da.loc[:,:,ifgd13] = np.logical_and(da.loc[:,:,ifgd13],is_ok)
+        else:
+            da.loc[:,:,ifgd12] = np.logical_or(da.loc[:,:,ifgd12],is_ok)
+            da.loc[:,:,ifgd23] = np.logical_or(da.loc[:,:,ifgd23],is_ok)
+            da.loc[:,:,ifgd13] = np.logical_or(da.loc[:,:,ifgd13],is_ok)
+     #   da.loc[:, :, ifgd12] = np.logical_or(da.loc[:, :, ifgd12], is_ok)
+     #   da.loc[:, :, ifgd23] = np.logical_or(da.loc[:, :, ifgd23], is_ok)
+     #   da.loc[:, :, ifgd13] = np.logical_or(da.loc[:, :, ifgd13], is_ok)
         ns_loop_err1 = ns_loop_err1 + (1 * ~is_ok).astype(np.uint8)  # suspected unw error
         ns_loop_bad.loc[:, :, ifgd12] = ns_loop_bad.loc[:, :, ifgd12] + (1 * ~is_ok).astype(np.int8)
         ns_loop_bad.loc[:, :, ifgd23] = ns_loop_bad.loc[:, :, ifgd23] + (1 * ~is_ok).astype(np.int8)
@@ -1379,8 +1409,15 @@ def nullify_unw(ifgd, mask):
             # use LiCSBAS preview generator
             cmap_wrap = cmc.romaO
             cycle = 3
-            plot_lib.make_im_png(np.angle(np.exp(1j * unw / cycle) * cycle), unwpngfile, cmap_wrap,
-                                 unwfile, vmin=-np.pi, vmax=np.pi, cbar=False)
+
+            if treat_as_bad:
+               pngfile = os.path.join(ifgdir, ifgd, ifgd+'_aggro_null.png')
+            else:
+               pngfile = os.path.join(ifgdir, ifgd, ifgd+'_gentle_null.png')
+            plot_lib.make_im_png(np.angle(np.exp(1j*unw/cycle)*cycle), pngfile, cmap_wrap, ifgd+'.unw', vmin=-np.pi, vmax=np.pi, cbar=False)
+
+            #plot_lib.make_im_png(np.angle(np.exp(1j * unw / cycle) * cycle), unwpngfile, cmap_wrap,
+                                 #unwfile, vmin=-np.pi, vmax=np.pi, cbar=False)
 
 # %% main
 if __name__ == "__main__":

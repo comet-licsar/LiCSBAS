@@ -502,7 +502,15 @@ def singular_nsbas_onepoint(d,G,m,dt_cum, wvars, skip_gapestimate, i):
     
     if not max(badincs):
         # if actually all are fine, just run LS:
-        mpx = np.linalg.lstsq(Gpx_ok, dpx_ok, rcond=None)[0]
+        #mpx = np.linalg.lstsq(Gpx_ok, dpx_ok, rcond=None)[0]
+
+         # if actually all are fine, just run LS:
+        try:
+          mpx = np.linalg.lstsq(Gpx_ok, dpx_ok, rcond=None)[0]
+        except np.linalg.LinAlgError:
+        # fallback to pseudo-inverse if SVD fails
+          mpx = np.dot(np.linalg.pinv(Gpx_ok), dpx_ok)
+     
     else:
         # if there is at least one im with no related ifg (means, it would cause gap):
         mpx[~badincs] = np.linalg.lstsq(Gpx_ok[:,~badincs], dpx_ok, rcond=None)[0]
@@ -1124,3 +1132,61 @@ def get_model_cum(G, params_sorted):
         out = m * np.repeat(ivals[:, np.newaxis], x*y, axis=1).reshape((t,x,y)) + out
     #
     return out
+
+'''
+def invert_nsbas_optimized(unw, G, dt_cum, gamma, n_core, gpu):
+    """
+    Optimized NSBAS inversion
+    """
+    n_pt, n_ifg = unw.shape
+    n_im = G.shape[1] + 1
+
+    # Combine G with additional rows for gamma
+    Gbl = np.tril(np.ones((n_im, n_im - 1), dtype=np.float32), k=-1) * gamma
+    Gbr = np.stack([-dt_cum * gamma, -np.ones(n_im, dtype=np.float32)], axis=-1)
+    Gall = np.concatenate([np.vstack([G, np.zeros((n_ifg, 2), dtype=np.float32)]), 
+                           np.hstack([Gbl, Gbr])], axis=0)
+
+    # Use sparse matrix if applicable
+    from scipy.sparse import csc_matrix
+    Gall = csc_matrix(Gall) if np.count_nonzero(Gall) / Gall.size < 0.5 else Gall
+
+    # Full data points
+    full_mask = np.all(~np.isnan(unw), axis=1)
+    partial_mask = ~full_mask
+    result = np.full((n_im + 1, n_pt), np.nan, dtype=np.float32)
+
+    if gpu:
+        import cupy as cp
+        Gall_gpu = cp.asarray(Gall)
+        unw_gpu = cp.asarray(unw[full_mask])
+        unw_gpu = cp.vstack([unw_gpu, cp.zeros((n_im, unw_gpu.shape[1]))])
+        result[:, full_mask] = cp.asnumpy(cp.linalg.lstsq(Gall_gpu, unw_gpu.T, rcond=None)[0])
+    else:
+        result[:, full_mask] = np.linalg.lstsq(Gall, np.vstack([unw[full_mask], np.zeros((n_im, sum(full_mask)))]).T, rcond=None)[0]
+
+    # Parallel processing for incomplete points
+    if n_core > 1:
+        from multiprocessing import Pool
+        with Pool(n_core) as p:
+            args = [(Gall, unw[i, :], n_im) for i in np.where(partial_mask)[0]]
+            partial_results = p.map(solve_partial_point, args)
+        result[:, partial_mask] = np.array(partial_results).T
+    else:
+        for i, idx in enumerate(np.where(partial_mask)[0]):
+            result[:, idx] = solve_partial_point((Gall, unw[idx, :], n_im))
+
+    inc, vel, vconst = result[:n_im-1], result[n_im-1], result[n_im]
+    return inc, vel, vconst
+
+def solve_partial_point(args):
+    """
+    Solve point-by-point for incomplete data
+    """
+    Gall, unw, n_im = args
+    unw = np.nan_to_num(unw)  # Replace NaN with zeros
+    mask = ~np.isnan(unw)
+    unw = unw * mask  # Apply mask
+    return np.linalg.lstsq(Gall[mask], unw[mask], rcond=None)[0]
+
+'''
