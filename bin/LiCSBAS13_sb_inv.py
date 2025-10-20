@@ -1243,8 +1243,30 @@ def main(argv=None):
     print('\nFind stable reference point...', flush=True)
     ### Compute RMS of time series with reference to all points
     sumsq_cum_wrt_med = np.zeros((length, width), dtype=np.float32)
+    update_epochs_i = []
     for i in range(n_im):
-        sumsq_cum_wrt_med = sumsq_cum_wrt_med + (cum[i, :, :]-np.nanmedian(cum[i, :, :]))**2
+        centralcumvalue = np.nanmedian(cum[i, :, :])
+        if np.isnan(centralcumvalue):
+            print('WARNING - all cum values for epoch '+imdates[i]+' are NaNs. Removing this epoch')
+            update_epochs_i.append(i)
+        else:
+            sumsq_cum_wrt_med = sumsq_cum_wrt_med + (cum[i, :, :]-centralcumvalue)**2
+    if update_epochs_i:
+        for i in update_epochs_i:
+            _ = imdates.pop(i)
+            _ = bperp.pop(i)
+            if not save_mem:
+                cum = np.delete(cum, i, 0)
+        if save_mem:
+            print('removing listed epochs from h5 file')
+            remove_indices_from_dataset(cumh5, 'cum', update_epochs_i)
+        if 'imdates' in cumh5:
+            del cumh5['imdates']
+            cumh5.create_dataset('imdates', data=[np.int32(imd) for imd in imdates])
+        if 'bperp' in cumh5:
+            del cumh5['bperp']
+            cumh5.create_dataset('bperp', data=bperp)
+
     rms_cum_wrt_med = np.sqrt(sumsq_cum_wrt_med/n_im)
 
     ### Mask by minimum n_gap
@@ -1268,7 +1290,7 @@ def main(argv=None):
         vel = vel - vel[refy1s, refx1s]
         vconst = vconst - vconst[refy1s, refx1s]
     else:
-        print('  Skip rerferencing cumulative displacement and velocity for sbovl data.', flush=True)
+        print('  Skip referencing cumulative displacement and velocity for sbovl data.', flush=True)
         
     ### Save image
     rms_cum_wrt_med_file = os.path.join(infodir, '13rms_cum_wrt_med')
