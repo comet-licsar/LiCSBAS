@@ -1250,13 +1250,19 @@ def main(argv=None):
             print('WARNING - all cum values for epoch '+imdates[i]+' are NaNs. Removing this epoch')
             update_epochs_i.append(i)
         else:
-            sumsq_cum_wrt_med = sumsq_cum_wrt_med + (cum[i, :, :]-np.nanmedian(cum[i, :, :]))**2
+            sumsq_cum_wrt_med_test = sumsq_cum_wrt_med + (cum[i, :, :]-np.nanmedian(cum[i, :, :]))**2
+        if np.count_nonzero(~np.isnan(sumsq_cum_wrt_med_test))<=1:
+            print('WARNING - epoch '+imdates[i]+' is not consistent with previous epochs in coverage (nullified?) - removing this epoch.')
+            update_epochs_i.append(i)
+        else:
+            sumsq_cum_wrt_med = sumsq_cum_wrt_med_test
     if update_epochs_i:
         for i in update_epochs_i:
             _ = imdates.pop(i)
             _ = bperp.pop(i)
             if not save_mem:
                 cum = np.delete(cum, i, 0)
+        n_im=len(imdates)
         if save_mem:
             print('removing listed epochs from h5 file')
             remove_indices_from_dataset(cumh5, 'cum', update_epochs_i)
@@ -1268,6 +1274,7 @@ def main(argv=None):
             cumh5.create_dataset('bperp', data=bperp)
 
     rms_cum_wrt_med = np.sqrt(sumsq_cum_wrt_med/n_im)
+
 
     ### Mask by minimum n_gap
     n_gap = io_lib.read_img(os.path.join(resultsdir, 'n_gap'), length, width)
