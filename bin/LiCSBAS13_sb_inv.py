@@ -1245,12 +1245,12 @@ def main(argv=None):
     sumsq_cum_wrt_med = np.zeros((length, width), dtype=np.float32)
     update_epochs_i = []
     for i in range(n_im):
-        centralcumvalue = np.nanmedian(cum[i, :, :])
-        if np.isnan(centralcumvalue):
+        nonancount = np.count_nonzero(~np.isnan(cum[i,:,:]))
+        if nonancount<=1:
             print('WARNING - all cum values for epoch '+imdates[i]+' are NaNs. Removing this epoch')
             update_epochs_i.append(i)
         else:
-            sumsq_cum_wrt_med = sumsq_cum_wrt_med + (cum[i, :, :]-centralcumvalue)**2
+            sumsq_cum_wrt_med = sumsq_cum_wrt_med + (cum[i, :, :]-np.nanmedian(cum[i, :, :]))**2
     if update_epochs_i:
         for i in update_epochs_i:
             _ = imdates.pop(i)
