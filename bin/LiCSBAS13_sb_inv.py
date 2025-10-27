@@ -1522,6 +1522,10 @@ def inc_png_wrapper(imx, sbovl=False):
     ## Comparison of increment and daisy chain pair
     ifgd = '{}_{}'.format(imd, imdates[imx+1])
     incfile = os.path.join(incdir, '{}.inc'.format(ifgd))
+    if not os.path.exists(incfile):
+        print('the increment file '+incfile+' does not exist (probably the image '+str(imdates[imx+1])+' has been removed due to nans in ref area?)')
+        return
+
     if sbovl:
         unwfile = os.path.join(ifgdir, ifgd, '{}.sbovldiff.adf.mm'.format(ifgd))
     else:
