@@ -86,8 +86,9 @@ LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] 
  --load_patches Load previously completed patches first [default: No, restart inversion]
  --input_units Units of the input data. Possible values: ['rad', 'mm', 'm']. Default: rad
  --offsets eqoffsets.txt  Estimate offsets read from external txt file - must have lines in the form of either yyyymmdd or yyyy-mm-dd
- --nullify_noloops   Nullifies data from ifgs not included in any loop BEFORE NULLIFICATION (if happened)
- --nullify_noloops_use_data_after_nullification  Just to test, will probably remove this
+ --nullify_noloops   Nullifies data from ifgs not included in any loop, both ifg and pixel based noloop_ifgs. Uses data before nullification (optional step 12)
+ --nullify_noloops_use_data_after_nullification  This would nullify noloop_ifgs after the nullification (usually not recommended)
+ --ignore_nullification  Use of unwrapped data before the unwrapping error nullification (step 12) if performed.
 """
 '''
 skipping here as will do it as post-processing:
@@ -98,7 +99,9 @@ skipping here as will do it as post-processing:
 '''
 #%% Change log
 '''
-
+20250903 ML+PEB
+ - nullify_noloops also ignores full source interferograms -> dropping empty epochs
+ - fix for filling no-gap nan values 
 20241221 Muhammet Nergizci
  - check baseline file empty or not
 20241207 ML
@@ -213,10 +216,9 @@ def main(argv=None):
     nopngs = False
     #noloop = False  # setting this later
     input_units = 'rad'
+    ignore_nullification = False
     nullify_noloops = False
-    #print('NOTE, keeping nullify_noloops ON by default, for testing..')
     nullify_noloops_use_data_after_nullification = False
-    #print('NOTE, variable nullify_noloops_use_data_after_nullification set to False - testing')
     sbovl = False
     
     try:
@@ -251,7 +253,7 @@ def main(argv=None):
                                        ["help",  "mem_size=", "input_units=", "gamma=",
                                         "n_unw_r_thre=", "keep_incfile", "nopngs", "nullify_noloops", "nullify_noloops_use_data_after_nullification",
                                         "inv_alg=", "n_para=", "gpu", "singular", "singular_gauss","only_sb", "no_storepatches", "load_patches",
-                                        "offsets=", "sbovl"])
+                                        "offsets=", "sbovl", "ignore_nullification"])
                                       #  "step_events="])
         except getopt.error as msg:
             raise Usage(msg)
@@ -269,6 +271,8 @@ def main(argv=None):
                 gamma = float(a)
             elif o == '--input_units':
                 input_units = a
+            elif o == '--ignore_nullification':
+                ignore_nullification = True
             elif o == '--n_unw_r_thre':
                 n_unw_r_thre = float(a)
             elif o == '--keep_incfile':
@@ -493,7 +497,14 @@ def main(argv=None):
             print('adding also ifgs listed as bad in the optional 120 step')
             bad_ifg120 = io_lib.read_ifg_list(bad_ifg120file)
             bad_ifg12 = list(set(bad_ifg12 + bad_ifg120))
-    
+    if nullify_noloops:
+        # adding also noloop_ifgs as ifgs to skip
+        print('skipping noloop_ifgs')
+        bad_ifg12fileno = os.path.join(infodir, '12no_loop_ifg.txt')
+        if os.path.exists(bad_ifg12fileno):
+            bad_ifg12no = io_lib.read_ifg_list(bad_ifg12fileno)  ## no loop file
+            bad_ifg12 = list(set(bad_ifg12 + bad_ifg12no))
+    #
     bad_ifg_all = list(set(bad_ifg11+bad_ifg12))
     # removing coseismic ifgs for standard solutions. this will cause gap that will get interpolated
     # not needed/wanted for 'only_sb' and 'singular_gauss' methods
@@ -595,7 +606,7 @@ def main(argv=None):
     ### Construct G and Aloop matrix for increment and n_gap
     G = inv_lib.make_sb_matrix(ifgdates)
     Aloop = loop_lib.make_loop_matrix(ifgdates)
-
+    B = inv_lib.make_sb_matrix_epochs(ifgdates) # useful for returning nans between connections
 
     #%% Plot network
     ## Read bperp data or dummy
@@ -836,6 +847,9 @@ def main(argv=None):
                     unwfile = os.path.join(ifgdir, ifgd, ifgd+'.sbovldiff.adf.mm')
                 else:
                     unwfile = os.path.join(ifgdir, ifgd, ifgd+'.unw')
+                if ignore_nullification:
+                    if os.path.exists(unwfile+'.ori'):
+                        unwfile = unwfile+'.ori'
                 f = open(unwfile, 'rb')
                 f.seek(countf*4, os.SEEK_SET) #Seek for >=2nd patch, 4 means byte
 
@@ -920,7 +934,7 @@ def main(argv=None):
             # if still ok, perform the main noloop routine
             if nullify_noloops:
                 print('  removing noloop_ifgs before inversion (in memory)')
-                orignounw = (unwpatch[~np.isnan(unwpatch)]).sum()
+                orignounw = hasdatapatch.sum()
                 # step 2 for nullify_noloops: counting the noloops and nullying data from ifgs not forming any loop
                 try:
                     print('  with {} parallel processing...'.format(n_para), flush=True)
@@ -928,9 +942,9 @@ def main(argv=None):
                     p = q.Pool(n_para)
                     # ML: simultaneous write to np.array is possible (just careful not to use same rows/cols)
                     # _result = np.array(
-                    p.map(nullify_noloops_from_ori, range(n_para)) #, dtype=float)
+                    p.map(nullify_noloops_wrapper, range(n_para)) #, dtype=float)
                     p.close()
-                    afternounw = (unwpatch[~np.isnan(unwpatch)]).sum()
+                    afternounw = (~np.isnan(unwpatch)).sum()
 
                 except Exception as e:
                     print("ERROR nullifying noloops data:")
@@ -1117,6 +1131,19 @@ def main(argv=None):
                 cum_patch = np.zeros((n_im, n_pt_all), dtype=np.float32)*np.nan
                 cum_patch[1:, :] = np.cumsum(inc_patch, axis=0)
 
+                ## 2025/09: keep the nans between connections
+                print('Setting NaNs to cum values that were not measured by interferograms')
+                try:
+                    cum_tmp = cum_patch[:, ix_unnan_pt]  # cum_patch is of shape (epochs, ALL pixels)
+                    for indexpx in range(unwpatch.shape[0]):   # unwpatch is of shape (UNNAN pixels, unw data)
+                        nonans = np.argwhere(~np.isnan(unwpatch[indexpx]))[:, 0]
+                        if len(nonans)>0:  # should not happen, but just in case..
+                            Bm = B[nonans, :].sum(axis=0)
+                            cum_tmp[Bm == 0, indexpx] = np.nan
+                    cum_patch[:, ix_unnan_pt] = cum_tmp
+                except:
+                    print('dev functionality on returning  nans - error, please fix (let know Milan)')
+
                 ## Fill 1st image with 0 at unnan points from 2nd images
                 bool_unnan_pt = ~np.isnan(cum_patch[1, :])
                 cum_patch[0, bool_unnan_pt] = 0
@@ -1216,9 +1243,38 @@ def main(argv=None):
     print('\nFind stable reference point...', flush=True)
     ### Compute RMS of time series with reference to all points
     sumsq_cum_wrt_med = np.zeros((length, width), dtype=np.float32)
+    update_epochs_i = []
     for i in range(n_im):
-        sumsq_cum_wrt_med = sumsq_cum_wrt_med + (cum[i, :, :]-np.nanmedian(cum[i, :, :]))**2
+        nonancount = np.count_nonzero(~np.isnan(cum[i,:,:]))
+        if nonancount<=1:
+            print('WARNING - all cum values for epoch '+imdates[i]+' are NaNs. Removing this epoch')
+            update_epochs_i.append(i)
+        else:
+            sumsq_cum_wrt_med_test = sumsq_cum_wrt_med + (cum[i, :, :]-np.nanmedian(cum[i, :, :]))**2
+        if np.count_nonzero(~np.isnan(sumsq_cum_wrt_med_test))<=1:
+            print('WARNING - epoch '+imdates[i]+' is not consistent with previous epochs in coverage (nullified?) - removing this epoch.')
+            update_epochs_i.append(i)
+        else:
+            sumsq_cum_wrt_med = sumsq_cum_wrt_med_test
+    if update_epochs_i:
+        for i in update_epochs_i:
+            _ = imdates.pop(i)
+            _ = bperp.pop(i)
+            if not save_mem:
+                cum = np.delete(cum, i, 0)
+        n_im=len(imdates)
+        if save_mem:
+            print('removing listed epochs from h5 file')
+            remove_indices_from_dataset(cumh5, 'cum', update_epochs_i)
+        if 'imdates' in cumh5:
+            del cumh5['imdates']
+            cumh5.create_dataset('imdates', data=[np.int32(imd) for imd in imdates])
+        if 'bperp' in cumh5:
+            del cumh5['bperp']
+            cumh5.create_dataset('bperp', data=bperp)
+
     rms_cum_wrt_med = np.sqrt(sumsq_cum_wrt_med/n_im)
+
 
     ### Mask by minimum n_gap
     n_gap = io_lib.read_img(os.path.join(resultsdir, 'n_gap'), length, width)
@@ -1241,7 +1297,7 @@ def main(argv=None):
         vel = vel - vel[refy1s, refx1s]
         vconst = vconst - vconst[refy1s, refx1s]
     else:
-        print('  Skip rerferencing cumulative displacement and velocity for sbovl data.', flush=True)
+        print('  Skip referencing cumulative displacement and velocity for sbovl data.', flush=True)
         
     ### Save image
     rms_cum_wrt_med_file = os.path.join(infodir, '13rms_cum_wrt_med')
@@ -1423,17 +1479,15 @@ def count_gaps_wrapper(i):
     return _ns_gap_patch, _gap_patch, _ns_ifg_noloop_patch
 
 #%%
-def nullify_noloops_from_ori(i):
-    # must be run with both unwpatch and hasdatapatch already existing
+def nullify_noloops_wrapper(i):
+    # must be run with both unwpatch and hasdatapatch already existing - i.e. works for either from ori or nulled unws
     print("    Running {:2}/{:2}th patch...".format(i+1, n_para), flush=True)
     n_pt_patch = int(np.ceil(unwpatch.shape[0]/n_para))
-    n_im = G.shape[1]+1
-    n_loop, n_ifg = Aloop.shape
-
+    #
     if i*n_pt_patch >= unwpatch.shape[0]:
         # Nothing to do
         return
-
+    #
     ### n_ifg_noloop
     # n_ifg*(n_pt,n_ifg)->(n_loop,n_pt)
     # Number of ifgs for each loop at each point.
@@ -1468,6 +1522,10 @@ def inc_png_wrapper(imx, sbovl=False):
     ## Comparison of increment and daisy chain pair
     ifgd = '{}_{}'.format(imd, imdates[imx+1])
     incfile = os.path.join(incdir, '{}.inc'.format(ifgd))
+    if not os.path.exists(incfile):
+        print('the increment file '+incfile+' does not exist (probably the image '+str(imdates[imx+1])+' has been removed due to nans in ref area?)')
+        return
+
     if sbovl:
         unwfile = os.path.join(ifgdir, ifgd, '{}.sbovldiff.adf.mm'.format(ifgd))
     else:

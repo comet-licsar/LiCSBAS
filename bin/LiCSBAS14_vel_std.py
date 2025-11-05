@@ -201,7 +201,8 @@ def main(argv=None):
             cum_patch = cum[:, rows[0]:rows[1], :].reshape((n_im, n_pt_all)).transpose() #(n_pt_all, n_im)
 
             ### Remove invalid points
-            bool_unnan_pt = ~np.isnan(cum_patch[:, 0])
+            # bool_unnan_pt = ~np.isnan(cum_patch[:, 0])  # this used only first epoch...
+            bool_unnan_pt = ~np.all(np.isnan(cum_patch), axis=1)
 
             cum_patch = cum_patch[bool_unnan_pt, :] ## remain only unnan data
             n_pt_unnan = bool_unnan_pt.sum()

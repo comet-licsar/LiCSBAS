@@ -135,6 +135,7 @@ def main(argv=None):
     nlook = 1
     plot_cc = False
     sbovl = False
+    rngoff = False
     radar_freq = 5.405e9
     try:
         n_para = len(os.sched_getaffinity(0))
@@ -151,7 +152,7 @@ def main(argv=None):
     #%% Read options
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "hi:o:n:", ["help", "plot_cc", "freq=", "n_para=", "sbovl"])
+            opts, args = getopt.getopt(argv[1:], "hi:o:n:", ["help", "plot_cc", "freq=", "n_para=", "sbovl", "rngoff"])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -172,6 +173,9 @@ def main(argv=None):
                 plot_cc = True
             elif o == '--sbovl':
                 sbovl = True
+            elif o == '--rngoff':
+                rngoff = True
+                raise Usage('The --rngoff functionality has to be yet implemented. Cancelling now.')
 
         if not geocdir:
             raise Usage('No GEOC directory given, -d is not optional!')

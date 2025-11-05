@@ -50,6 +50,11 @@ Outputs in TS_GEOCml*/ :
    - n_unw[.png]      : Number of available unwrapped data to be used
    - coh_avg[.png]    : Average coherence
    - n_loop_err[.png] : Number of remaining loop errors (>pi) in data to be used
+   - n_loop_err_rat[.png]: Ratio of loop errors per all loops
+   - n_ifg_noloop[.png]: Number of interferograms without forming a loop
+   - loop_ph_avg_abs[.png]: Average absolute wrapped loop phase closure (optional use for masking)
+   [- n_nullify[.png]  : Number of nullified pixels due to unwrapping errors]
+   [- n_nullify_rat[.png] : Ratio of the nullified pixels to all interferograms that form a loop]
  - 12ifg_ras/*.png     : png (link) of unw to be used
  - 12bad_ifg_cand_ras/*.png : png (link) of unw to be used but candidates of bad
  - 12bad_ifg_ras/*.png : png (link) of unw to be removed
@@ -207,11 +212,11 @@ def main(argv=None):
             elif o == '--skip_pngs' or o == '--nopngs':
                 do_pngs = False
             elif o == '--ref_approx':
-                ref_approx = a
+                ref_approx = float(a)
             elif o == '--nullify_skip_backup':
                 save_ori_unw = False
             elif o == '--nullify_threshold':
-                nullify_threshold = a
+                nullify_threshold = float(a)
         if not nullify: # debug
             save_ori_unw = False
         if not ifgdir:
@@ -1194,7 +1199,7 @@ def loop_closure_3rd_wrapper(i):
 
 
 # %%
-def loop_closure_4th_wrapper(args):
+def loop_closure_4th_wrapper_NOTUSED(args):
     '''
     ML:
     same as 3rd wrapper, but calculate n_loop_err as number of loop errors > pi, per

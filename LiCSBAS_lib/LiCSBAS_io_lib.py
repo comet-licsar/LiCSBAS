@@ -294,3 +294,38 @@ def read_residual_file(resid_file):
                 ifg_list.append(l.split()[0])
                 residual_list.append(float(l.split()[1]))
     return ifg_list, residual_list
+
+
+def remove_indices_from_dataset(h5file, dataset_name, indices_to_remove, new_name=None):
+    """
+    Remove multiple indices from an HDF5 dataset using an already open h5py.File object.
+    (co-created by MS Copilot Chat)
+
+    :param h5file: Open h5py.File object
+    :param dataset_name: Name of the dataset to modify
+    :param indices_to_remove: List of indices to remove
+    :param new_name: Optional new dataset name (default: overwrite original)
+    """
+    indices_to_remove = sorted(set(indices_to_remove))
+    old_dset = h5file[dataset_name]
+    old_shape = old_dset.shape
+    keep_count = old_shape[0] - len(indices_to_remove)
+
+    # Create new dataset
+    new_name = new_name or dataset_name + "_new"
+    new_dset = h5file.create_dataset(new_name, shape=(keep_count,) + old_shape[1:],
+                                     dtype=old_dset.dtype, chunks=True)
+
+    # Copy slices
+    write_pos = 0
+    remove_set = set(indices_to_remove)
+    for i in range(old_shape[0]):
+        if i in remove_set:
+            continue
+        new_dset[write_pos] = old_dset[i]
+        write_pos += 1
+
+    # Optionally replace old dataset
+    if new_name == dataset_name:
+        del h5file[dataset_name]
+        h5file[dataset_name] = new_dset

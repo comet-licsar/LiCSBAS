@@ -118,6 +118,8 @@ p16_sbovl="n"
 ### Less frequently used options. If blank, use default. ###
 p01_frame=""	# e.g. 021D_04972_131213 
 p01_n_para=$n_para	# default: 4
+p01_rngoff="n"
+p02_rngoff="n"
 p02_GEOCdir=""	# default: GEOC
 p02_GEOCmldir=""	# default: GEOCml$nlook
 p02_freq=$freq	# default: 5.405e9 Hz
@@ -146,6 +148,7 @@ p13_TSdir=""    # default: TS_$GEOCmldir
 p13_inv_alg=""	# LS (default) or WLS
 p13_mem_size=""	# default: 8000 (MB)
 p13_gamma=""	# default: 0.0001
+p13_inputunit="" # rad by default
 p13_n_para=$n_para	# default: # of usable CPU
 p13_n_unw_r_thre=""	# default: 1 for shorter-than-L-band-wavelength (if cometdev, will set to 0.1)
 p13_keep_incfile="n"	# y/n. default: n
@@ -194,14 +197,11 @@ if [ $start_step -le 01 -a $end_step -ge 01 ];then
   if [ ! -z $p01_end_date ];then p01_op="$p01_op -e $p01_end_date"; fi
   if [ ! -z $p01_n_para ];then p01_op="$p01_op --n_para $p01_n_para"; fi
   # Add --sbovl option if p01_sbovl is "y"
-  if [ "$p01_sbovl" == "y" ]; then
-    p01_op="$p01_op --sbovl"
-  else
-    # Add other options only if --sbovl is not set
+  if [ "$p01_sbovl" == "y" ]; then p01_op="$p01_op --sbovl"; fi
+  if [ "$p01_rngoff" == "y" ]; then p01_op="$p01_op --rngoff"; fi
     if [ "$p01_get_gacos" == "y" ]; then p01_op="$p01_op --get_gacos"; fi
     if [ "$p01_get_pha" == "y" ]; then p01_op="$p01_op --get_pha"; fi
     if [ "$p01_get_mli" == "y" ]; then p01_op="$p01_op --get_mli"; fi
-  fi
 
   if [ $check_only == "y" ];then
     echo "LiCSBAS01_get_geotiff.py $p01_op"
@@ -263,6 +263,7 @@ else
     fi
 
     if [ "$p02_sbovl" == "y" ]; then p02_op="$p02_op --sbovl"; fi
+    if [ "$p02_rngoff" == "y" ]; then p02_op="$p02_op --rngoff"; fi
 
   if [ $check_only == "y" ];then
       echo "LiCSBAS02_ml_prep.py $p02_op"
@@ -462,6 +463,7 @@ if [ $start_step -le 13 -a $end_step -ge 13 ];then
   if [ ! -z "$p13_inv_alg" ];then p13_op="$p13_op --inv_alg $p13_inv_alg"; fi
   if [ ! -z "$p13_mem_size" ];then p13_op="$p13_op --mem_size $p13_mem_size"; fi
   if [ ! -z "$p13_gamma" ];then p13_op="$p13_op --gamma $p13_gamma"; fi
+  if [ ! -z "$p13_inputunit" ];then p13_op="$p13_op --input_units $p13_inputunit"; fi
   if [ ! -z "$p13_n_para" ];then p13_op="$p13_op --n_para $p13_n_para";
     elif [ ! -z "$n_para" ];then p13_op="$p13_op --n_para $n_para"; fi
   if [ ! -z "$p13_n_unw_r_thre" ];then p13_op="$p13_op --n_unw_r_thre $p13_n_unw_r_thre"; fi
