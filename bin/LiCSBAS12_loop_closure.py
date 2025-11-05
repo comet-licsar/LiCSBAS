@@ -50,6 +50,11 @@ Outputs in TS_GEOCml*/ :
    - n_unw[.png]      : Number of available unwrapped data to be used
    - coh_avg[.png]    : Average coherence
    - n_loop_err[.png] : Number of remaining loop errors (>pi) in data to be used
+   - n_loop_err_rat[.png]: Ratio of loop errors per all loops
+   - n_ifg_noloop[.png]: Number of interferograms without forming a loop
+   - loop_ph_avg_abs[.png]: Average absolute wrapped loop phase closure (optional use for masking)
+   [- n_nullify[.png]  : Number of nullified pixels due to unwrapping errors]
+   [- n_nullify_rat[.png] : Ratio of the nullified pixels to all interferograms that form a loop]
  - 12ifg_ras/*.png     : png (link) of unw to be used
  - 12bad_ifg_cand_ras/*.png : png (link) of unw to be used but candidates of bad
  - 12bad_ifg_ras/*.png : png (link) of unw to be removed
