@@ -28,9 +28,6 @@ Finally, the original [quick start](https://github.com/yumorishita/LiCSBAS/wiki/
 The latest tutorial is available as a [Jupyter Notebook](https://github.com/comet-licsar/LiCSBAS/blob/main/licsbas_tutorial.ipynb) that you can directly
 [run using Binder](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD?labpath=licsbas_tutorial.ipynb), or you can test the [dev branch version](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/dev?labpath=licsbas_tutorial.ipynb) that contains latest updates.  
 
-Furthermore, if you have Google account, you can use Google Colab:  
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/licsbas_tutorial.ipynb)  
-
 The tutorial still uses the original LiCSBAS tutorial data that can be downloaded separately if needed, including the sample scripts for learning outside of the notebook, that is:
 
 - Frame ID: 124D_04854_171313 (Italy)
