@@ -52,6 +52,7 @@ Outputs in TS_GEOCml*/ :
    - n_loop_err[.png] : Number of remaining loop errors (>pi) in data to be used
    - n_loop_err_rat[.png]: Ratio of loop errors per all loops
    - n_ifg_noloop[.png]: Number of interferograms without forming a loop
+   - loop_ph_avg[.png]: Average wrapped loop phase closure
    - loop_ph_avg_abs[.png]: Average absolute wrapped loop phase closure (optional use for masking)
    [- n_nullify[.png]  : Number of nullified pixels due to unwrapping errors]
    [- n_nullify_rat[.png] : Ratio of the nullified pixels to all interferograms that form a loop]
@@ -1305,6 +1306,12 @@ def loop_closure_4th(args, da):
     file = os.path.join(resultsdir, 'loop_ph_avg')
     #np.float32(loop_ph_wrapped_sum/n_loop).tofile(file)
     np.float32(loop_ph_wrapped_sum / nonan_count).tofile(file)
+    title = 'Average phase loop closure error'
+    # plot_lib.make_im_png(loop_ph_wrapped_sum_abs/n_loop, file + '.png', cmap_noise_r, title)
+    try:
+        plot_lib.make_im_png(loop_ph_avg, file + '.png', cmap_noise_r, title)
+    except:
+        print('WARNING, loop_ph_avg (without abs) is probably wrong')
     # and create preview only for the abs (for masking)
     file = os.path.join(resultsdir, 'loop_ph_avg_abs')
     #np.float32(loop_ph_wrapped_sum_abs/n_loop).tofile(file)
