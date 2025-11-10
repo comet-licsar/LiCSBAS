@@ -21,3 +21,4 @@ cmcrameri
 pygmt
 ipympl
 lmfit
+usgs-libcomcat
