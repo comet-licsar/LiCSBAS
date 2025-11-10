@@ -798,7 +798,7 @@ if __name__ == "__main__":
         ii1h = ii-0.5; ii2h = ii+1-0.5 ## Shift half for plot
         jj1h = jj-0.5; jj2h = jj+1-0.5
         pax.set_data([jj1h, jj2h, jj2h, jj1h, jj1h], [ii1h, ii1h, ii2h, ii2h, ii1h])
-        pax2.set_data(jj, ii)
+        pax2.set_data([jj, ii])
         pv.canvas.draw()
 
         axts.cla()

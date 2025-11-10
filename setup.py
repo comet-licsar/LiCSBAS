@@ -33,6 +33,8 @@ REQUIRED = [
 # What packages are optional?
 EXTRAS = {
     # 'fancy feature': ['django'],
+  # for eq offsets only (optional):
+  'usgs-libcomcat'
 }
 
 # The rest you shouldn't have to touch too much :)
