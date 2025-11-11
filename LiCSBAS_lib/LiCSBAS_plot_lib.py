@@ -325,7 +325,10 @@ def plot_network(ifgdates, bperp, rm_ifgdates, pngfile, plot_bad=True, label_nam
     plt.legend()
 
     ### Save
-    plt.savefig(pngfile, bbox_inches='tight')
+    try:
+        plt.savefig(pngfile, bbox_inches='tight')
+    except:
+        print('WARNING, generating network plot failed - new matplotlib changes?')
     plt.close()
 
     return len(ixs_inc_gap)
