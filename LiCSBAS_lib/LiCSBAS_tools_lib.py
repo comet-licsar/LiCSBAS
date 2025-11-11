@@ -506,7 +506,8 @@ def get_cmap(cmap_name, cmapN=256):
         try:
             plt.cm.register_cmap(name = cmap_name, cmap = _cmap)
         except:
-            print('WARNING, the colourmap was already registered - not overwriting')
+            pass
+            # print('WARNING, the colourmap was already registered - not overwriting')
 
     cmap = plt.get_cmap(cmap_name, cmapN)
 
