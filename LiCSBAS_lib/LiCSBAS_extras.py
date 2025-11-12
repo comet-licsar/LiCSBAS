@@ -236,7 +236,7 @@ def generate_vel_preview(nc, lims = [-100,100], title = 'vel_msk', volcid = None
 
 
 def pygmt_plot_interactive(cube, title, label='deformation rate [mm/year]', lims=[-15, 50],
-                           cmap="polar", photobg=False, plotvec=None):
+                           cmap="polar", photobg=False, plotvec=None, yrange = None):
     ''' This will start a simple interactive viewer in jupyter ntb.
     Note you need ipympl installed and the matplotlib widget must be set here.
 
@@ -244,8 +244,12 @@ def pygmt_plot_interactive(cube, title, label='deformation rate [mm/year]', lims
     COMET Summer MSc Internship 2024 - and she did magnificent job interactivizing pygmt.
     Her original tool resides here: https://github.com/chelle0425/IntPyGMT
 
-    We only modified this for CIW 2024 tutorial purposes on LiCSBAS'''
+    We only modified this for CIW 2024 tutorial purposes on LiCSBAS
+
+    yrange can be e.g. [-50,50]
+    '''
     # print("%matplotlib widget")
+    #
     # first of all generate the left plot:
     tempng = '/tmp/pygmt_pi.png'
     grid = cube['vel']
@@ -310,8 +314,11 @@ def pygmt_plot_interactive(cube, title, label='deformation rate [mm/year]', lims
     #cum = cube["cum"]
     # ymin = float(cube.cum.mean() - 3*cube.cum.std())
     # ymax = float(cube.cum.mean() + 3*cube.cum.std())
-    ymin = float(cube.cum.min())
-    ymax = float(cube.cum.max())
+    if yrange:
+        ymin,ymax=yrange
+    else:
+        ymin = float(cube.cum.min())
+        ymax = float(cube.cum.max())
     #
     def pos_to_lonlat(x, y):
         # xyshift input in cm
