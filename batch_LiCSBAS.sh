@@ -82,7 +82,7 @@ p12_multi_prime="y"	# y/n. y recommended
 p12_nullify="" # y/n. y recommended
 p12_rm_ifg_list=""	# List file containing ifgs to be manually removed
 p12_skippngs="" # y/n. n by default
-p13_nullify_noloops="" # y/n. n by default
+p13_nullify_noloops="" # y/n. n by default (but it is recommended to use this option with p12_nullify)
 p13_singular="" # y/n. n by default
 p13_singular_gauss="" # y/n. n by default
 p13_skippngs="" # y/n. n by default
@@ -422,10 +422,9 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
         LiCSBAS12_loop_closure.py $p12_op 2>&1 | tee -a $log
         if [ ${PIPESTATUS[0]} -ne 0 ];then exit 1; fi
       fi
-      # 2024/11/13: updated nullification may cause extra all-nans-in-ref area. Workaround - update reference point.
-      # Forcing this to always use p120 ..
+      # 2024/11/13: updated nullification may cause extra all-nans-in-ref area. Rerunning step 120 if set to be used
       if [ $p12_nullify == "y" ];then
-      #if [ $p120_use == "y" ]; then
+      if [ $p120_use == "y" ]; then
         dirset="-c $GEOCmldir -d $GEOCmldir -t $TSdir "
         extra=""
         if [ $p120_ignoreconncomp == "y" ]; then
@@ -438,7 +437,7 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
           if [ ${PIPESTATUS[0]} -ne 0 ];then echo "WARNING, LiCSBAS120 failed. Reverting to original LiCSBAS ref selection"; fi; #
           # if [ ${PIPESTATUS[0]} -ne 0 ];then exit 1; fi
         fi
-      #fi
+      fi
       fi
     fi
 fi
