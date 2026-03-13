@@ -570,6 +570,22 @@ if __name__ == "__main__":
         if vmax is None:
             vmax = vmax_auto - refvalue_vel
 
+    import rasterio as rio
+    import earthpy.spatial as es
+
+    resultsdirdem=resultsdir+"/hgt.geo.tif"
+
+    print("Shadow DEM",resultsdirdem)
+    dem=resultsdirdem
+    az=-167.92738
+
+    ### Create hillshade
+    with rio.open(dem) as srca:
+      elevationa = srca.read(1)
+	    # Set masked values to np.nan
+      #elevationa[elevationa < 0] = np.nan
+      h_dem = es.hillshade(elevationa,azimuth=az)
+
 
     #%% Plot figure of cumulative displacement and velocity
     figsize_x = 6 if length > width else 9
