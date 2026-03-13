@@ -323,7 +323,7 @@ if __name__ == "__main__":
     if not resultsdir: # if not given
         resultsdir = os.path.join(cumdir, 'results')
 
-     resultsdir2=os.path.join(cumdir)
+    resultsdir2=os.path.join(cumdir)
     try:
         output = run_licsbass_script(resultsdir2)
         print("Script executed successfully. Output:\n", output)
