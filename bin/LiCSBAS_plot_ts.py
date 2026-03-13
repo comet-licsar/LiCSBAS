@@ -167,6 +167,40 @@ def calc_model(dph, imdates_ordinal, xvalues, model):
     return yvalues
 
 
+def run_licsbass_script(resultsdir: str):
+    """
+    Runs the LiCSBAS_flt2geotiff.py script with paths based on the results directory.
+
+    Args:
+        resultsdir (str): The base directory for the results.
+
+    Returns:
+        str: The stdef run_licsbass_script(resultsdir: str):
+    """
+    out_path = f"{resultsdir}/results/hgt.geo.tif"
+    if not os.path.isfile(out_path):
+        # Construct the input and parameter file paths
+        input_path = f"{resultsdir}/results/hgt"
+        parameter_file = f"{resultsdir}/info/EQA.dem_par"
+
+        # Define the command
+        command = [
+            "LiCSBAS_flt2geotiff.py",  # The script to execute
+            "-i", input_path,  # Input path
+            "-p", parameter_file  # Parameter file path
+        ]
+
+        try:
+            # Run the command
+            result = subprocess.run(command, check=True, text=True, capture_output=True)
+            return result.stdout
+        except subprocess.CalledProcessError as e:
+            # Raise an error if the script fails
+            raise RuntimeError(f"Script execution failed: {e.stderr}") from e
+    else:
+        return f"Output file {out_path} already exists, skipping execution."
+     
+
 #%% Main
 ## Not use def main to use global valuables
 if __name__ == "__main__":
@@ -288,6 +322,13 @@ if __name__ == "__main__":
     ### results dir
     if not resultsdir: # if not given
         resultsdir = os.path.join(cumdir, 'results')
+
+     resultsdir2=os.path.join(cumdir)
+    try:
+        output = run_licsbass_script(resultsdir2)
+        print("Script executed successfully. Output:\n", output)
+    except RuntimeError as e:
+        print(e)
 
     ### mask
     maskfile = os.path.join(resultsdir, 'mask')
@@ -547,7 +588,8 @@ if __name__ == "__main__":
         data = vel*mask-np.nanmean((vel*mask)[refy1:refy2+1, refx1:refx2+1])
     else:
         data = vel*mask
-    cax = axv.imshow(data, clim=[vmin, vmax], cmap=cmap, aspect=aspect, interpolation='nearest')
+    axv.imshow(h_dem, cmap='Greys', alpha=0.8)
+    cax = axv.imshow(data, clim=[vmin, vmax], cmap=cmap, aspect=aspect, interpolation='nearest',alpha=0.6)
 
     axv.set_title('vel')
 
