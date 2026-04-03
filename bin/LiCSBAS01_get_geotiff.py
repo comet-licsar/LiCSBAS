@@ -51,6 +51,9 @@ LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] 
 """
 #%% Change log
 '''
+2026-04-03 Dr. Burak Can KARA
+ - Added LiCSAR_products.public fallback for data migrated to new storage (Oct 2025)
+ - All URL requests first try original LiCSAR_products, then retry with LiCSAR_products.public
 2025-08-22 ML: fixes for the 'future' LiCSAR HTMLs
 20241001 P. Espin
  - Download ERA5 data fro LiCSAR epoch
@@ -257,7 +260,9 @@ def main(argv=None):
         print('Searching latest epoch for mli...', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
         response = requests.get(url)
-        
+        if response.status_code != 200 and 'LiCSAR_products/' in url:
+            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+            response = requests.get(url)
         response.encoding = response.apparent_encoding #avoid garble
         html_doc = response.text
         soup = BeautifulSoup(html_doc, "html.parser")
@@ -310,6 +315,9 @@ def main(argv=None):
         print('\nDownload GACOS data', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
         response = requests.get(url)
+        if response.status_code != 200 and 'LiCSAR_products/' in url:
+            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+            response = requests.get(url)
         response.encoding = response.apparent_encoding #avoid garble
         html_doc = response.text
         soup = BeautifulSoup(html_doc, "html.parser")
@@ -377,6 +385,9 @@ def main(argv=None):
         print('\nDownload ERA5 data', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
         response = requests.get(url)
+        if response.status_code != 200 and 'LiCSAR_products/' in url:
+            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+            response = requests.get(url)
         response.encoding = response.apparent_encoding #avoid garble
         html_doc = response.text
         soup = BeautifulSoup(html_doc, "html.parser")
@@ -440,7 +451,9 @@ def main(argv=None):
     print('\nDownload geotiff of InSAR products', flush=True)
     url_ifgdir = os.path.join(LiCSARweb, trackID, frameID, 'interferograms/')
     response = requests.get(url_ifgdir)
-    
+    if response.status_code != 200 and 'LiCSAR_products/' in url_ifgdir:
+        url_ifgdir = url_ifgdir.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+        response = requests.get(url_ifgdir)
     response.encoding = response.apparent_encoding #avoid garble
     html_doc = response.text
     soup = BeautifulSoup(html_doc, "html.parser")

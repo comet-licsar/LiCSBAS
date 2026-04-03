@@ -1,5 +1,38 @@
 
-# LiCSBAS
+# LiCSBAS — Fork by Dr. Burak Can KARA
+
+[![Fork of comet-licsar/LiCSBAS](https://img.shields.io/badge/upstream-comet--licsar%2FLiCSBAS-blue)](https://github.com/comet-licsar/LiCSBAS)
+[![GitHub](https://img.shields.io/badge/maintainer-Dr.%20Burak%20Can%20KARA-green)](https://github.com/bcankara)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-yellow.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+> **This is a maintained fork of [comet-licsar/LiCSBAS](https://github.com/comet-licsar/LiCSBAS) with critical fixes for the October 2025 LiCSAR data migration.**
+
+## What's Changed in This Fork
+
+In October 2025, LiCSAR migrated all data to a new storage system. The original COMET notice referenced `LiCSAR_products.future` as a temporary fallback URL — **this path is no longer valid**. The correct fallback is now **`LiCSAR_products.public`**.
+
+This fork implements an **automatic fallback mechanism**: all data requests first try the original `LiCSAR_products` URL; if the data is not found (HTTP 404), the code automatically retries using `LiCSAR_products.public`. **No manual URL changes needed on your part.**
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `LiCSBAS_lib/LiCSBAS_tools_lib.py` | New `resolve_url()` helper; fallback integrated into `comp_size_time()`, `download_data()`, `extract_url_licsar()`, `_get_frametime()` |
+| `bin/LiCSBAS01_get_geotiff.py` | `.public` fallback for epoch, GACOS, ERA5, and interferogram listing requests |
+| `bin/LiCSBAS_get_eqoffsets.py` | `.public` fallback for metadata access |
+| `LiCSBAS_lib/LiCSBAS_meta.py` | Version bumped to `1.15.2` (2026-04-03) |
+
+### Quick Install
+
+```bash
+git clone https://github.com/bcankara/LiCSBAS.git
+cd LiCSBAS
+source bashrc_LiCSBAS.sh
+```
+
+---
+
+## Original README
 
 LiCSBAS is an open-source package in Python and bash to carry out InSAR time series analysis using LiCSAR products (i.e., unwrapped interferograms and coherence) which are freely available on the [COMET-LiCS web portal](https://comet.nerc.ac.uk/COMET-LiCS-portal/).  
 

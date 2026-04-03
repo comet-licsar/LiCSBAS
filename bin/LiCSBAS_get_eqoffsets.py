@@ -23,6 +23,8 @@ LiCSBAS_get_eqoffsets.py -M minmag -t TSDIR -o eqoffsets.txt
 """
 #%% Change log
 '''
+2026-04-03 Dr. Burak Can KARA
+ - Added LiCSAR_products.public fallback for metadata access
 2024-12 ML, ULeeds:
  - Original implementation
 '''
@@ -112,6 +114,7 @@ def main(argv=None):
             return False
         web_path = 'https://gws-access.jasmin.ac.uk/public/nceo_geohazards/LiCSAR_products'
         fullwebpath_metadata = os.path.join(web_path, track, frame, 'metadata', 'metadata.txt')
+        fullwebpath_metadata = tools_lib.resolve_url(fullwebpath_metadata)
         try:
             import pandas as pd
             a = pd.read_csv(fullwebpath_metadata, sep='=', header=None)

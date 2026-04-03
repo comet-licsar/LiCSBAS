@@ -8,6 +8,10 @@ Python3 library of time series analysis tools for LiCSBAS.
 =========
 Changelog
 =========
+2026-04-03 Dr. Burak Can KARA
+ - Added resolve_url() helper for LiCSAR_products.public fallback
+ - Integrated fallback into comp_size_time(), download_data(), extract_url_licsar(), _get_frametime()
+ - Replaces obsolete LiCSAR_products.future with LiCSAR_products.public
 2025-08-22 ML: url extractor for the 'future' LiCSAR HTMLs
 2024-12-13 Muhammet Nergizci, ULeeds
  - Add weights to multilooking
@@ -86,6 +90,20 @@ def bl2xy(lon, lat, width, length, lat1, postlat, lon1, postlon):
 
 
 #%%
+def resolve_url(url):
+    """Try original URL first; if 404, retry with LiCSAR_products.public."""
+    response = requests.head(url, allow_redirects=True)
+    if response.status_code == 200:
+        return url
+    if 'LiCSAR_products/' in url:
+        alt = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+        response = requests.head(alt, allow_redirects=True)
+        if response.status_code == 200:
+            return alt
+    return url
+
+
+#%%
 def comp_size_time(file_remote, file_local):
     """
     Compare size and time of remote and local files.
@@ -96,6 +114,7 @@ def comp_size_time(file_remote, file_local):
         3 : Remote not exist
     """
 
+    file_remote = resolve_url(file_remote)
     response = requests.head(file_remote, allow_redirects=True)
 
     if response.status_code != 200:
@@ -239,15 +258,12 @@ def extract_url_licsar(url):
     else:
         fname = os.path.basename(url)
         url = os.path.dirname(url)
-        # transition period - both old and new version exist - try the temporary url:
-        url = url.replace('LiCSAR_products/', 'LiCSAR_products.future/')
         response = requests.get(url)
         if response.status_code != 200:
-            # perhaps already after the transition? Getting it back:
-            url = url.replace('LiCSAR_products.future/', 'LiCSAR_products/')
+            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
             response = requests.get(url)
             if response.status_code != 200:
-                return None # this also does not exist
+                return None
         response.encoding = response.apparent_encoding  # avoid garble
         html_doc = response.text
         soup = BeautifulSoup(html_doc, "html.parser")
@@ -260,6 +276,7 @@ def extract_url_licsar(url):
 
 #%%
 def download_data(url, file, n_retry=3):
+    url = resolve_url(url)
     for i in range(n_retry):
         try:
             start = time.time()
@@ -970,6 +987,7 @@ def get_earthquake_dates(cumfile, minmag = 6.5, maxdepth=60):
             return False
         web_path = 'https://gws-access.jasmin.ac.uk/public/nceo_geohazards/LiCSAR_products'
         fullwebpath_metadata = os.path.join(web_path, track, frame, 'metadata', 'metadata.txt')
+        fullwebpath_metadata = resolve_url(fullwebpath_metadata)
         try:
             a = pd.read_csv(fullwebpath_metadata, sep='=', header=None)
             center_time = a[a[0] == 'center_time'][1].values[0]
