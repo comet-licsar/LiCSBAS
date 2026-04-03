@@ -56,7 +56,7 @@ All HTTP requests include a **30-second timeout** and are wrapped in `try-except
 | File | Change |
 |------|--------|
 | `LiCSBAS_lib/LiCSBAS_tools_lib.py` | `resolve_url()` (2-tier for pages), `extract_url_licsar()` (3-tier for files), `_extract_ceda_url_from_xml()` (XML→CEDA parser), 30 s timeout on all requests |
-| `bin/LiCSBAS01_get_geotiff.py` | `fetch_listing()` helper with `.public` fallback for epoch/GACOS/ERA5/interferogram directory listings, 30 s timeout |
+| `bin/LiCSBAS01_get_geotiff.py` | `fetch_listing()` always checks both original and `.public`, prefers whichever has more results (original holds only ~66 recent pairs vs 3 000+ in `.public`); graceful exit on empty IFG list instead of `IndexError`; 30 s timeout on all requests |
 | `bin/LiCSBAS_get_eqoffsets.py` | Metadata access via `resolve_url()` fallback |
 | `LiCSBAS_lib/LiCSBAS_meta.py` | Version `1.15.2` (2026-04-03), author credit added |
 | `.gitattributes` | Enforce LF line endings across all platforms |
