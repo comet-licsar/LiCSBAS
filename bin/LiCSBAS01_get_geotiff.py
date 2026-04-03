@@ -51,6 +51,12 @@ LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] 
 """
 #%% Change log
 '''
+2026-04-03 Dr. Burak Can KARA
+ - Added LiCSAR_products.public fallback for data migrated to new storage (Oct 2025)
+ - fetch_listing now always checks .public and prefers whichever has more results,
+   since original LiCSAR_products/ contains only a small recent subset
+ - Guard against empty interferogram list (IndexError) with graceful exit
+ - All URL requests include 30 s timeout to prevent hanging
 2025-08-22 ML: fixes for the 'future' LiCSAR HTMLs
 20241001 P. Espin
  - Download ERA5 data fro LiCSAR epoch
@@ -98,6 +104,33 @@ import numpy as np
 import datetime as dt
 import multiprocessing as multi
 import LiCSBAS_tools_lib as tools_lib
+
+LICSAR_TIMEOUT = 30
+
+def fetch_listing(url, pattern):
+    """Fetch directory listing; always check .public too and prefer whichever
+    has more results, since the original LiCSAR_products/ now holds only a
+    small subset of recent data while .public has the complete dataset."""
+    tags = []
+    try:
+        response = requests.get(url, timeout=LICSAR_TIMEOUT)
+        response.encoding = response.apparent_encoding
+        soup = BeautifulSoup(response.text, "html.parser")
+        tags = soup.find_all(href=re.compile(pattern))
+    except requests.exceptions.RequestException:
+        pass
+    if 'LiCSAR_products/' in url and 'LiCSAR_products.public/' not in url:
+        public_url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+        try:
+            response = requests.get(public_url, timeout=LICSAR_TIMEOUT)
+            response.encoding = response.apparent_encoding
+            soup = BeautifulSoup(response.text, "html.parser")
+            public_tags = soup.find_all(href=re.compile(pattern))
+            if len(public_tags) > len(tags):
+                return public_url, public_tags
+        except requests.exceptions.RequestException:
+            pass
+    return url, tags
 
 
 class Usage(Exception):
@@ -256,12 +289,7 @@ def main(argv=None):
         ### Get available dates
         print('Searching latest epoch for mli...', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
-        response = requests.get(url)
-        
-        response.encoding = response.apparent_encoding #avoid garble
-        html_doc = response.text
-        soup = BeautifulSoup(html_doc, "html.parser")
-        tags = soup.find_all(href=re.compile(r"\d{8}"))
+        url, tags = fetch_listing(url, r"\d{8}")
         imdates_all = [tag.get("href")[0:8] for tag in tags]
         _imdates = np.int32(np.array(imdates_all))
         _imdates = (_imdates[(_imdates>=startdate)*(_imdates<=enddate)]).astype('str').tolist()
@@ -309,11 +337,7 @@ def main(argv=None):
         ### Get available dates
         print('\nDownload GACOS data', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
-        response = requests.get(url)
-        response.encoding = response.apparent_encoding #avoid garble
-        html_doc = response.text
-        soup = BeautifulSoup(html_doc, "html.parser")
-        tags = soup.find_all(href=re.compile(r"\d{8}"))
+        url, tags = fetch_listing(url, r"\d{8}")
         imdates_all = [tag.get("href")[0:8] for tag in tags]
         _imdates = np.int32(np.array(imdates_all))
         _imdates = (_imdates[(_imdates>=startdate)*(_imdates<=enddate)]).astype('str').tolist()
@@ -376,11 +400,7 @@ def main(argv=None):
         ### Get available dates
         print('\nDownload ERA5 data', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
-        response = requests.get(url)
-        response.encoding = response.apparent_encoding #avoid garble
-        html_doc = response.text
-        soup = BeautifulSoup(html_doc, "html.parser")
-        tags = soup.find_all(href=re.compile(r"\d{8}"))
+        url, tags = fetch_listing(url, r"\d{8}")
         imdates_all = [tag.get("href")[0:8] for tag in tags]
         _imdates = np.int32(np.array(imdates_all))
         _imdates = (_imdates[(_imdates>=startdate)*(_imdates<=enddate)]).astype('str').tolist()
@@ -439,12 +459,7 @@ def main(argv=None):
     ### Get available dates
     print('\nDownload geotiff of InSAR products', flush=True)
     url_ifgdir = os.path.join(LiCSARweb, trackID, frameID, 'interferograms/')
-    response = requests.get(url_ifgdir)
-    
-    response.encoding = response.apparent_encoding #avoid garble
-    html_doc = response.text
-    soup = BeautifulSoup(html_doc, "html.parser")
-    tags = soup.find_all(href=re.compile(r"\d{8}_\d{8}"))
+    url_ifgdir, tags = fetch_listing(url_ifgdir, r"\d{8}_\d{8}")
     ifgdates_all = [tag.get("href")[0:17] for tag in tags]
     
     ### Extract during start_date to end_date
@@ -468,6 +483,10 @@ def main(argv=None):
 
     n_ifg = len(ifgdates)
     imdates = tools_lib.ifgdates2imdates(ifgdates)
+    if n_ifg == 0:
+        print('No IFGs available from {} to {}. Check date range or data availability.'.format(
+            startdate, enddate), file=sys.stderr, flush=True)
+        return 1
     print('{} IFGs available from {} to {}'.format(n_ifg, imdates[0], imdates[-1]), flush=True)
 
     ### Check if both unw and cc already donwloaded, new, and same size
@@ -520,11 +539,7 @@ def main(argv=None):
         ### Get available dates
         print('\nDownload MLI data', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
-        response = requests.get(url)
-        response.encoding = response.apparent_encoding  # avoid garble
-        html_doc = response.text
-        soup = BeautifulSoup(html_doc, "html.parser")
-        tags = soup.find_all(href=re.compile(r"\d{8}"))
+        url, tags = fetch_listing(url, r"\d{8}")
         imdates_all = [tag.get("href")[0:8] for tag in tags]
         _imdates = np.int32(np.array(imdates_all))
         _imdates = (_imdates[(_imdates >= startdate) * (_imdates <= enddate)]).astype('str').tolist()
@@ -663,10 +678,13 @@ def check_gacos_wrapper(args):
             print("Newer {} available.".format(bname_data), flush=True)
         return rc
     else:
-        response = requests.head(url_data, allow_redirects=True)
-        if response.status_code == 200:
-            return 4
-        else:
+        try:
+            response = requests.head(url_data, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+            if response.status_code == 200:
+                return 4
+            else:
+                return 5
+        except requests.exceptions.RequestException:
             return 5
     
 

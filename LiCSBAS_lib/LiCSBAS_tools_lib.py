@@ -8,6 +8,12 @@ Python3 library of time series analysis tools for LiCSBAS.
 =========
 Changelog
 =========
+2026-04-03 Dr. Burak Can KARA
+ - Added resolve_url() helper for LiCSAR_products.public fallback
+ - Integrated fallback into comp_size_time(), download_data(), extract_url_licsar(), _get_frametime()
+ - Replaces obsolete LiCSAR_products.future with LiCSAR_products.public
+ - extract_url_licsar: 3-tier fallback (original -> .public direct -> CEDA via XML)
+ - Added timeout to all HTTP requests to prevent hanging on old URLs
 2025-08-22 ML: url extractor for the 'future' LiCSAR HTMLs
 2024-12-13 Muhammet Nergizci, ULeeds
  - Add weights to multilooking
@@ -86,6 +92,28 @@ def bl2xy(lon, lat, width, length, lat1, postlat, lon1, postlon):
 
 
 #%%
+LICSAR_TIMEOUT = 30
+
+def resolve_url(url):
+    """Try original URL first; if not reachable, retry with LiCSAR_products.public."""
+    try:
+        response = requests.head(url, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+        if response.status_code == 200:
+            return url
+    except requests.exceptions.RequestException:
+        pass
+    if 'LiCSAR_products/' in url:
+        alt = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+        try:
+            response = requests.head(alt, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+            if response.status_code == 200:
+                return alt
+        except requests.exceptions.RequestException:
+            pass
+    return url
+
+
+#%%
 def comp_size_time(file_remote, file_local):
     """
     Compare size and time of remote and local files.
@@ -96,7 +124,11 @@ def comp_size_time(file_remote, file_local):
         3 : Remote not exist
     """
 
-    response = requests.head(file_remote, allow_redirects=True)
+    file_remote = resolve_url(file_remote)
+    try:
+        response = requests.head(file_remote, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+    except requests.exceptions.RequestException:
+        return 3
 
     if response.status_code != 200:
         return 3
@@ -229,41 +261,67 @@ def convert_size(size_bytes):
    return "%s%s" % (s, size_name[i])
 
 
-def extract_url_licsar(url):
-    ''' new since Aug 2025+: URL gets different from direct to HTML file with a link..
-    '''
-    # first try if the direct url actually works (old version):
-    response = requests.head(url, allow_redirects=True)
-    if response.status_code == 200:
-        return url
-    else:
-        fname = os.path.basename(url)
-        url = os.path.dirname(url)
-        # transition period - both old and new version exist - try the temporary url:
-        url = url.replace('LiCSAR_products/', 'LiCSAR_products.future/')
-        response = requests.get(url)
+def _extract_ceda_url_from_xml(xml_url, fname):
+    """Parse a .tif.xml file from LiCSAR_products.public to extract the CEDA download URL."""
+    try:
+        import xml.etree.ElementTree as ET
+        response = requests.get(xml_url, timeout=LICSAR_TIMEOUT)
         if response.status_code != 200:
-            # perhaps already after the transition? Getting it back:
-            url = url.replace('LiCSAR_products.future/', 'LiCSAR_products/')
-            response = requests.get(url)
-            if response.status_code != 200:
-                return None # this also does not exist
-        response.encoding = response.apparent_encoding  # avoid garble
-        html_doc = response.text
-        soup = BeautifulSoup(html_doc, "html.parser")
-        tag = soup.find(href=re.compile(fname))
-        if tag:
-            return tag.get('href')
-        else:
             return None
+        root = ET.fromstring(response.content)
+        ns = {'atom': 'http://www.w3.org/2005/Atom'}
+        for link in root.iter('{http://www.w3.org/2005/Atom}link'):
+            href = link.get('href', '')
+            if fname in href and link.get('rel') == 'enclosure':
+                try:
+                    r = requests.head(href, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+                    if r.status_code == 200:
+                        return href
+                except requests.exceptions.RequestException:
+                    pass
+    except Exception:
+        pass
+    return None
+
+
+def extract_url_licsar(url):
+    ''' Resolve the actual download URL for a LiCSAR product file.
+    Tries: 1) direct URL, 2) .public direct URL, 3) .public XML -> CEDA URL
+    '''
+    fname = os.path.basename(url)
+    # 1) original direct URL
+    try:
+        response = requests.head(url, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+        if response.status_code == 200:
+            return url
+    except requests.exceptions.RequestException:
+        pass
+    # 2) .public direct URL (new data lives here with actual .tif files)
+    if 'LiCSAR_products/' in url:
+        public_url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+        try:
+            response = requests.head(public_url, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+            if response.status_code == 200:
+                return public_url
+        except requests.exceptions.RequestException:
+            pass
+    # 3) .public XML metadata -> CEDA URL (old migrated data)
+    parent = os.path.dirname(url)
+    public_parent = parent.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+    xml_url = public_parent + '/' + fname + '.xml'
+    ceda_url = _extract_ceda_url_from_xml(xml_url, fname)
+    if ceda_url:
+        return ceda_url
+    return None
 
 
 #%%
 def download_data(url, file, n_retry=3):
+    url = resolve_url(url)
     for i in range(n_retry):
         try:
             start = time.time()
-            with requests.get(url) as res:
+            with requests.get(url, timeout=300) as res:
                 res.raise_for_status()
                 size_remote = int(res.headers.get("Content-Length"))
                 with open(file, "wb") as output:
@@ -970,6 +1028,7 @@ def get_earthquake_dates(cumfile, minmag = 6.5, maxdepth=60):
             return False
         web_path = 'https://gws-access.jasmin.ac.uk/public/nceo_geohazards/LiCSAR_products'
         fullwebpath_metadata = os.path.join(web_path, track, frame, 'metadata', 'metadata.txt')
+        fullwebpath_metadata = resolve_url(fullwebpath_metadata)
         try:
             a = pd.read_csv(fullwebpath_metadata, sep='=', header=None)
             center_time = a[a[0] == 'center_time'][1].values[0]
