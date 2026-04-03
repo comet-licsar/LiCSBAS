@@ -90,16 +90,24 @@ def bl2xy(lon, lat, width, length, lat1, postlat, lon1, postlon):
 
 
 #%%
+LICSAR_TIMEOUT = 30
+
 def resolve_url(url):
-    """Try original URL first; if 404, retry with LiCSAR_products.public."""
-    response = requests.head(url, allow_redirects=True)
-    if response.status_code == 200:
-        return url
+    """Try original URL first; if not reachable, retry with LiCSAR_products.public."""
+    try:
+        response = requests.head(url, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+        if response.status_code == 200:
+            return url
+    except requests.exceptions.RequestException:
+        pass
     if 'LiCSAR_products/' in url:
         alt = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
-        response = requests.head(alt, allow_redirects=True)
-        if response.status_code == 200:
-            return alt
+        try:
+            response = requests.head(alt, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+            if response.status_code == 200:
+                return alt
+        except requests.exceptions.RequestException:
+            pass
     return url
 
 
@@ -115,7 +123,10 @@ def comp_size_time(file_remote, file_local):
     """
 
     file_remote = resolve_url(file_remote)
-    response = requests.head(file_remote, allow_redirects=True)
+    try:
+        response = requests.head(file_remote, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+    except requests.exceptions.RequestException:
+        return 3
 
     if response.status_code != 200:
         return 3
@@ -252,18 +263,26 @@ def extract_url_licsar(url):
     ''' new since Aug 2025+: URL gets different from direct to HTML file with a link..
     '''
     # first try if the direct url actually works (old version):
-    response = requests.head(url, allow_redirects=True)
-    if response.status_code == 200:
-        return url
-    else:
-        fname = os.path.basename(url)
-        url = os.path.dirname(url)
-        response = requests.get(url)
+    try:
+        response = requests.head(url, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+        if response.status_code == 200:
+            return url
+    except requests.exceptions.RequestException:
+        pass
+    fname = os.path.basename(url)
+    url = os.path.dirname(url)
+    try:
+        response = requests.get(url, timeout=LICSAR_TIMEOUT)
+    except requests.exceptions.RequestException:
+        response = type('', (), {'status_code': 0})()
+    if response.status_code != 200:
+        url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+        try:
+            response = requests.get(url, timeout=LICSAR_TIMEOUT)
+        except requests.exceptions.RequestException:
+            return None
         if response.status_code != 200:
-            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
-            response = requests.get(url)
-            if response.status_code != 200:
-                return None
+            return None
         response.encoding = response.apparent_encoding  # avoid garble
         html_doc = response.text
         soup = BeautifulSoup(html_doc, "html.parser")
@@ -280,7 +299,7 @@ def download_data(url, file, n_retry=3):
     for i in range(n_retry):
         try:
             start = time.time()
-            with requests.get(url) as res:
+            with requests.get(url, timeout=300) as res:
                 res.raise_for_status()
                 size_remote = int(res.headers.get("Content-Length"))
                 with open(file, "wb") as output:
