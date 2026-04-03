@@ -53,7 +53,10 @@ LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] 
 '''
 2026-04-03 Dr. Burak Can KARA
  - Added LiCSAR_products.public fallback for data migrated to new storage (Oct 2025)
- - All URL requests first try original LiCSAR_products, then retry with LiCSAR_products.public
+ - fetch_listing now always checks .public and prefers whichever has more results,
+   since original LiCSAR_products/ contains only a small recent subset
+ - Guard against empty interferogram list (IndexError) with graceful exit
+ - All URL requests include 30 s timeout to prevent hanging
 2025-08-22 ML: fixes for the 'future' LiCSAR HTMLs
 20241001 P. Espin
  - Download ERA5 data fro LiCSAR epoch
@@ -105,7 +108,9 @@ import LiCSBAS_tools_lib as tools_lib
 LICSAR_TIMEOUT = 30
 
 def fetch_listing(url, pattern):
-    """Fetch directory listing page; fallback to .public if empty or timeout."""
+    """Fetch directory listing; always check .public too and prefer whichever
+    has more results, since the original LiCSAR_products/ now holds only a
+    small subset of recent data while .public has the complete dataset."""
     tags = []
     try:
         response = requests.get(url, timeout=LICSAR_TIMEOUT)
@@ -114,13 +119,15 @@ def fetch_listing(url, pattern):
         tags = soup.find_all(href=re.compile(pattern))
     except requests.exceptions.RequestException:
         pass
-    if not tags and 'LiCSAR_products/' in url:
-        url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+    if 'LiCSAR_products/' in url and 'LiCSAR_products.public/' not in url:
+        public_url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
         try:
-            response = requests.get(url, timeout=LICSAR_TIMEOUT)
+            response = requests.get(public_url, timeout=LICSAR_TIMEOUT)
             response.encoding = response.apparent_encoding
             soup = BeautifulSoup(response.text, "html.parser")
-            tags = soup.find_all(href=re.compile(pattern))
+            public_tags = soup.find_all(href=re.compile(pattern))
+            if len(public_tags) > len(tags):
+                return public_url, public_tags
         except requests.exceptions.RequestException:
             pass
     return url, tags
@@ -476,6 +483,10 @@ def main(argv=None):
 
     n_ifg = len(ifgdates)
     imdates = tools_lib.ifgdates2imdates(ifgdates)
+    if n_ifg == 0:
+        print('No IFGs available from {} to {}. Check date range or data availability.'.format(
+            startdate, enddate), file=sys.stderr, flush=True)
+        return 1
     print('{} IFGs available from {} to {}'.format(n_ifg, imdates[0], imdates[-1]), flush=True)
 
     ### Check if both unw and cc already donwloaded, new, and same size
