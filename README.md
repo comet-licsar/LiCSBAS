@@ -7,28 +7,83 @@
 
 > **This is a maintained fork of [comet-licsar/LiCSBAS](https://github.com/comet-licsar/LiCSBAS) with critical fixes for the October 2025 LiCSAR data migration.**
 
-## What's Changed in This Fork
+## Why This Fork?
 
-In October 2025, LiCSAR migrated all data to a new storage system. The original COMET notice referenced `LiCSAR_products.future` as a temporary fallback URL — **this path is no longer valid**. The correct fallback is now **`LiCSAR_products.public`**.
+In October 2025, LiCSAR migrated all data to a new storage system on JASMIN. After the migration the server directory at `gws-access.jasmin.ac.uk/public/nceo_geohazards/` looks like this:
 
-This fork implements an **automatic fallback mechanism**: all data requests first try the original `LiCSAR_products` URL; if the data is not found (HTTP 404), the code automatically retries using `LiCSAR_products.public`. **No manual URL changes needed on your part.**
+| Directory | Status |
+|-----------|--------|
+| `LiCSAR_products/` | Original path — now contains only a small subset of recent data (~66 IFG pairs per frame) |
+| `LiCSAR_products.public/` | New primary storage — complete dataset (3 000+ IFG pairs per frame), actively updated |
+| `LiCSAR_products.future/` | Mentioned in the original COMET notice but **returns 404** for `.tif` files — do not use |
 
-### Modified Files
+The upstream repository's notice suggested changing URLs to `LiCSAR_products.future`, but that path is effectively dead. The correct path is **`LiCSAR_products.public`**, and even that has a nuance: for **older (pre-migration) data**, `.public` only hosts XML metadata — the actual GeoTIFF files live in the [CEDA archive](https://dap.ceda.ac.uk/neodc/comet/data/licsar_products/).
+
+## 3-Tier URL Resolution
+
+This fork implements an automatic, transparent fallback so **no manual URL changes are needed**:
+
+```
+Tier 1 — Original URL (LiCSAR_products/)
+  │  Try HEAD request with 30 s timeout
+  │  ✓ 200 → use this URL
+  ✗ timeout / error / non-200
+  │
+Tier 2 — Public URL (LiCSAR_products.public/)
+  │  Try HEAD request with 30 s timeout
+  │  ✓ 200 → use this URL (works for new data with direct .tif files)
+  ✗ timeout / error / non-200
+  │
+Tier 3 — CEDA via XML metadata
+  │  Fetch .tif.xml from .public, parse Atom <link rel="enclosure">
+  │  Extract CEDA URL (dap.ceda.ac.uk/neodc/comet/data/licsar_products/...)
+  │  ✓ 200 → use CEDA URL (works for old migrated data)
+  ✗ all tiers failed → file unavailable
+```
+
+**When does each tier activate?**
+
+| Data Age | Tier 1 (original) | Tier 2 (.public direct) | Tier 3 (CEDA via XML) |
+|----------|--------------------|--------------------------|------------------------|
+| Recent / not yet migrated | 200 | — | — |
+| New post-migration (2025+) | timeout | 200 (`.tif` files present) | — |
+| Old pre-migration (≤2023) | timeout | no `.tif` (only `.xml`/`.metadata`) | 200 from CEDA |
+
+All HTTP requests include a **30-second timeout** and are wrapped in `try-except` to prevent hangs on unresponsive endpoints.
+
+## Modified Files
 
 | File | Change |
 |------|--------|
-| `LiCSBAS_lib/LiCSBAS_tools_lib.py` | New `resolve_url()` helper; fallback integrated into `comp_size_time()`, `download_data()`, `extract_url_licsar()`, `_get_frametime()` |
-| `bin/LiCSBAS01_get_geotiff.py` | `.public` fallback for epoch, GACOS, ERA5, and interferogram listing requests |
-| `bin/LiCSBAS_get_eqoffsets.py` | `.public` fallback for metadata access |
-| `LiCSBAS_lib/LiCSBAS_meta.py` | Version bumped to `1.15.2` (2026-04-03) |
+| `LiCSBAS_lib/LiCSBAS_tools_lib.py` | `resolve_url()` (2-tier for pages), `extract_url_licsar()` (3-tier for files), `_extract_ceda_url_from_xml()` (XML→CEDA parser), 30 s timeout on all requests |
+| `bin/LiCSBAS01_get_geotiff.py` | `fetch_listing()` helper with `.public` fallback for epoch/GACOS/ERA5/interferogram directory listings, 30 s timeout |
+| `bin/LiCSBAS_get_eqoffsets.py` | Metadata access via `resolve_url()` fallback |
+| `LiCSBAS_lib/LiCSBAS_meta.py` | Version `1.15.2` (2026-04-03), author credit added |
+| `.gitattributes` | Enforce LF line endings across all platforms |
 
-### Quick Install
+## Quick Install
 
 ```bash
 git clone https://github.com/bcankara/LiCSBAS.git
 cd LiCSBAS
 source bashrc_LiCSBAS.sh
 ```
+
+If you already have a clone of the upstream repo, you can add this fork as a remote:
+
+```bash
+git remote add bcankara https://github.com/bcankara/LiCSBAS.git
+git fetch bcankara
+git checkout bcankara/main
+```
+
+## Verified (2026-04-03)
+
+Tested against frame `094D_04913_101213` (Turkey, 2018 data) and confirmed:
+- `LiCSAR_products.future/*.tif` → **404** (dead)
+- `LiCSAR_products.public/` old pair → only `.xml`+`.metadata`, no `.tif`
+- `LiCSAR_products.public/` new pair → direct `.tif` files present
+- CEDA archive via XML parsing → **200**, correct file size
 
 ---
 
