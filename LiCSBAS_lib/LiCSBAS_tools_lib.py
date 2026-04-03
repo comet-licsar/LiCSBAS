@@ -12,6 +12,8 @@ Changelog
  - Added resolve_url() helper for LiCSAR_products.public fallback
  - Integrated fallback into comp_size_time(), download_data(), extract_url_licsar(), _get_frametime()
  - Replaces obsolete LiCSAR_products.future with LiCSAR_products.public
+ - extract_url_licsar: 3-tier fallback (original -> .public direct -> CEDA via XML)
+ - Added timeout to all HTTP requests to prevent hanging on old URLs
 2025-08-22 ML: url extractor for the 'future' LiCSAR HTMLs
 2024-12-13 Muhammet Nergizci, ULeeds
  - Add weights to multilooking
@@ -259,38 +261,58 @@ def convert_size(size_bytes):
    return "%s%s" % (s, size_name[i])
 
 
+def _extract_ceda_url_from_xml(xml_url, fname):
+    """Parse a .tif.xml file from LiCSAR_products.public to extract the CEDA download URL."""
+    try:
+        import xml.etree.ElementTree as ET
+        response = requests.get(xml_url, timeout=LICSAR_TIMEOUT)
+        if response.status_code != 200:
+            return None
+        root = ET.fromstring(response.content)
+        ns = {'atom': 'http://www.w3.org/2005/Atom'}
+        for link in root.iter('{http://www.w3.org/2005/Atom}link'):
+            href = link.get('href', '')
+            if fname in href and link.get('rel') == 'enclosure':
+                try:
+                    r = requests.head(href, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+                    if r.status_code == 200:
+                        return href
+                except requests.exceptions.RequestException:
+                    pass
+    except Exception:
+        pass
+    return None
+
+
 def extract_url_licsar(url):
-    ''' new since Aug 2025+: URL gets different from direct to HTML file with a link..
+    ''' Resolve the actual download URL for a LiCSAR product file.
+    Tries: 1) direct URL, 2) .public direct URL, 3) .public XML -> CEDA URL
     '''
-    # first try if the direct url actually works (old version):
+    fname = os.path.basename(url)
+    # 1) original direct URL
     try:
         response = requests.head(url, allow_redirects=True, timeout=LICSAR_TIMEOUT)
         if response.status_code == 200:
             return url
     except requests.exceptions.RequestException:
         pass
-    fname = os.path.basename(url)
-    url = os.path.dirname(url)
-    try:
-        response = requests.get(url, timeout=LICSAR_TIMEOUT)
-    except requests.exceptions.RequestException:
-        response = type('', (), {'status_code': 0})()
-    if response.status_code != 200:
-        url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+    # 2) .public direct URL (new data lives here with actual .tif files)
+    if 'LiCSAR_products/' in url:
+        public_url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
         try:
-            response = requests.get(url, timeout=LICSAR_TIMEOUT)
+            response = requests.head(public_url, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+            if response.status_code == 200:
+                return public_url
         except requests.exceptions.RequestException:
-            return None
-        if response.status_code != 200:
-            return None
-        response.encoding = response.apparent_encoding  # avoid garble
-        html_doc = response.text
-        soup = BeautifulSoup(html_doc, "html.parser")
-        tag = soup.find(href=re.compile(fname))
-        if tag:
-            return tag.get('href')
-        else:
-            return None
+            pass
+    # 3) .public XML metadata -> CEDA URL (old migrated data)
+    parent = os.path.dirname(url)
+    public_parent = parent.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+    xml_url = public_parent + '/' + fname + '.xml'
+    ceda_url = _extract_ceda_url_from_xml(xml_url, fname)
+    if ceda_url:
+        return ceda_url
+    return None
 
 
 #%%
