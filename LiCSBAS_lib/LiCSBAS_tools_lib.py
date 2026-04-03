@@ -96,8 +96,8 @@ LICSAR_TIMEOUT = 30
 
 def resolve_url(url):
     """Try original URL first; if not reachable, retry with LiCSAR_products.public."""
-    if url is None:
-        return None
+    if not url:
+        return url
     try:
         response = requests.head(url, allow_redirects=True, timeout=LICSAR_TIMEOUT)
         if response.status_code == 200:
@@ -319,7 +319,7 @@ def extract_url_licsar(url):
 
 #%%
 def download_data(url, file, n_retry=3):
-    if url is None:
+    if not url:
         return
     url = resolve_url(url)
     for i in range(n_retry):

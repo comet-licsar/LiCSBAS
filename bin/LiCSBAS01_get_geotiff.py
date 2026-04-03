@@ -613,7 +613,7 @@ def download_wrapper(args):
     print('  Downloading {} ({}/{})...'.format(ifgd, i+1, n_dl), flush=True)
     if not os.path.exists(dir_data): os.mkdir(dir_data)
     url_data = tools_lib.extract_url_licsar(url_data)
-    if url_data is None:
+    if not url_data:
         print('    {} not available.'.format(os.path.basename(path_data)), flush=True)
         return
     tools_lib.download_data(url_data, path_data)
