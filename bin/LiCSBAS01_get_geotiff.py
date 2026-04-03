@@ -260,13 +260,17 @@ def main(argv=None):
         print('Searching latest epoch for mli...', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
         response = requests.get(url)
-        if response.status_code != 200 and 'LiCSAR_products/' in url:
-            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
-            response = requests.get(url)
         response.encoding = response.apparent_encoding #avoid garble
         html_doc = response.text
         soup = BeautifulSoup(html_doc, "html.parser")
         tags = soup.find_all(href=re.compile(r"\d{8}"))
+        if (response.status_code != 200 or not tags) and 'LiCSAR_products/' in url:
+            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+            response = requests.get(url)
+            response.encoding = response.apparent_encoding
+            html_doc = response.text
+            soup = BeautifulSoup(html_doc, "html.parser")
+            tags = soup.find_all(href=re.compile(r"\d{8}"))
         imdates_all = [tag.get("href")[0:8] for tag in tags]
         _imdates = np.int32(np.array(imdates_all))
         _imdates = (_imdates[(_imdates>=startdate)*(_imdates<=enddate)]).astype('str').tolist()
@@ -315,13 +319,17 @@ def main(argv=None):
         print('\nDownload GACOS data', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
         response = requests.get(url)
-        if response.status_code != 200 and 'LiCSAR_products/' in url:
-            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
-            response = requests.get(url)
         response.encoding = response.apparent_encoding #avoid garble
         html_doc = response.text
         soup = BeautifulSoup(html_doc, "html.parser")
         tags = soup.find_all(href=re.compile(r"\d{8}"))
+        if (response.status_code != 200 or not tags) and 'LiCSAR_products/' in url:
+            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+            response = requests.get(url)
+            response.encoding = response.apparent_encoding
+            html_doc = response.text
+            soup = BeautifulSoup(html_doc, "html.parser")
+            tags = soup.find_all(href=re.compile(r"\d{8}"))
         imdates_all = [tag.get("href")[0:8] for tag in tags]
         _imdates = np.int32(np.array(imdates_all))
         _imdates = (_imdates[(_imdates>=startdate)*(_imdates<=enddate)]).astype('str').tolist()
@@ -385,13 +393,17 @@ def main(argv=None):
         print('\nDownload ERA5 data', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
         response = requests.get(url)
-        if response.status_code != 200 and 'LiCSAR_products/' in url:
-            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
-            response = requests.get(url)
         response.encoding = response.apparent_encoding #avoid garble
         html_doc = response.text
         soup = BeautifulSoup(html_doc, "html.parser")
         tags = soup.find_all(href=re.compile(r"\d{8}"))
+        if (response.status_code != 200 or not tags) and 'LiCSAR_products/' in url:
+            url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+            response = requests.get(url)
+            response.encoding = response.apparent_encoding
+            html_doc = response.text
+            soup = BeautifulSoup(html_doc, "html.parser")
+            tags = soup.find_all(href=re.compile(r"\d{8}"))
         imdates_all = [tag.get("href")[0:8] for tag in tags]
         _imdates = np.int32(np.array(imdates_all))
         _imdates = (_imdates[(_imdates>=startdate)*(_imdates<=enddate)]).astype('str').tolist()
@@ -451,13 +463,17 @@ def main(argv=None):
     print('\nDownload geotiff of InSAR products', flush=True)
     url_ifgdir = os.path.join(LiCSARweb, trackID, frameID, 'interferograms/')
     response = requests.get(url_ifgdir)
-    if response.status_code != 200 and 'LiCSAR_products/' in url_ifgdir:
-        url_ifgdir = url_ifgdir.replace('LiCSAR_products/', 'LiCSAR_products.public/')
-        response = requests.get(url_ifgdir)
     response.encoding = response.apparent_encoding #avoid garble
     html_doc = response.text
     soup = BeautifulSoup(html_doc, "html.parser")
     tags = soup.find_all(href=re.compile(r"\d{8}_\d{8}"))
+    if (response.status_code != 200 or not tags) and 'LiCSAR_products/' in url_ifgdir:
+        url_ifgdir = url_ifgdir.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+        response = requests.get(url_ifgdir)
+        response.encoding = response.apparent_encoding
+        html_doc = response.text
+        soup = BeautifulSoup(html_doc, "html.parser")
+        tags = soup.find_all(href=re.compile(r"\d{8}_\d{8}"))
     ifgdates_all = [tag.get("href")[0:17] for tag in tags]
     
     ### Extract during start_date to end_date
