@@ -534,17 +534,29 @@ def main(argv=None):
         p.close()
 
         n_existing = 0
+        n_unavailable = 0
+        dates_unavailable = []
         dates_dl = []
         for i, rc1 in enumerate(rc):
             if rc1 == 0:  ## No need to download
                 n_existing = n_existing + 1
             if rc1 == 3 or rc1 == 5:  ## Can not download
+                n_unavailable += 1
+                dates_unavailable.append(ifgdates[i])
                 print('  {0}.geo.{1}.tif not available.'.format(str(ifgdates[i]), ext), flush=True)
             elif rc1 == 1 or rc1 == 2  or rc1 == 4:  ## Need download
                 dates_dl.append(ifgdates[i])
 
         n_dl = len(dates_dl)
         print('{} already downloaded'.format(n_existing), flush=True)
+        if n_unavailable > 0:
+            print('\n  WARNING: {}/{} {} files not available from any source (original/public/CEDA/future).'.format(
+                n_unavailable, n_ifg, ext), flush=True)
+            print('  These IFGs will be skipped. Processing will continue with {}/{} available IFGs.'.format(
+                n_ifg - n_unavailable, n_ifg), flush=True)
+            print('  Unavailable IFG dates: {}'.format(', '.join(dates_unavailable[:10])), flush=True)
+            if n_unavailable > 10:
+                print('  ... and {} more.'.format(n_unavailable - 10), flush=True)
         ### Download with parallel
         if n_dl != 0:
             print('\nDownload {0} ({1} parallel)...'.format(ext, str(n_para)), flush=True)
