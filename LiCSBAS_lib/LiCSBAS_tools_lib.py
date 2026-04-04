@@ -8,6 +8,10 @@ Python3 library of time series analysis tools for LiCSBAS.
 =========
 Changelog
 =========
+ 2026-04-04 Dr. Burak Can KARA
+ - Added LiCSAR_products.future as 4th-tier fallback in extract_url_licsar and fetch_listing
+ - .future acts as catalogue; its HTML contains links to data.ceda.ac.uk or .public URLs
+ - This fixes missing IFGs whose unw/cc TIFs only exist via the .future catalogue
 2026-04-03 Dr. Burak Can KARA
  - Added resolve_url() helper for LiCSAR_products.public fallback
  - Integrated fallback into comp_size_time(), download_data(), extract_url_licsar(), _get_frametime()
@@ -286,9 +290,36 @@ def _extract_ceda_url_from_xml(xml_url, fname):
     return None
 
 
+def _extract_url_from_future_html(future_page_url, fname):
+    """Parse the .future catalogue HTML page to find the actual download URL for fname.
+    The .future page lists files as <a href="..."> pointing to .public or data.ceda.ac.uk URLs.
+    """
+    try:
+        response = requests.get(future_page_url, timeout=LICSAR_TIMEOUT)
+        if response.status_code != 200:
+            return None
+        soup = BeautifulSoup(response.text, 'html.parser')
+        # Find all links whose text or href ends with the target filename
+        for a_tag in soup.find_all('a', href=True):
+            href = a_tag.get('href', '')
+            link_text = a_tag.get_text(strip=True)
+            if link_text == fname or href.endswith('/' + fname) or href.endswith(fname):
+                # Prefer data.ceda.ac.uk or .public URLs that actually have the file
+                try:
+                    r = requests.head(href, allow_redirects=True, timeout=LICSAR_TIMEOUT)
+                    if r.status_code == 200:
+                        return href
+                except requests.exceptions.RequestException:
+                    continue
+    except Exception:
+        pass
+    return None
+
+
 def extract_url_licsar(url):
     ''' Resolve the actual download URL for a LiCSAR product file.
-    Tries: 1) direct URL, 2) .public direct URL, 3) .public XML -> CEDA URL
+    Tries: 1) direct URL, 2) .public direct URL, 3) .public XML -> CEDA URL,
+           4) .future catalogue HTML -> actual download URL
     '''
     fname = os.path.basename(url)
     # 1) original direct URL
@@ -298,9 +329,11 @@ def extract_url_licsar(url):
             return url
     except requests.exceptions.RequestException:
         pass
+    # Normalise: if URL already contains .public or .future, derive the base LiCSAR_products URL
+    base_url = url.replace('LiCSAR_products.public/', 'LiCSAR_products/').replace('LiCSAR_products.future/', 'LiCSAR_products/')
     # 2) .public direct URL (new data lives here with actual .tif files)
-    if 'LiCSAR_products/' in url:
-        public_url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+    if 'LiCSAR_products/' in base_url:
+        public_url = base_url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
         try:
             response = requests.head(public_url, allow_redirects=True, timeout=LICSAR_TIMEOUT)
             if response.status_code == 200:
@@ -308,12 +341,20 @@ def extract_url_licsar(url):
         except requests.exceptions.RequestException:
             pass
     # 3) .public XML metadata -> CEDA URL (old migrated data)
-    parent = os.path.dirname(url)
+    parent = os.path.dirname(base_url)
     public_parent = parent.replace('LiCSAR_products/', 'LiCSAR_products.public/')
     xml_url = public_parent + '/' + fname + '.xml'
     ceda_url = _extract_ceda_url_from_xml(xml_url, fname)
     if ceda_url:
         return ceda_url
+    # 4) .future catalogue HTML -> actual download URL (data.ceda.ac.uk or .public)
+    if 'LiCSAR_products/' in base_url:
+        # The .future page URL is the parent directory (without the filename)
+        # e.g. .../interferograms/20231118_20231130  (no trailing slash)
+        future_parent = parent.replace('LiCSAR_products/', 'LiCSAR_products.future/').replace('/interferograms/', '/interferograms/')
+        future_url = _extract_url_from_future_html(future_parent, fname)
+        if future_url:
+            return future_url
     return None
 
 

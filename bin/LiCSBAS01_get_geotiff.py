@@ -51,6 +51,11 @@ LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] 
 """
 #%% Change log
 '''
+2026-04-04 Dr. Burak Can KARA
+ - Added LiCSAR_products.future as 3rd source in fetch_listing
+ - .future catalogue contains IFG entries whose unw/cc TIFs are on data.ceda.ac.uk
+ - extract_url_licsar in tools_lib now has 4-tier fallback including .future HTML parsing
+ - This fixes Temmuz-Aralik 2023 period where 50 IFGs were wrongly reported as unavailable
 2026-04-03 Dr. Burak Can KARA
  - Added LiCSAR_products.public fallback for data migrated to new storage (Oct 2025)
  - fetch_listing now always checks .public and prefers whichever has more results,
@@ -108,29 +113,50 @@ import LiCSBAS_tools_lib as tools_lib
 LICSAR_TIMEOUT = 30
 
 def fetch_listing(url, pattern):
-    """Fetch directory listing; always check .public too and prefer whichever
-    has more results, since the original LiCSAR_products/ now holds only a
-    small subset of recent data while .public has the complete dataset."""
-    tags = []
+    """Fetch directory listing; check original, .public and .future, and prefer
+    whichever has more results.  The original LiCSAR_products/ holds only a
+    small subset, .public has the complete dataset, and .future may contain
+    additional IFG entries whose actual files live on data.ceda.ac.uk."""
+    # Normalise to base URL
+    base_url = url.replace('LiCSAR_products.public/', 'LiCSAR_products/').replace('LiCSAR_products.future/', 'LiCSAR_products/')
+    best_url = base_url
+    best_tags = []
+    # 1) original LiCSAR_products
     try:
-        response = requests.get(url, timeout=LICSAR_TIMEOUT)
+        response = requests.get(base_url, timeout=LICSAR_TIMEOUT)
         response.encoding = response.apparent_encoding
         soup = BeautifulSoup(response.text, "html.parser")
-        tags = soup.find_all(href=re.compile(pattern))
+        best_tags = soup.find_all(href=re.compile(pattern))
+        best_url = base_url
     except requests.exceptions.RequestException:
         pass
-    if 'LiCSAR_products/' in url and 'LiCSAR_products.public/' not in url:
-        public_url = url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
+    # 2) .public
+    if 'LiCSAR_products/' in base_url:
+        public_url = base_url.replace('LiCSAR_products/', 'LiCSAR_products.public/')
         try:
             response = requests.get(public_url, timeout=LICSAR_TIMEOUT)
             response.encoding = response.apparent_encoding
             soup = BeautifulSoup(response.text, "html.parser")
             public_tags = soup.find_all(href=re.compile(pattern))
-            if len(public_tags) > len(tags):
-                return public_url, public_tags
+            if len(public_tags) > len(best_tags):
+                best_tags = public_tags
+                best_url = public_url
         except requests.exceptions.RequestException:
             pass
-    return url, tags
+    # 3) .future (catalogue; may list IFGs not in .public)
+    if 'LiCSAR_products/' in base_url:
+        future_url = base_url.replace('LiCSAR_products/', 'LiCSAR_products.future/')
+        try:
+            response = requests.get(future_url, timeout=LICSAR_TIMEOUT)
+            response.encoding = response.apparent_encoding
+            soup = BeautifulSoup(response.text, "html.parser")
+            future_tags = soup.find_all(href=re.compile(pattern))
+            if len(future_tags) > len(best_tags):
+                best_tags = future_tags
+                best_url = future_url
+        except requests.exceptions.RequestException:
+            pass
+    return best_url, best_tags
 
 
 class Usage(Exception):

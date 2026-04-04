@@ -1,5 +1,101 @@
 
-# LiCSBAS
+# LiCSBAS — Fork by Dr. Burak Can KARA
+
+[![Fork of comet-licsar/LiCSBAS](https://img.shields.io/badge/upstream-comet--licsar%2FLiCSBAS-blue)](https://github.com/comet-licsar/LiCSBAS)
+[![GitHub](https://img.shields.io/badge/maintainer-Dr.%20Burak%20Can%20KARA-green)](https://github.com/bcankara)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-yellow.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+> **This is a maintained fork of [comet-licsar/LiCSBAS](https://github.com/comet-licsar/LiCSBAS) with critical fixes for the October 2025 LiCSAR data migration and full support for the `.future` catalogue.**
+
+## Why This Fork?
+
+In October 2025, LiCSAR migrated all data to a new storage system on JASMIN. After the migration the server directory at `gws-access.jasmin.ac.uk/public/nceo_geohazards/` looks like this:
+
+| Directory | Status |
+|-----------|--------|
+| `LiCSAR_products/` | Original path — now contains only a small subset of recent data (~66 IFG pairs per frame) |
+| `LiCSAR_products.public/` | New primary storage — complete dataset (3 000+ IFG pairs per frame), actively updated. Some IFG directories exist but only contain burst-overlap products (`bovldiff`, `mag_cc`) without `unw.tif`/`cc.tif` |
+| `LiCSAR_products.future/` | **Catalogue** — does not host files directly but its HTML pages contain `<a href>` links to actual download URLs on `data.ceda.ac.uk` or `.public`. Critical for IFGs whose `unw.tif`/`cc.tif` are not in `.public` but exist in the CEDA archive |
+
+The correct approach is a **multi-tier fallback**: first try the original URL, then `.public` direct files, then `.public` XML metadata for CEDA URLs, and finally the **`.future` HTML catalogue** which lists the actual download locations. This fork implements all four tiers automatically.
+
+## 4-Tier URL Resolution
+
+This fork implements an automatic, transparent fallback so **no manual URL changes are needed**:
+
+```
+Tier 1 — Original URL (LiCSAR_products/)
+  │  Try HEAD request with 30 s timeout
+  │  ✓ 200 → use this URL
+  ✗ timeout / error / non-200
+  │
+Tier 2 — Public URL (LiCSAR_products.public/)
+  │  Try HEAD request with 30 s timeout
+  │  ✓ 200 → use this URL (works for new data with direct .tif files)
+  ✗ timeout / error / non-200
+  │
+Tier 3 — CEDA via XML metadata
+  │  Fetch .tif.xml from .public, parse Atom <link rel="enclosure">
+  │  Extract CEDA URL (dap.ceda.ac.uk/neodc/comet/data/licsar_products/...)
+  │  ✓ 200 → use CEDA URL (works for old migrated data)
+  ✗ not found
+  │
+Tier 4 — Future catalogue (LiCSAR_products.future/)
+  │  Fetch HTML page, parse <a href> links for target filename
+  │  Links point to data.ceda.ac.uk or .public URLs
+  │  ✓ 200 → use resolved URL
+  ✗ all tiers failed → file unavailable
+```
+
+**When does each tier activate?**
+
+| Data Age | Tier 1 (original) | Tier 2 (.public direct) | Tier 3 (CEDA via XML) | Tier 4 (.future HTML) |
+|----------|--------------------|--------------------------|------------------------|------------------------|
+| Recent / not yet migrated | 200 | — | — | — |
+| New post-migration (2025+) | timeout | 200 (`.tif` files present) | — | — |
+| Old pre-migration (≤2023) | timeout | no `.tif` (only `.xml`/`.metadata`) | 200 from CEDA | — |
+| IFGs with only burst-overlap in `.public` | timeout | no `unw.tif` | no XML | 200 via CEDA link |
+
+All HTTP requests include a **30-second timeout** and are wrapped in `try-except` to prevent hangs on unresponsive endpoints.
+
+## Modified Files
+
+| File | Change |
+|------|--------|
+| `LiCSBAS_lib/LiCSBAS_tools_lib.py` | `resolve_url()` (2-tier for pages), `extract_url_licsar()` (4-tier for files including `.future` HTML parsing), `_extract_ceda_url_from_xml()` (XML→CEDA parser), `_extract_url_from_future_html()` (`.future` catalogue parser), 30 s timeout on all requests |
+| `bin/LiCSBAS01_get_geotiff.py` | `fetch_listing()` checks original, `.public` and `.future`, prefers whichever has more results; graceful exit on empty IFG list instead of `IndexError`; 30 s timeout on all requests |
+| `bin/LiCSBAS_get_eqoffsets.py` | Metadata access via `resolve_url()` fallback |
+| `LiCSBAS_lib/LiCSBAS_meta.py` | Version `1.15.2` (2026-04-03), author credit added |
+| `.gitattributes` | Enforce LF line endings across all platforms |
+
+## Quick Install
+
+```bash
+git clone https://github.com/bcankara/LiCSBAS.git
+cd LiCSBAS
+source bashrc_LiCSBAS.sh
+```
+
+If you already have a clone of the upstream repo, you can add this fork as a remote:
+
+```bash
+git remote add bcankara https://github.com/bcankara/LiCSBAS.git
+git fetch bcankara
+git checkout bcankara/main
+```
+
+## Verified (2026-04-04)
+
+Tested against frame `094D_04913_101213` (Merzifon, Turkey) and confirmed:
+- `LiCSAR_products.public/` some IFG dirs contain only burst-overlap products (`bovldiff`, `mag_cc`), **no `unw.tif`/`cc.tif`**
+- `LiCSAR_products.public/` new pair → direct `.tif` files present
+- CEDA archive via XML parsing → **200**, correct file size
+- `LiCSAR_products.future/` HTML catalogue → lists `<a href>` links to `data.ceda.ac.uk` and `.public` with actual `unw.tif`/`cc.tif` → **200**
+- For period 2023-07 to 2024-01: `.public` listing shows 58 IFG dirs but only 8 have `unw.tif`; **`.future` catalogue resolves the remaining 50** via CEDA links
+
+---
+
+## Original README
 
 LiCSBAS is an open-source package in Python and bash to carry out InSAR time series analysis using LiCSAR products (i.e., unwrapped interferograms and coherence) which are freely available on the [COMET-LiCS web portal](https://comet.nerc.ac.uk/COMET-LiCS-portal/).  
 
