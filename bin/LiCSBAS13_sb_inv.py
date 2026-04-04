@@ -1236,7 +1236,8 @@ def main(argv=None):
             # storing also the gap_patch matrix to be used later
             file = os.path.join(resultsdir, 'gap_patch')
             with open(file, openmode) as f:
-                gap_patch[i].tofile(f)
+                for gi in range(gap_patch.shape[0]):
+                    gap_patch[gi].tofile(f)
 
             # cleaning patch variables from memory:
             varnames = ['res_patch', 'cum_patch', 'inc_patch', 'hasdatapatch', 'gap_patch', 'unwpatch', 'wvars', 'varpatch']
