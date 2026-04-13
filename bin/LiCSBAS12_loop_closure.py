@@ -182,6 +182,7 @@ def main(argv=None):
     save_ori_unw = True
     nullify_threshold = np.pi
     nullify_aggressive = False
+    nullify_mask_mode = False  ### Case Islands volcanoes e.g. Taal water mask
 
     try:
         n_para = len(os.sched_getaffinity(0))
@@ -198,7 +199,7 @@ def main(argv=None):
         try:
             opts, args = getopt.getopt(argv[1:], "hd:t:l:",
                                        ["help", "multi_prime", "nullify", "nullify_fix_ref", "nullify_aggressive", "skip_pngs", "nopngs",
-                                        "rm_ifg_list=", "n_para=", "ref_approx=", "nullify_skip_backup", "nullify_threshold="])
+                                        "rm_ifg_list=", "n_para=", "ref_approx=", "nullify_skip_backup", "nullify_threshold=","nullify_mask_mode="])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -231,6 +232,9 @@ def main(argv=None):
                 save_ori_unw = False
             elif o == '--nullify_threshold':
                 nullify_threshold = float(a)
+            elif o == '--nullify_mask_mode':
+                nullify_mask_mode = True
+
         if not nullify: # debug
             save_ori_unw = False
         if not ifgdir:
@@ -1312,7 +1316,19 @@ def loop_closure_4th(args, da):
         ## Summing the phase closure values -> will get average (wrapped) phase
         loop_ph_wrapped_sum = loop_ph_wrapped_sum + np.angle(np.exp(1j * loop_ph))
         loop_ph_wrapped_sum_abs = loop_ph_wrapped_sum_abs + np.abs(np.angle(np.exp(1j * loop_ph)))
-        is_ok = np.abs(loop_ph) < nullify_threshold
+        #is_ok = np.abs(loop_ph) < nullify_threshold
+
+     
+        # === MODO NORMAL ===
+        if not nullify_mask_mode:
+            is_ok = (np.abs(loop_ph) < nullify_threshold)
+
+        # === MODO MÁSCARA ESPECIAL ===        
+        else:
+            base_ok = (np.abs(loop_ph) < nullify_threshold)
+            protect = (coh > 0.20)
+            is_ok = (base_ok | protect) & mask_land
+
         if nullify_aggressive:
             da.loc[:, :, ifgd12] = np.logical_and(da.loc[:, :, ifgd12], is_ok)
             da.loc[:, :, ifgd23] = np.logical_and(da.loc[:, :, ifgd23], is_ok)
