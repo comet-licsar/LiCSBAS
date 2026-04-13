@@ -84,9 +84,15 @@ LiCSBAS12_loop_closure.py -d ifgdir [-t tsadir] [-l loop_thre] [--multi_prime]
  --nullify_threshold Threshold to detect phase loop closure errors (Default: pi) [rad]
  --nullify_fix_ref Additional nullification control flag - preferring major connected components (solves unreliable reference point)
  --nullify_aggressive Nullify unless ALL loops are GOOD (default: only nullify if all loops are bad) # PEB
+ --nullify_mask_mode Improved nullification mode for Taal Volcano: water-covered areas cause false loop-closure errors, removing valid island pixels.  
+  This mode protects high-coherence land pixels and masks out lakes to prevent excessive nullification
 """
 # %% Change log
 '''
+2026/04 PEB: for e.g Taal Volcano 
+  Improved nullification mode for Taal Volcano: water-covered areas cause false loop-closure errors, removing valid island pixels.  
+  This mode protects high-coherence land pixels and masks out lakes to prevent excessive nullification
+  nullify_mask_mode = False 
 2026/02: ML: added nullify_fix_ref
 2026/02: PEB: added nullify_aggressive
 20241221 Muhammet Nergizci
