@@ -1294,6 +1294,21 @@ def loop_closure_4th(args, da):
         ### Read unw
         unw12, unw23, unw13, ifgd12, ifgd23, ifgd13 = loop_lib.read_unw_loop_ph(Aloop[i, :], ifgdates, ifgdir, length,
                                                                                 width)
+
+        # ==== LOAD COHERENCE for ifgd12 (others optional, but this is enough) ====  For MASK
+        # Read coherence for the first interferogram of the triplet
+        ccfile = os.path.join(ifgdir, ifgd12, ifgd12 + '.cc')
+        if os.path.getsize(ccfile) == length * width:
+            coh = io_lib.read_img(ccfile, length, width, np.uint8).astype(np.float32) / 255.0
+        else:
+            coh = io_lib.read_img(ccfile, length, width)
+            coh[np.isnan(coh)] = 0.0
+
+        # ==== LAND MASK BASED ON COHERENCE ====
+        # Lake = very low coherence in most scenes, Taal island stays above ~0.12
+        mask_land = coh > 0.12
+
+  
         #
         ### Skip if bad ifg is included
         if ifgd12 in bad_ifg_all or ifgd23 in bad_ifg_all or ifgd13 in bad_ifg_all:
