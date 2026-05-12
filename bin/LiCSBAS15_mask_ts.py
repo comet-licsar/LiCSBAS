@@ -544,8 +544,9 @@ def main(argv=None):
         else:
             refarea = None
             refcolor = None
-
-        title = '{} {}({})'.format(name, units[i], thre_dict[name])
+        plot_name = 'n_pxls_noloop' if name == 'n_ifg_noloop' else name  ## Change to Pixels in mask figure
+        title = '{} {}({})'.format(plot_name, units[i], thre_dict[name])
+        #title = '{} {}({})'.format(name, units[i], thre_dict[name])
         add_subplot(fig, i+3, data, vmin_n, vmax_n, cmap, title, refarea, refcolor)
         add_subplot(fig2, i+3, data*mask_nan, vmin_n, vmax_n, cmap, title, refarea, refcolor)
         #i+3 because 3 data already plotted
