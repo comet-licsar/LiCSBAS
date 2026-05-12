@@ -268,13 +268,13 @@ def main(argv=None):
     # rearranging:
     if sbovl:
         print(f'sbovl active so there is no n_loop_err_rat threshold')
-        names = ['coh_avg', 'n_unw', 'vstd', 'maxTlen', ngapfile, 'stc', 'n_pxl_noloop', 'resid_rms']
+        names = ['coh_avg', 'n_unw', 'vstd', 'maxTlen', ngapfile, 'stc', 'n_ifg_noloop', 'resid_rms']
         units = ['', '', 'mm/yr', 'yr', '', 'mm', '', 'mm']
     elif os.path.exists(os.path.join(resultsdir, 'n_loop_err_rat')):
-        names = ['coh_avg', 'n_unw', 'vstd', 'maxTlen', ngapfile, 'stc', 'n_pxl_noloop', 'n_loop_err_rat', 'resid_rms']
+        names = ['coh_avg', 'n_unw', 'vstd', 'maxTlen', ngapfile, 'stc', 'n_ifg_noloop', 'n_loop_err_rat', 'resid_rms']
     elif os.path.exists(os.path.join(resultsdir, 'n_loop_err')):
-        names = ['coh_avg', 'n_unw', 'vstd', 'maxTlen', ngapfile, 'stc', 'n_pxl_noloop', 'n_loop_err', 'resid_rms']
-        names = ['coh_avg', 'n_unw', 'vstd', 'maxTlen', ngapfile, 'stc', 'n_pxl_noloop', 'n_loop_err', 'resid_rms']
+        names = ['coh_avg', 'n_unw', 'vstd', 'maxTlen', ngapfile, 'stc', 'n_ifg_noloop', 'n_loop_err', 'resid_rms']
+        names = ['coh_avg', 'n_unw', 'vstd', 'maxTlen', ngapfile, 'stc', 'n_ifg_noloop', 'n_loop_err', 'resid_rms']
     else:
         raise Usage('no n_loop_err information - cancelling. Please rerun step 12 or contact dev team on recommendations how to skip this step.')
     units = ['', '', 'mm/yr', 'yr', '', 'mm', '', '', 'mm']
