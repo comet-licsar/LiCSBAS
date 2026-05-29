@@ -443,7 +443,14 @@ def main(argv=None):
             sys.exit(1)
     else:
         print(f"No valid interferogram data found for processing or already processed, please check {outdir} exist or not!", flush=True)
-        example_date = ifgdates2[i]
+        #example_date = ifgdates2[i] ### rOMPE AQUI PORQUE YA ESTA PROCESADO TODO
+  
+        if len(ifgdates) > 0:
+            example_date = ifgdates[0]
+        else:
+            print("No interferograms found at all. Exiting.")
+            sys.exit(1)
+
         unw_tiffile = os.path.join(geocdir, example_date, example_date+'.geo.unw.tif')
         geotiff = gdal.Open(unw_tiffile)
         width = geotiff.RasterXSize
