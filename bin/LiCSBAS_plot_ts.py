@@ -1394,10 +1394,10 @@ if __name__ == "__main__":
         print('\nCreate {} for time seires plot\n'.format(ts_pngfile))
         #fig.savefig(ts_pngfile)
         #sys.exit(0)
- 
+ #### for using in jupiternotebook fig is not define
         if correction_flag:
                 fig.savefig(ts_pngfile, bbox_inches='tight')
-            else:
+        else:
                 pts.savefig(ts_pngfile, bbox_inches='tight')
 
         sys.exit(0)
