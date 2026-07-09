@@ -1392,9 +1392,15 @@ if __name__ == "__main__":
     #%%
     if ts_pngfile:
         print('\nCreate {} for time seires plot\n'.format(ts_pngfile))
-        fig.savefig(ts_pngfile)
-        sys.exit(0)
+        #fig.savefig(ts_pngfile)
+        #sys.exit(0)
+ 
+        if correction_flag:
+                fig.savefig(ts_pngfile, bbox_inches='tight')
+            else:
+                pts.savefig(ts_pngfile, bbox_inches='tight')
 
+        sys.exit(0)
 
     #%% Final linking of the canvas to the plots.
     cid = pv.canvas.mpl_connect('button_press_event', printcoords)
