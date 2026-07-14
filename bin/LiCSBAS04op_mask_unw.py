@@ -205,6 +205,22 @@ def main(argv=None):
         print("\nCalculate coh_avg and define mask (<={})".format(coh_thre), flush=True)
         coh_avg = np.zeros((length, width), dtype=np.float32)
         n_coh = np.zeros((length, width), dtype=np.int16)
+
+     ### delete automatic cc with diferent size or cause error and stop 
+        for ifgd in ifgdates:
+
+            ccfile = os.path.join(in_dir, ifgd, ifgd + '.cc')
+
+            if not os.path.exists(ccfile):
+               continue
+
+            expected_size = length * width      # uint8
+
+            if os.path.getsize(ccfile) != expected_size:
+                print(f"Eliminando {ccfile}")
+                os.remove(ccfile)
+       ############# 
+     
         for ifgix, ifgd in enumerate(ifgdates): 
             ccfile = os.path.join(in_dir, ifgd, ifgd+'.cc')
             if os.path.getsize(ccfile) == length*width:
