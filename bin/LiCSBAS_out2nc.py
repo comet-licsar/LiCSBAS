@@ -940,6 +940,9 @@ def main(argv=None):
     if title:
         cube.attrs['title'] = title
 
+    from pathlib import Path
+    Path(outfile+'.lock').touch()
+
     if not tozarr:
         if tocf:
             encode = encoding
@@ -975,7 +978,9 @@ def main(argv=None):
         cube.to_zarr(outfile)
         #except:
         #    print('error storing to zarr - ')
-        
+    
+    os.remove(outfile+'.lock')
+
     #if alignsar:
     #    # will just load it from stored since we will use the non-load approach for amps/cohs to save memory
     #    del cube
