@@ -637,11 +637,12 @@ def main(argv=None):
     toxcube = False
     do_not_compress = [] # anything to be NOT compressed..
     medianfix = False
+    title = False
 
     #%% Read options
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "hi:o:m:r:CA", ["help", "alignsar", "cf", "xcube",
+            opts, args = getopt.getopt(argv[1:], "hi:o:m:r:CA", ["help", "alignsar", "cf", "xcube", "title=",
                                                                  "zarr", "addtif=", "extracol=", "compress",
                                                                  "postfilter","clip_geo=", "ref_geo=", "apply_mask", "mask="])
         except getopt.error as msg:
@@ -662,6 +663,7 @@ def main(argv=None):
                 toxcube = True
                 tocf = True # useful..
                 medianfix = True
+                compress = True # very useful - now using just level 1 (with shuffle) - very good!
             elif o == '--addtif':
                 print('Final datacube will include imported '+a)
                 filestoadd.append(a)
@@ -676,6 +678,8 @@ def main(argv=None):
             elif o == '-r':
                 refarea = a
                 print('ref area in radar coords not implemented yet')
+            elif o == '--title':
+                title = a
             elif o == '--clip_geo':
                 cliparea_geo = a
                 minclipx, maxclipx, minclipy, maxclipy = cliparea_geo.split('/')
@@ -877,6 +881,9 @@ def main(argv=None):
         fix_units("stc", longname='spatio-temporal consistence', units="mm")
         # fix_units("coh", units="1")
         fix_units("loop_ph_avg_abs", longname='average absolute loop phase error', units="rad")
+        if 'coh' in ds:
+            # if 'time' in ds['coh'].coords:
+            ds['coh'].attrs['long_name'] = 'average coherence'
         #
         # 5) Remove _FillValue from coordinate variables if present (coordinates must be numeric arrays)
         for c in ["lat", "lon", "time"]:
@@ -928,6 +935,10 @@ def main(argv=None):
         encoding["lon"] = {"dtype": ds["lon"].dtype}
         encoding["time"] = {"dtype": 'i4'}  # ds["time"].dtype}
         cube = ds # just in case...
+
+    # some details:
+    if title:
+        cube.attrs['title'] = title
 
     if not tozarr:
         if tocf:
