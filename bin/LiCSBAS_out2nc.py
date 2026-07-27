@@ -437,7 +437,7 @@ def toalignsar(tsdir, cube, filestoadd = []):  # ncfile, outncfile, filestoadd =
         cube['DEM'].values = cumnf.hgt.values #np.flipud(cumnf.hgt.values)
         cube['DEM'].attrs['unit']='m'
         cube['DEM']=cube['DEM'].where(cube['DEM'] != 0)
-    #
+    #   ttt
     if filestoadd:
         for tif in filestoadd:
             try:
