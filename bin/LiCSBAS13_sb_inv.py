@@ -88,7 +88,7 @@ LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] 
  --nullify_noloops   Nullifies data from ifgs not included in any loop, both ifg and pixel based noloop_ifgs. Uses data before nullification (optional step 12)
  --nullify_noloops_use_data_after_nullification  This would nullify noloop_ifgs after the nullification (usually not recommended)
  --sbovl running the inversion on sbovl data (input is in mm)
- --sbovl_abs running the inversion on sbovl data, and use absolute values of sbovl data, not referenced to the reference point
+ --sbovl_abs recalculate the absolute velocity of sbovl, referecing steps are skipped!
  --ignore_nullification  Use of unwrapped data before the unwrapping error nullification (step 12) if performed.
  --estimate_ts_errors  This will estimate cumulated time series errors from increment residuals. For NSBAS only (for now). WLS would also use weights to form covariance matrix
 """
@@ -222,7 +222,7 @@ def main(argv=None):
     nullify_noloops = False
     nullify_noloops_use_data_after_nullification = False
     sbovl = False
-    sbovl_abs = False ##No need to set this to True if sbovl is not set MN
+    sbovl_abs = False
     debugflag = False
 
     try:
@@ -426,8 +426,8 @@ def main(argv=None):
         if not sbovl:
             if not os.path.exists(bad_ifg12file):
                 raise Usage('No 12bad_ifg.txt file exists in {}!'.format(infodir))
-        if not os.path.exists(reffile):
-            raise Usage('No 12ref.txt file exists in {}!'.format(infodir))
+            if not os.path.exists(reffile):
+                raise Usage('No 12ref.txt file exists in {}!'.format(infodir))
     except Usage as err:
         print("\nERROR:", file=sys.stderr, end='')
         print("  "+str(err.msg), file=sys.stderr)
@@ -889,7 +889,7 @@ def main(argv=None):
                 if not sbovl_abs:
                     unw = unw - ref_unw[i] ## Remove reference phase
                 elif not printed_sbovl_warning:
-                    print('SBOVL_abs: no reference removal set up as you set the sbovl_abs!')
+                    print('sbovl_abs: no reference removal set up as you set the sbovl_abs!')
                     printed_sbovl_warning = True  ##This helps to print the warning only once
                 unwpatch[i] = unw
                 f.close()

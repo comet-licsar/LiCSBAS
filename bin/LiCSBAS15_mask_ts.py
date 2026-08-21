@@ -51,15 +51,12 @@ LiCSBAS15_mask_ts.py -t tsadir [-c coh_thre] [-u n_unw_r_thre] [-v vstd_thre]
  --noautoadjust  Do not auto adjust threshold when all pixels are masked
                  (Default: do auto adjust)
  --sbovl  use the sbovl masking thresholds and indices
- --sbovl_abs  use the sbovl abs results from previous step like bootvel_abs_notide_noiono
- --tide use tide corrected results (if exist) like bootvel_abs_notide
- --iono use iono corrected results (if exist) like bootvel_abs_notide_noiono  ##TODO the corrections applied in the step 16 for the sboi before spatio-temporal filter, these flag was open to testing absolute sense of boi and its correction, need to be removed/organized after better testing. #MN
- 
+ --sbovl_abs  absolute sense to call boolvel_abs
 
  Default thresholds:
    C-band : -c 0.05 -u 1.5 -v 100 -T 1 -g 10 -s 5  -i 50 -l 5 -r 2
    L-band : -c 0.01 -u 1   -v 200 -T 1 -g 1  -s 10 -i 50 -l 1 -r 10
-   SBOI   : -c 0.05 -u 0.5 -g 50 -s 10 -r 15 -i 1000 -L 0.5   
+   sbovl   : -c 0.05 -u 0.5 -g 50 -s 10 -r 15 -i 1000 -L 0.5   
 """
 #%% Change log
 '''
@@ -356,18 +353,7 @@ def main(argv=None):
     #%% Read data
     # breakpoint()
     if sbovl_abs:
-        # velfile = os.path.join(resultsdir,'vel_ransac_abs_notide_noiono')
-        if tide and iono:
-            velfile = os.path.join(resultsdir,'bootvel_abs_notide_noiono')
-        elif tide and not iono:
-            velfile = os.path.join(resultsdir,'bootvel_abs_notide')
-        elif not tide and iono:
-            velfile = os.path.join(resultsdir,'bootvel_abs_noiono') 
-        elif not tide and not iono:
-            velfile = os.path.join(resultsdir,'bootvel_abs')
-        #not exist velfile, so use vel
-        if not os.path.exists(velfile):
-            velfile = os.path.join(resultsdir,'vel')
+        velfile = os.path.join(resultsdir,'bootvel_abs')
         print(f'Using {velfile}')
     else:
         velfile = os.path.join(resultsdir,'vel')

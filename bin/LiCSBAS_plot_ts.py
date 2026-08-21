@@ -49,15 +49,12 @@ LiCSBAS_plot_ts.py [-i cum[_filt].h5] [--i2 cum*.h5] [-m yyyymmdd] [-d results_d
  --ts_png     Output png file of time series plot (not display interactive viewers)
  --corrections Show corrections (tide, iono, gacos, etc.) if exist in cum file in another subplot of time series plot
  --cum_name, cum_name2, cum_name3  Dataset name in cum hdf5 file for cumulative displacement to show in time series plot (Default: cum or cum_model). If --corrections is specified, you can specify the dataset name for the corrections to show. For example, if you have tide correction data in your cum hdf5 file, you can specify --cum_name2 tide to show the time series of tide correction. You can specify up to 3 datasets with these options. The labels of the time series plot will be set to the dataset names.
- 
- ##TODO here is testing for absolute referencign and plotting, so please contact developers if you want to use or modify these options #MN
- --abs       Show absolute cumulative displacement and velocity if exist in cum file. If not exist, show cum and vel but set title and color range based on absolute values. This is for the scenario like SBOI where the cumulative displacement and velocity are already corrected for plate motion and show the absolute values. In this scenario, the relative cumulative displacement and velocity (i.e., not corrected for plate motion) can be shown by specifying the cum file with relative values with --i2 option.
- --novelocity  Not show velocity in title and not use velocity for color range setting
- --raw         Show raw cumulative displacement without mask and reference area (Default: show filtered cumulative displacement with mask and reference area) for sbovl absolute senario
-
- # PEB additions:
  --dem_background  Uses project hgt file to plot a hillshade background. Uses earthpy and rasterio.
 
+ ##TODO here is testing for absolute referencign and plotting, so please contact developers if you want to use or modify these options #MN
+ --abs       Show absolute cumulative displacement and velocity if exist in cum file. If not exist, show cum and vel but set title and color range based on absolute values. This is for the scenario like sbovl where the cumulative displacement and velocity are already corrected for plate motion and show the absolute values. In this scenario, the relative cumulative displacement and velocity (i.e., not corrected for plate motion) can be shown by specifying the cum file with relative values with --i2 option.
+ --no_velocity  Not show velocity in title and not use velocity for color range setting
+  
 example:  LiCSBAS_plot_ts.py -i TS_GEOCml10GACOSmask/cum_filt_interpolate.h5 --cum_name cum --cum_name2 cum_corr_minus_plate --cum_name3 cum_corr_minus_plate_inter
 """
 #%% Change log
@@ -248,7 +245,6 @@ if __name__ == "__main__":
     #TODO here is testing for absolute referencign and plotting, so please contact developers if you want to use or modify these options #MN
     absolute= False
     novel_flag = False
-    raw_flag = False
     tsstd = None
 
     dem_background = False
@@ -259,7 +255,7 @@ if __name__ == "__main__":
             opts, args = getopt.getopt(argv[1:], "hi:d:u:m:r:p:c:",
                ["help", "i2=", "ref_geo=", "p_geo=", "nomask", "dmin=", "dmax=",
                 "vmin=", "vmax=", "auto_crange=", "ylen=", "ts_png=", "abs", "corrections", "cum_name=",
-                "cum_name2=", "cum_name3=", "novelocity", "raw", "dem_background"])
+                "cum_name2=", "cum_name3=", "no_velocity", "dem_background"])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -308,10 +304,8 @@ if __name__ == "__main__":
                 absolute = True
             elif o == '--corrections':
                 correction_flag = True
-            elif o == '--novelocity':
+            elif o == '--no_velocity':
                 novel_flag = True
-            elif o == '--raw':
-                raw_flag = True
             elif o == '--cum_name':
                 cum_name = a
             elif o == '--cum_name2':
@@ -329,7 +323,7 @@ if __name__ == "__main__":
     #%% Set cmap
     cmap = tools_lib.get_cmap(cmap_name)
 
-
+    
     #%% Set files
     ### cumfile
     if not cumfile: ## if not given
@@ -404,14 +398,19 @@ if __name__ == "__main__":
     else:
         LOSuflag = True
 
-
+    
     #%% Read data
     ### cumfile
     print('\nReading {}'.format(os.path.relpath(cumfile)))
     cumh5 = h5.File(cumfile,'r')
     vel = cumh5['vel']
     try:
-        cum = cumh5['cum']
+        if cum_name is not None:
+            cum = cumh5[cum_name]
+            print(f'{cum_name} found in {cumfile}.')
+        else:
+            cum = cumh5['cum']
+            print('loading model cum data')
     except:
         cum = cumh5['cum_model']
         print('loading model cum data')
@@ -440,7 +439,8 @@ if __name__ == "__main__":
         geocod_flag = False
         aspect = 1
         print('No latlon field found in {}. Skip.'.format(cumfile))
-
+    
+    
     ### Add the corrections
     if correction_flag:
         # tide correction
@@ -462,7 +462,7 @@ if __name__ == "__main__":
             print('No iono correction found in {}. Skip.'.format(cumfile))
         
         # gacos correction
-        # breakpoint()
+        # 
         try:
             gacos = cumh5['sltd'][:] #'gacos'
             label_gacos = 'Gacos correction'
@@ -483,6 +483,7 @@ if __name__ == "__main__":
                 iono2 = cumh5['geo.iono.code.sTECA.tif'][:]
                 label_iono2 = 'Iono2 correction (sTECA)'
                 print('Second Ionospheric correction (sTECA) found.')
+                # breakpoint()
             elif 'geo.iono.code.tif' in cumh5:
                 iono2 = cumh5['geo.iono.code.tif'][:]
                 label_iono2 = 'Iono2 correction (CODE)'
@@ -494,20 +495,12 @@ if __name__ == "__main__":
             iono2 = None
             print(f'Error checking iono2 in {cumfile}: {e}')   
             
-    # breakpoint()
     if absolute:
         cum_abs = cum_name
         vel = None
-        # breakpoint()
         # Check for absolute displacement
-        if cum_name is None:
-            if 'cum_abs_notide_noiono' in cumh5:
-                cum_abs = cumh5['cum_abs_notide_noiono'][()]
-                print('Absolute displacement (cum_abs_notide_noiono) found.')
-            elif 'cum_abs_notide' in cumh5:
-                cum_abs = cumh5['cum_abs_notide'][()]
-                print('Absolute displacement (cum_abs_notide) found.')
-            elif 'cum_abs' in cumh5:
+        if cum_name is not None:
+            if 'cum_abs' in cumh5:
                 cum_abs = cumh5['cum_abs'][()]
                 print('Absolute displacement (cum_abs) found.')
             else:
@@ -516,13 +509,7 @@ if __name__ == "__main__":
         else:
             cum_abs = cumh5[cum_name][()]
         # Check for absolute velocity
-        if 'vel_abs_notide_noiono' in cumh5:
-            vel = cumh5['vel_abs_notide_noiono']
-            print('Absolute velocity (vel_abs_notide_noiono) found.')
-        elif 'vel_abs_notide' in cumh5:
-            vel = cumh5['vel_abs_notide']
-            print('Absolute velocity (vel_abs_notide) found.')
-        elif 'vel_abs' in cumh5:
+        if 'vel_abs' in cumh5:
             vel = cumh5['vel_abs']
             print('Absolute velocity (vel_abs) found.')
         else:
@@ -619,18 +606,10 @@ if __name__ == "__main__":
             
     ### cumfile2
     if cumfile2:
-        if absolute:  #SBOI scenario for InSAR LoS plotting
+        if absolute:  #sbovl scenario for InSAR LoS plotting
             print('Reading {} as 2nd'.format(os.path.relpath(cumfile2)))
             cumh52 = h5.File(cumfile2,'r')
-            if 'cum_abs_notide_noiono' in cumh52:
-                cum2 = cumh52['cum_abs_notide_noiono'][()]
-                vel2 = cumh52['vel_abs_notide_noiono'][()]
-                print('Absolute displacement (cum_abs_notide_noiono) found.')
-            elif 'cum_abs_notide' in cumh52:
-                cum2 = cumh52['cum_abs_notide'][()]
-                vel2 = cumh52['vel_abs_notide'][()]
-                print('Absolute displacement (cum_abs_notide) found.')
-            elif 'cum_abs' in cumh52:
+            if  'cum_abs' in cumh52:
                 cum2 = cumh52['cum_abs'][()]
                 vel2 = cumh52['vel_abs'][()]
                 print('Absolute displacement (cum_abs) found.')
@@ -690,7 +669,7 @@ if __name__ == "__main__":
         cumname3_ref = cumname3[ix_m, :, :]
         label4 = f'{cum_name3}'
 
-    # breakpoint()
+    # 
     #%% Read Mask (1: unmask, 0: mask, nan: no cum data)
     mask_base = np.ones((length, width), dtype=np.float32)
     mask_base[np.isnan(cum[ix_m, :, :])] = np.nan
@@ -779,7 +758,7 @@ if __name__ == "__main__":
 
     ### background DEM
     if dem_background:
-        alphamain = 0.6
+        alphamain = 0.8
         demtif=os.path.join(resultsdir,"hgt.geo.tif")
         print('Shadow DEM', demtif)
         az=-167.92738 # could rotate based on A/D
@@ -1401,37 +1380,6 @@ if __name__ == "__main__":
                 axts.scatter(imdates_dt, dph, label=label1, c='b', alpha=0.6, zorder=5)
                 axts.set_title('vel = {:.1f} mm/yr @({}, {})'.format(vel1p, jj, ii), fontsize=10)
             
-            if raw_flag:
-                cum_abs_withoutiono = cumh5['cum_abs_notide'][()]
-                cum_abs_withoutiono_tide = cumh5['cum_abs'][()]
-                
-                # if not cumfile2: ## I assumed the cumfile2 also include the correction, therefore I skip that to avoid dublication ## I dublicate right now to make sure cum_filt.h5 is correct.
-                dph_uncorr1 = cum_abs_withoutiono_tide[:, ii, jj] - cum_abs_ref[ii, jj]
-                dph_uncorr2 = cum_abs_withoutiono[:, ii, jj] - cum_abs_ref[ii, jj]    
-                #Compute corrected velocity (vel_uncorr1)
-                vel_uncorr1 = np.polyfit(imdates_ordinal - imdates_ordinal[0], dph_uncorr1, 1)[0] * 365.25  # Convert to mm/yr
-                vel_uncorr2 = np.polyfit(imdates_ordinal - imdates_ordinal[0], dph_uncorr2, 1)[0] * 365.25  # Convert to mm/yr
-                
-                #Fit function for uncorrected disp2
-                lines_corr = [0, 0, 0, 0]
-                for model, vis in enumerate(visibilities):
-                    yvalues_corr = calc_model(dph_uncorr2, imdates_ordinal, xvalues, model)
-                    # if not novel_flag:
-                    #     lines_corr[model], = axts.plot(xvalues_dt, yvalues_corr, '#00CC00', visible=vis, alpha=0.6, zorder=3)  # Cyan for corrected
-                    
-                axts.scatter(imdates_dt, dph_uncorr2, label='abs_notide', c='#FFA500', alpha=0.5, zorder=3, marker="s")  # Orange
-                axts.set_title('vel(1) = {:.1f} mm/yr, vel(uncor) = {:.1f} mm/yr @({}, {})'.format(vel1p, vel_uncorr2, jj, ii), fontsize=10)
-            
-                #Fit function for uncorrected disp1           
-                for model, vis in enumerate(visibilities):
-                    yvalues_corr = calc_model(dph_uncorr1, imdates_ordinal, xvalues, model)
-                    # if not novel_flag:
-                    #     lines_corr[model], = axts.plot(xvalues_dt, yvalues_corr, '#00CC00', visible=vis, alpha=0.6, zorder=3)  # Cyan for corrected
-                    
-                axts.scatter(imdates_dt, dph_uncorr1, label='abs', c='#00CC00', alpha=1, zorder=4, marker="s")  # Green
-                axts.set_title('vel(1) = {:.1f} mm/yr, vel(uncor) = {:.1f} mm/yr @({}, {})'.format(vel1p, vel_uncorr1, jj, ii), fontsize=10)
-    
-            
             ### cumfile2
             if cumfile2:
                 if not absolute:
@@ -1451,6 +1399,19 @@ if __name__ == "__main__":
                 if not novel_flag:
                     axts.scatter(imdates_dt, dphf, c='r', label=label2, alpha=0.6, zorder=4)
                     axts.set_title('vel(1) = {:.1f} mm/yr, vel(2) = {:.1f} mm/yr @({}, {})'.format(vel1p, vel2p, jj, ii), fontsize=10)
+            
+            if cum_name2:
+                dcumname2_ref = cumname2_ref[ii, jj]-np.nanmean(cumname2_ref[refy1:refy2, refx1:refx2]*mask[refy1:refy2, refx1:refx2])
+                dphf = cumname2[:, ii, jj]-np.nanmean(cumname2[:, refy1:refy2, refx1:refx2]*mask[refy1:refy2, refx1:refx2], axis=(1, 2)) - dcumname2_ref
+                axts.scatter(imdates_dt, dphf, c='orange', label=label3, alpha=0.6, zorder=4)
+                # axts.set_title('vel(1) = {:.1f} mm/yr, vel(2) = {:.1f} mm/yr @({}, {})'.format(vel1p, vel2p, jj, ii), fontsize=10)
+            
+            if cum_name3:
+                dcumname3_ref = cumname3_ref[ii, jj]-np.nanmean(cumname3_ref[refy1:refy2, refx1:refx2]*mask[refy1:refy2, refx1:refx2])
+                dphf = cumname3[:, ii, jj]-np.nanmean(cumname3[:, refy1:refy2, refx1:refx2]*mask[refy1:refy2, refx1:refx2], axis=(1, 2)) - dcumname3_ref
+                axts.scatter(imdates_dt, dphf, c='purple', label=label4, alpha=0.6, zorder=4)
+                # axts.set_title('vel(1) = {:.1f} mm/yr, vel(2) = {:.1f} mm/yr @({}, {})'.format(vel1p, vel2p, jj, ii), fontsize=10)
+
             
             ## gap
             if gap:

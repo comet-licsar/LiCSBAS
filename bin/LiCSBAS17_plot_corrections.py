@@ -20,7 +20,7 @@ Arguments:
  -i    cum(_filt).h5 file (default cum.h5)
  -o    Output PNG file name (default: <frame>.corrections.png)
  -r   Reference area in lon/lat format (e.g., 30:40/50:60) to subtract mean value
---sboi Run in SBOI mode to preserve absolute velocity (azimuth instead of LOS)
+--sbovl Run in sbovl mode to preserve absolute velocity (azimuth instead of LOS)
 """
 
 #%% Imports
@@ -64,14 +64,14 @@ def main(argv=None):
     tsdir = ''
     frame = None
     output_file = None
-    sboi = False
+    sbovl = False
     keep_absolute = False
     refarea = []
     cumfile = 'cum.h5'
 
     # Argument parsing
     try:
-        opts, _ = getopt.getopt(argv[1:], "ht:i:o:r:", ["help", "sboi"])
+        opts, _ = getopt.getopt(argv[1:], "ht:i:o:r:", ["help", "sbovl"])
         for opt, arg in opts:
             if opt in ('-h', '--help'):
                 print(__doc__)
@@ -84,8 +84,8 @@ def main(argv=None):
                 output_file = arg
             elif opt == '-r':
                 refarea = arg
-            elif opt == '--sboi':
-                sboi = True
+            elif opt == '--sbovl':
+                sbovl = True
                 # keep_absolute = True
 
         if not tsdir:
@@ -109,7 +109,7 @@ def main(argv=None):
     vel_file = os.path.join(workdir, f'{frame}.vel_filt.mskd.eurasia.geo.tif')
     cum_file = os.path.join(tsdir, cumfile)
 
-    if sboi:
+    if sbovl:
         corrections = {
             "tide": {
                 "fname": tide_file,
@@ -184,10 +184,10 @@ def main(argv=None):
     # Load data
     tide = np.fromfile(tide_file, dtype='float32').reshape(shape)
     iono = np.fromfile(iono_file, dtype='float32').reshape(shape)
-    if not sboi:
+    if not sbovl:
         gacos = np.fromfile(gacos_file, dtype='float32').reshape(shape)
     vlos = lts.load_tif2xr(vel_file)
-    vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', sboi=sboi).interp_like(vlos)
+    vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', azi=sbovl).interp_like(vlos)
 
     # Reference area subtraction if needed
     if not keep_absolute:
@@ -207,13 +207,13 @@ def main(argv=None):
         mean_val = np.nanmean(iono[refy1:refy2, refx1:refx2])
         mean_val = np.nan_to_num(mean_val, nan=0.0)
         iono -= mean_val
-        if not sboi:
+        if not sbovl:
             mean_val = np.nanmean(gacos[refy1:refy2, refx1:refx2])
             mean_val = np.nan_to_num(mean_val, nan=0.0)
             gacos -= mean_val
 
     # Uncorrected velocity
-    if sboi:
+    if sbovl:
         gacos = np.zeros_like(vlos.data)
     vlos_uncorrected = vlos.data - tide - iono - vlos_eurasia.data + gacos
 
@@ -222,7 +222,7 @@ def main(argv=None):
     post_lon, post_lat = cum.post_lon.item(), cum.post_lat.item()
 
     # Create grids
-    if sboi:
+    if sbovl:
         grids = {
             "vlos_uncorrected": create_geogrid(vlos_uncorrected, corner_lon, corner_lat, post_lon, post_lat),
             "tide": create_geogrid(tide, corner_lon, corner_lat, post_lon, post_lat),
@@ -262,7 +262,7 @@ def main(argv=None):
         print('DEM is downloading please wait! After downloading, the process will be faster!')
         try:
             # Download the earth relief data and save it to a file
-            grid = pygmt.datasets.load_earth_relief(resolution=dem_resolution, region=RR_used)
+            grid = pygmt.datasets.load_earth_relief(resolution=dem_resolution, region=[25,50,25,50])
             # Saving the grid to a NetCDF file
             grid.to_netcdf(dem)
             print(f"Data successfully downloaded and saved to {dem}")
@@ -271,7 +271,7 @@ def main(argv=None):
     else:
         print(f'DEM already exists!')
     
-    if not sboi:
+    if not sbovl:
         # Figure creation
         fig = pygmt.Figure()
         pygmt.config(MAP_FRAME_PEN='0.7p,black',FONT_LABEL='12p,Helvetica', FONT_ANNOT='10p,Helvetica',MAP_FRAME_TYPE="inside",FORMAT_GEO_MAP="DD")
@@ -381,7 +381,7 @@ def main(argv=None):
             pygmt.makecpt(cmap="gray", series=[-200, 10000, 3000], continuous=True, reverse=True)
             fig.grdimage(grid=dem,cmap=True,region=region,shading=True,frame=False)
             pygmt.makecpt(cmap="vik", series=cmap_range)
-            decomp3d_Vn_xyz='sboi.xyz'
+            decomp3d_Vn_xyz='sbovl.xyz'
             plot_lib.da_to_xyz(grid, decomp3d_Vn_xyz,varname="Vn")
             # PlOT dsc_file
             fig.plot(data=decomp3d_Vn_xyz, style="c0.05c", fill="+z", cmap=True)
@@ -406,7 +406,7 @@ def main(argv=None):
                 fig.basemap(projection="M3c", region=region, frame=["x2f1","y2f1",'wsne'])
         # Save output
         if not output_file:
-            output_file = f"{frame}.corrections_SBOI.png"
+            output_file = f"{frame}.corrections_sbovl.png"
         
         
         

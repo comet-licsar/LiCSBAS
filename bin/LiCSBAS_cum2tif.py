@@ -57,7 +57,7 @@ def cum_wrapper(frame, cumxr, imdate, plate_motion, refarea, interseismic_motion
 
     # years since primary
     dt_days = (im_d - imd_p_dt64).astype('timedelta64[D]').astype(int)
-    years = dt_days / 365.4
+    years = dt_days / 365.25
     
     # select cumulative at epoch and at primary
     try:
@@ -217,14 +217,14 @@ def main(TS_folder, cum_h5, mask, dem_par, frame, imd_p, imd_s, ve_gnss=None, vn
     cumxr = lts.loadall2cube(cum_h5)#, extracols = 'cum')
     
     if plate_motion:
-        vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', sboi=sbovl)
+        vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', azi=sbovl)
         #reshape
         vlos_eurasia_reshaped=vlos_eurasia.interp_like(cumxr.vel)
     if interseismic_motion:
         
         if ve_gnss is None or vn_gnss is None:
             ve_gnss_nc='/gws/ssde/j25a/nceo_geohazards/vol1/projects/COMET/mnergizci/1.second_paper/interseismic/decomp3d.nc'
-            vn_gnss_nc='/gws/ssde/j25a/nceo_geohazards/vol1/projects/COMET/mnergizci/1.second_paper/interseismic/velmap_insars29_sbois0_scalar.nc'
+            vn_gnss_nc='/gws/ssde/j25a/nceo_geohazards/vol1/projects/COMET/mnergizci/1.second_paper/interseismic/velmap_insars29_sbovls0_scalar.nc'
             if not os.path.exists(ve_gnss_nc):
                 print(f"Error: GNSS velocity file {ve_gnss_nc} does not exist.")
                 exit(1)
@@ -234,17 +234,22 @@ def main(TS_folder, cum_h5, mask, dem_par, frame, imd_p, imd_s, ve_gnss=None, vn
 
             ve_gnss= xr.load_dataset(ve_gnss_nc).Ve
             vn_gnss= xr.load_dataset(vn_gnss_nc).Vn
+            vu_gnss= xr.load_dataset(ve_gnss_nc).Vu
             ve_gnss_velmap= xr.load_dataset(vn_gnss_nc).Ve
 
             ##reshape
             ve_gnss_reshaped=ve_gnss.interp_like(E_unit)
             vn_gnss_reshaped=vn_gnss.interp_like(E_unit)
-            
+            vu_gnss_reshaped=vu_gnss.interp_like(E_unit)
+
             ve_gnss_velmap_reshaped=ve_gnss_velmap.interp_like(E_unit)
             ve_gnss_filled = ve_gnss_reshaped.fillna(ve_gnss_velmap_reshaped)
+            vu_gnss_reshaped = vu_gnss_reshaped.where(np.abs(vu_gnss_reshaped) <= 5)
             
-            
-            vlos_gnss = ve_gnss_filled * E_unit + vn_gnss_reshaped * N_unit 
+            if sbovl:
+                vlos_gnss = ve_gnss_filled * E_unit + vn_gnss_reshaped * N_unit
+            else:
+                vlos_gnss = ve_gnss_filled * E_unit + vn_gnss_reshaped * N_unit + vu_gnss_reshaped * U_unit
             #vlos_gnss
     else:
         print("No interseismic motion calculation requested.")
@@ -316,45 +321,23 @@ def main(TS_folder, cum_h5, mask, dem_par, frame, imd_p, imd_s, ve_gnss=None, vn
     #     del cumh55['imdates_corr']
     # cumh55.create_dataset('imdates_corr', data=imdates_out, dtype=np.int32)
 
-
     if stack_plate is not None:
-        if 'cum_corr_minus_plate' in cumh55:
-            del cumh55['cum_corr_minus_plate']
-        cumh55.create_dataset('cum_corr_minus_plate',
+        if 'cum_plate' in cumh55:
+            del cumh55['cum_plate']
+        cumh55.create_dataset('cum_plate',
                             data=stack_plate, dtype=np.float32,
                             compression='gzip', chunks=True)
 
     if stack_inter is not None:
-        if 'cum_corr_minus_plate_inter' in cumh55:
-            del cumh55['cum_corr_minus_plate_inter']
-        cumh55.create_dataset('cum_corr_minus_plate_inter',
+        if 'cum_plate_inter' in cumh55:
+            del cumh55['cum_plate_inter']
+        cumh55.create_dataset('cum_plate_inter',
                             data=stack_inter, dtype=np.float32,
                             compression='gzip', chunks=True)
-
 
     cumh55.flush()
     cumh55.close()
     print("Done writing corrected datasets to HDF5.")
-
-    ##TODO, I can do parallel running.
-    # n_epoch = len(args_list)
-    # if n_epoch > 0:
-    #     if n_para > n_epoch:
-    #         n_para = n_epoch
-
-    #     print('  {} parallel processing...'.format(n_para), flush=True)
-
-    #     # define a local wrapper that captures imd_p_dt64 and velocity rasters by closure
-    #     def _local_wrapper(args):
-    #         # expose names to the top-level cum_wrapper via closure
-    #         nonlocal imd_p_dt64, vlos_eurasia_reshaped, vlos_gnss
-    #         return cum_wrapper(*args)
-
-        # p = q.Pool(n_para)
-        # results = p.map(_local_wrapper, args_list)
-        # p.close()
-        # print(f"Processed {len(results)} epochs.")
-        
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Read the cum.h5 file and output the binary, tif and png file of cumulative dispalcement of each epoch.")

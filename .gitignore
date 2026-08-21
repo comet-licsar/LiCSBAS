@@ -1,1 +1,4 @@
 LiCSBAS_lib/__pycache__
+*.png
+*.pyc
+*json
