@@ -307,16 +307,18 @@ def main(argv=None):
 
 
     #%% Additional correction data if specified
-    if sbovl:
-        extrastr='.azi'
-    else:
-        extrastr = ''
     epoch_products = [
         (get_gacos, 'GACOS', '{}.sltd.geo.tif'),
         (get_era5, 'ERA5', '{}.icams.sltd.geo.tif'),
-        (get_iono, 'IONO', '{}.geo.iono'+extrastr+'.tif'),
-        (get_tides, 'TIDES', '{}.tide.geo'+extrastr+'.tif'),
+        (get_iono, 'IONO', '{}.geo.iono.tif'),
+        (get_tides, 'TIDES', '{}.tide.geo.tif'),
     ]
+    if sbovl:
+        epoch_products = epoch_products + [
+            (get_iono, 'IONO', '{}.geo.iono.STECA.tif'),
+            (get_iono, 'IONO', '{}.geo.iono.STECB.tif'),
+            (get_tides, 'TIDES', '{}.tide.geo.azi.tif')
+        ]
     enabled_products = [(name, filename) for enabled, name, filename in epoch_products
                         if enabled]
     if enabled_products:

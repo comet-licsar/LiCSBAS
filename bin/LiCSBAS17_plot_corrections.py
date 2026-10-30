@@ -31,8 +31,9 @@ import time
 import getopt
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
-import cmcrameri.cm as cmc
+# not used:
+# import matplotlib.pyplot as plt
+# import cmcrameri.cm as cmc
 import pygmt
 
 import LiCSBAS_plot_lib as plot_lib
@@ -113,13 +114,13 @@ def main(argv=None):
         corrections = {
             "tide": {
                 "fname": tide_file,
-                "field": "GEOC.EPOCHS",
+                "field": "TIDES",
                 "input_tif": "tide.geo.azi.tif",
                 "scale": 1000,
             },
             "iono": {
                 "fname": iono_file,
-                "field": "GEOC.EPOCHS",
+                "field": "IONO",
                 "input_tif": "geo.iono.sTECA.tif",
                 "scale": 14000,
             },
@@ -128,13 +129,13 @@ def main(argv=None):
          corrections = {
             "tide": {
                 "fname": tide_file,
-                "field": "GEOC.EPOCHS",
+                "field": "TIDES",
                 "input_tif": "tide.geo.tif",
                 "scale": 1000,
             },
             "iono": {
                 "fname": iono_file,
-                "field": "GEOC.EPOCHS",
+                "field": "IONO",
                 "input_tif": "geo.iono.tif",
                 "scale": 55.465 / (4 * np.pi),
             },
@@ -248,14 +249,17 @@ def main(argv=None):
 
     #prepareing dem for figure
     ###demfile
-    dem_file='earth_relief_fullAHB_30s.nc'
+    # dem_file='earth_relief_fullAHB_30s.nc'
     # Upload data
-    batchdir = os.environ.get("BATCH_CACHE_DIR")
-    dem = os.path.join(batchdir, dem_file)
+    # batchdir = os.environ.get("BATCH_CACHE_DIR")
+    # dem = os.path.join(batchdir, dem_file)
+    dem = 'dem.30s.nc'
     dem_resolution='30s'
-    merged_dir = '/home/users/mnergiz/1.gmt_workout/2.turkey_paper/merged_track_polys'
-    tr1_dir='/home/users/mnergiz/1.gmt_workout/1.turkey_paper'
-    fault_file=f'{tr1_dir}/data/GEM_NAEF.shp'
+    fault_file = 'faults.shp'
+    gem_file = 'GEM_TR.shp'
+    # merged_dir = '/home/users/mnergiz/1.gmt_workout/2.turkey_paper/merged_track_polys'
+    # tr1_dir='/home/users/mnergiz/1.gmt_workout/1.turkey_paper'
+    # fault_file=f'{tr1_dir}/data/GEM_NAEF.shp'
     #####
     # DEM downloading
     if not os.path.exists(dem):
@@ -329,8 +333,10 @@ def main(argv=None):
             pygmt.config(MAP_FRAME_TYPE="inside")
             if i == 0 or i == 5:
                 fig.basemap(projection="M5c", region=region, frame=["x2f1","y2f1",'WSne'])
-                fig.plot(data=f'{tr1_dir}/data/GEM_TR.shp', pen="0.5p,black",transparency=70)
-                fig.plot(data=fault_file, pen="1p,black",transparency=50)   
+                if os.path.exists(gem_file):
+                    fig.plot(data=gem_file, pen="0.5p,black",transparency=70)
+                if os.path.exists(fault_file):
+                    fig.plot(data=fault_file, pen="1p,black",transparency=50)
             else:
                 fig.basemap(projection="M3c", region=region, frame=["x2f1","y2f1",'wsne'])
                 
@@ -400,8 +406,10 @@ def main(argv=None):
             pygmt.config(MAP_FRAME_TYPE="inside")
             if i == 0 or i == 4:
                 fig.basemap(projection="M5c", region=region, frame=["x2f1","y2f1",'WSne'])
-                fig.plot(data=f'{tr1_dir}/data/GEM_TR.shp', pen="0.5p,black",transparency=70)
-                fig.plot(data=fault_file, pen="1p,black",transparency=50)   
+                if os.path.exists(gem_file):
+                    fig.plot(data=gem_file, pen="0.5p,black",transparency=70)
+                if os.path.exists(fault_file):
+                    fig.plot(data=fault_file, pen="1p,black",transparency=50)
             else:
                 fig.basemap(projection="M3c", region=region, frame=["x2f1","y2f1",'wsne'])
         # Save output
