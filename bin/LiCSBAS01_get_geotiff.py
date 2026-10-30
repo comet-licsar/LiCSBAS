@@ -7,8 +7,8 @@ Overview
 This script downloads GeoTIFF files in the specified frame ID from COMET-LiCS web portal.
 By default, unw (unwrapped interferogram) and cc (coherence) files are downloaded
 The -f option is not necessary when the frame ID can be automatically identified from the name of the working directory.
-GACOS data can also be downloaded if available. Existing GeoTIFF files are not re-downloaded to save time, i.e., only the newly available data will be downloaded.
-ERA5 data can also be downloaded if available (Firts need to run in Jasmin ICAMS to download for each frame)
+GACOS, ERA5, ionosphere, and tide data can also be downloaded if available.
+Existing GeoTIFF files are not re-downloaded to save time, i.e., only newly available data will be downloaded.
 
 ============
 Output files
@@ -30,12 +30,18 @@ Output files
    - metadata.txt
 [- GACOS/] (if --get_gacos is used and GACOS data available on COMET-LiCS web)
   [- yyyymmdd.sltd.geo.tif]
+[- ERA5/] (if --get_era5 is used and ERA5 data is available on COMET-LiCS web)
+  [- yyyymmdd.icams.sltd.geo.tif]
+[- IONO/] (if --get_iono is used and ionosphere data is available on COMET-LiCS web)
+  [- yyyymmdd.geo.iono.tif]
+[- TIDES/] (if --get_tides is used and tide data is available on COMET-LiCS web)
+  [- yyyymmdd.tide.geo.tif]
 [- GEOC.MLI/] (if --get_mli is used)
   [- yyyymmdd.geo.mli.tif]
 =====
 Usage
 =====
-LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] [--get_mli] [--get_era5] [--n_para int] [--maxbtemp maxbtemp] [--minbtemp minbtemp]
+LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] [--get_era5] [--get_iono] [--get_tides] [--get_mli] [--n_para int] [--maxbtemp maxbtemp] [--minbtemp minbtemp]
 
  -f  Frame ID (e.g., 021D_04972_131213). (Default: Read from directory name)
  -s  Start date (Default: 20141001)
@@ -43,11 +49,14 @@ LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] 
  --get_pha    Download also wrapped phase data (if available)
  --get_gacos  Download GACOS data as well if available
  --get_era5 Download ERA5 data as well if available
+ --get_iono  Download ionosphere data as well if available
+ --get_tides Download tide data as well if available
  --get_mli  Download MLI (multilooked intensity) data as well if available
  --n_para  Number of parallel downloading (Default: 4)
  --sbovl Download sbovl or bovl from portal to process!
  --minbtemp  Minimum Btemp in days (Default: 0 = not use)
  --maxbtemp  Maximum Btemp in days (Default: 0 = not use)
+ --skip_unw To skip downloading unwrapped data
 """
 #%% Change log
 '''
@@ -129,6 +138,7 @@ def main(argv=None):
     get_tides = False
     get_iono = False
     sbovl = False
+    skip_unw = False
     n_para = 4
     minbtemp = 0
     maxbtemp = 0 # 0 means not use
@@ -140,7 +150,8 @@ def main(argv=None):
         try:
             opts, args = getopt.getopt(argv[1:], "hf:s:e:", ["help", "get_gacos", "get_mli", "get_pha",
                                                              "get_iono", "get_tides", "get_era5",
-                                                             "n_para=", "minbtemp=", "maxbtemp=", "sbovl"])
+                                                             "n_para=", "minbtemp=", "maxbtemp=",
+                                                             "sbovl", "skip_unw"])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -163,10 +174,10 @@ def main(argv=None):
                 get_era5 = True
             elif o == '--get_iono':
                 get_iono = True
-                print('WARNING, getting iono corrections is not implemented yet')
             elif o == '--get_tides':
                 get_tides = True
-                print('WARNING, getting tides is not implemented yet')
+            elif o == '--skip_unw':
+                skip_unw = True
             elif o == '--n_para':
                 n_para = int(a)
             elif o == '--sbovl':
@@ -209,7 +220,10 @@ def main(argv=None):
 
 
     #%% ENU and hgt
-    for ENU in ['E', 'N', 'U', 'hgt']:
+    enus = ['E', 'N', 'U', 'hgt', 'landmask']
+    if sbovl:
+        enus = enus + ['E.azi', 'N.azi', 'U.azi']
+    for ENU in enus:
         enutif = '{}.geo.{}.tif'.format(frameID, ENU)
         url = os.path.join(LiCSARweb, trackID, frameID, 'metadata', enutif)
         if os.path.exists(enutif):
@@ -274,15 +288,6 @@ def main(argv=None):
             url_epoch = os.path.join(url, imd + '/')
             url_mli = os.path.join(url_epoch, imd+'.geo.mli.tif')
             url_mli = tools_lib.extract_url_licsar(url_mli)
-            #response = requests.get(url_epoch)
-            #if response.status_code != 200:
-            #    url_epoch = os.path.join(url, imd)  # future LiCSAR webdir version
-            #    response = requests.get(url_epoch)
-            #response.encoding = response.apparent_encoding #avoid garble
-            #html_doc = response.text
-            #soup = BeautifulSoup(html_doc, "html.parser")
-            #tag = soup.find(href=re.compile(r"\d{8}.geo.mli.tif"))
-            #if tag is not None:
             if url_mli is not None:
                 print('\n{} found as latest.'.format(imd))
                 imd1 = imd
@@ -301,138 +306,33 @@ def main(argv=None):
     print('', flush=True)
 
 
-    #%% GACOS if specified
-    if get_gacos:
-        gacosdir = os.path.join(wd, 'GACOS')
-        if not os.path.exists(gacosdir): os.mkdir(gacosdir)
-
-        ### Get available dates
-        print('\nDownload GACOS data', flush=True)
+    #%% Atmospheric correction data if specified
+    epoch_products = [
+        (get_gacos, 'GACOS', '{}.sltd.geo.tif'),
+        (get_era5, 'ERA5', '{}.icams.sltd.geo.tif'),
+        (get_iono, 'IONO', '{}.geo.iono.tif'),
+        (get_tides, 'TIDES', '{}.tide.geo.tif'),
+    ]
+    enabled_products = [(name, filename) for enabled, name, filename in epoch_products
+                        if enabled]
+    if enabled_products:
+        print('\nDownload epoch data', flush=True)
         url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
         response = requests.get(url)
         response.encoding = response.apparent_encoding #avoid garble
-        html_doc = response.text
-        soup = BeautifulSoup(html_doc, "html.parser")
+        soup = BeautifulSoup(response.text, "html.parser")
         tags = soup.find_all(href=re.compile(r"\d{8}"))
         imdates_all = [tag.get("href")[0:8] for tag in tags]
         _imdates = np.int32(np.array(imdates_all))
-        _imdates = (_imdates[(_imdates>=startdate)*(_imdates<=enddate)]).astype('str').tolist()
-        print('  There are {} epochs from {} to {}'.format(len(_imdates),
-                                       startdate, enddate), flush=True)
+        _imdates = (_imdates[(_imdates >= startdate) * (_imdates <= enddate)]
+                    ).astype('str').tolist()
+        print('  There are {} epochs from {} to {}'.format(
+            len(_imdates), startdate, enddate), flush=True)
 
-        ### Extract available dates
-        print('  Searching available epochs ({} parallel)...'.format(n_para), flush=True)
+        for product_name, filename_template in enabled_products:
+            download_epoch_data(product_name, filename_template, _imdates, url,
+                                wd, n_para, q, startdate, enddate)
 
-        args = [(i, len(_imdates),
-                 os.path.join(url, imd, '{}.sltd.geo.tif'.format(imd)),
-                 os.path.join(gacosdir, imd+'.sltd.geo.tif')
-                 ) for i, imd in enumerate(_imdates)]
-    
-        p = q.Pool(n_para)
-        rc = p.map(check_gacos_wrapper, args)
-        p.close()
-
-        n_im_existing = 0
-        n_im_unavailable = 0
-        imdates_dl = []
-        for i, rc1 in enumerate(rc):
-            if rc1 == 0:  ## No need to download
-                n_im_existing = n_im_existing + 1
-            if rc1 == 3 or rc1 == 5:  ## Can not download
-                n_im_unavailable = n_im_unavailable + 1
-            elif rc1 == 1 or rc1 == 2  or rc1 == 4:  ## Need download
-                imdates_dl.append(_imdates[i])
-
-        n_im_dl = len(imdates_dl)
-
-        if n_im_existing > 0:
-            print('  {} GACOS data already downloaded'.format(n_im_existing), flush=True)
-        if n_im_unavailable > 0:
-            print('  {} GACOS data unavailable'.format(n_im_unavailable), flush=True)
-
-        ### Download
-        if n_im_dl > 0:
-            print('{} GACOS data will be downloaded'.format(n_im_dl), flush=True)
-            print('Download GACOS ({} parallel)...'.format(n_para), flush=True)
-            ### Download
-            args = [(i, imd, n_im_dl,
-                     os.path.join(url, imd, '{}.sltd.geo.tif'.format(imd)),
-                     os.path.join(gacosdir, '{}.sltd.geo.tif'.format(imd))
-                     ) for i, imd in enumerate(imdates_dl)]
-            
-            p = q.Pool(n_para)
-            p.map(download_wrapper, args)
-            p.close()
-        else:
-            print('No GACOS data available from {} to {}'.format(startdate, enddate), flush=True)
-    
-    print('', flush=True)
-
-    #%% ERA5 if specified
-    if get_era5:
-        era5dir = os.path.join(wd, 'ERA5')
-        if not os.path.exists(era5dir): os.mkdir(era5dir)
-
-        ### Get available dates
-        print('\nDownload ERA5 data', flush=True)
-        url = os.path.join(LiCSARweb, trackID, frameID, 'epochs/')
-        response = requests.get(url)
-        response.encoding = response.apparent_encoding #avoid garble
-        html_doc = response.text
-        soup = BeautifulSoup(html_doc, "html.parser")
-        tags = soup.find_all(href=re.compile(r"\d{8}"))
-        imdates_all = [tag.get("href")[0:8] for tag in tags]
-        _imdates = np.int32(np.array(imdates_all))
-        _imdates = (_imdates[(_imdates>=startdate)*(_imdates<=enddate)]).astype('str').tolist()
-        print('  There are {} epochs from {} to {}'.format(len(_imdates),
-                                       startdate, enddate), flush=True)
-
-        ### Extract available dates
-        print('  Searching available epochs ({} parallel)...'.format(n_para), flush=True)
-
-        args = [(i, len(_imdates),
-                 os.path.join(url, imd, '{}.icams.sltd.geo.tif'.format(imd)),
-                 os.path.join(era5dir, imd+'.icams.sltd.geo.tif')
-                 ) for i, imd in enumerate(_imdates)]
-    
-        p = q.Pool(n_para)
-        rc = p.map(check_gacos_wrapper, args) # should work?
-        p.close()
-
-        n_im_existing = 0
-        n_im_unavailable = 0
-        imdates_dl = []
-        for i, rc1 in enumerate(rc):
-            if rc1 == 0:  ## No need to download
-                n_im_existing = n_im_existing + 1
-            if rc1 == 3 or rc1 == 5:  ## Can not download
-                n_im_unavailable = n_im_unavailable + 1
-            elif rc1 == 1 or rc1 == 2  or rc1 == 4:  ## Need download
-                imdates_dl.append(_imdates[i])
-
-        n_im_dl = len(imdates_dl)
-
-        if n_im_existing > 0:
-            print('  {} ERA5 data already downloaded'.format(n_im_existing), flush=True)
-        if n_im_unavailable > 0:
-            print('  {} ERA5 data unavailable'.format(n_im_unavailable), flush=True)
-
-        ### Download
-        if n_im_dl > 0:
-            print('{} ERA5 data will be downloaded'.format(n_im_dl), flush=True)
-            print('Download ERA5 ({} parallel)...'.format(n_para), flush=True)
-            ### Download
-            args = [(i, imd, n_im_dl,
-                     os.path.join(url, imd, '{}.icams.sltd.geo.tif'.format(imd)),
-                     os.path.join(era5dir, '{}.icams.sltd.geo.tif'.format(imd))
-                     ) for i, imd in enumerate(imdates_dl)]
-            
-            p = q.Pool(n_para)
-            p.map(download_wrapper, args)
-            p.close()
-        else:
-            print('No ERA5 data available from {} to {}'.format(startdate, enddate), flush=True)
-    
     print('', flush=True)
 
     #%% InSAR data
@@ -472,7 +372,9 @@ def main(argv=None):
 
     ### Check if both unw and cc already donwloaded, new, and same size
     print('Checking and downloading ({} parallel, may take time)...'.format(n_para), flush=True)
-    exts = ['unw', 'cc']
+    exts = ['cc']
+    if not skip_unw:
+        exts = exts + ['unw']
     if get_pha:
         exts = exts + ['diff_pha', 'diff_unfiltered_pha'] # some ifgs do not have unfiltered version, so getting both
     if sbovl:
@@ -539,9 +441,8 @@ def main(argv=None):
                  os.path.join(mlidir, imd + '.geo.mli.tif')
                  ) for i, imd in enumerate(_imdates)]
 
-        # will use the same for gacos
         p = q.Pool(n_para)
-        rc = p.map(check_gacos_wrapper, args)
+        rc = p.map(check_epoch_data_wrapper, args)
         p.close()
 
         n_im_existing = 0
@@ -592,6 +493,48 @@ def main(argv=None):
 
 
 #%%
+def download_epoch_data(product_name, filename_template, imdates, epoch_url,
+                        working_dir, n_para, pool_context, startdate, enddate):
+    product_dir = os.path.join(working_dir, product_name)
+    os.makedirs(product_dir, exist_ok=True)
+
+    print('\nDownload {} data'.format(product_name), flush=True)
+    print('  Searching available epochs ({} parallel)...'.format(n_para), flush=True)
+    args = [(i, len(imdates),
+             os.path.join(epoch_url, imd, filename_template.format(imd)),
+             os.path.join(product_dir, filename_template.format(imd)))
+            for i, imd in enumerate(imdates)]
+
+    with pool_context.Pool(n_para) as pool:
+        results = pool.map(check_epoch_data_wrapper, args)
+
+    n_existing = sum(result == 0 for result in results)
+    n_unavailable = sum(result in (3, 5) for result in results)
+    dates_to_download = [imd for imd, result in zip(imdates, results)
+                         if result in (1, 2, 4)]
+
+    if n_existing > 0:
+        print('  {} {} data already downloaded'.format(n_existing, product_name), flush=True)
+    if n_unavailable > 0:
+        print('  {} {} data unavailable'.format(n_unavailable, product_name), flush=True)
+
+    if dates_to_download:
+        n_download = len(dates_to_download)
+        print('{} {} data will be downloaded'.format(n_download, product_name), flush=True)
+        print('Download {} ({} parallel)...'.format(product_name, n_para), flush=True)
+        args = [(i, imd, n_download,
+                 os.path.join(epoch_url, imd, filename_template.format(imd)),
+                 os.path.join(product_dir, filename_template.format(imd)))
+                for i, imd in enumerate(dates_to_download)]
+
+        with pool_context.Pool(n_para) as pool:
+            pool.map(download_wrapper, args)
+    else:
+        print('No {} data available from {} to {}'.format(
+            product_name, startdate, enddate), flush=True)
+
+
+#%%
 def download_wrapper(args):
     i, ifgd, n_dl, url_data, path_data = args
     dir_data = os.path.dirname(path_data)
@@ -635,7 +578,7 @@ def check_exist_wrapper(args):
     
 
 #%%
-def check_gacos_wrapper(args):
+def check_epoch_data_wrapper(args):
     """
     Returns :
         0 : Local exist, complete, and new (no need to download)
@@ -673,4 +616,3 @@ def check_gacos_wrapper(args):
 #%% main
 if __name__ == "__main__":
     sys.exit(main())
-
