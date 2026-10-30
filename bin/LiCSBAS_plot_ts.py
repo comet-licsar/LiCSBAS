@@ -479,13 +479,13 @@ if __name__ == "__main__":
   
         # iono correction 2 (if exists) low ress CODE GIM    
         try:
-            if 'geo.iono.code.sTECA.tif' in cumh5:
-                iono2 = cumh5['geo.iono.code.sTECA.tif'][:]
+            if 'geo.iono.sTECA.tif' in cumh5:
+                iono2 = cumh5['geo.iono.sTECA.tif'][:]
                 label_iono2 = 'Iono2 correction (sTECA)'
                 print('Second Ionospheric correction (sTECA) found.')
                 # breakpoint()
-            elif 'geo.iono.code.tif' in cumh5:
-                iono2 = cumh5['geo.iono.code.tif'][:]
+            elif 'geo.iono.tif' in cumh5:
+                iono2 = cumh5['geo.iono.tif'][:]
                 label_iono2 = 'Iono2 correction (CODE)'
                 print('Second Ionospheric correction (CODE) found.')
             else:

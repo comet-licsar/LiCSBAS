@@ -120,7 +120,7 @@ def main(argv=None):
             "iono": {
                 "fname": iono_file,
                 "field": "GEOC.EPOCHS",
-                "input_tif": "geo.iono.code.sTECA.tif",
+                "input_tif": "geo.iono.sTECA.tif",
                 "scale": 14000,
             },
         }
@@ -135,7 +135,7 @@ def main(argv=None):
             "iono": {
                 "fname": iono_file,
                 "field": "GEOC.EPOCHS",
-                "input_tif": "geo.iono.code.tif",
+                "input_tif": "geo.iono.tif",
                 "scale": 55.465 / (4 * np.pi),
             },
             "sltd": {

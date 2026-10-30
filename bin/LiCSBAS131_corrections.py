@@ -2,6 +2,7 @@
 """
 This script applies tide, iono, and gacos corrections at cumulative level (all optional) and calculates STD reduction diagnostics
 for LiCSBAS13 results.
+Careful, at this moment it does not check whether GACOS was already removed..
 
 ===============
 Input & output files
@@ -23,13 +24,14 @@ Outputs in TS_GEOCml*/ :
 =====
 Usage
 =====
-LiCSBAS131_corrections.py -t TS_GEOCml10 [--tide] [--iono] [--gacos] [--nomask]
+LiCSBAS131_corrections.py -t TS_GEOCml10 [--tide] [--iono] [--gacos] [--nomask] [--sbovl]
 
  -t        Path to the TS_GEOCml* directory.
  --tide    Apply solid Earth tide correction.
  --iono    Apply ionospheric correction.
- --gacos   Apply GACOS/sltd correction if sltd exists in cum.h5.
+ --gacos   Apply GACOS/sltd correction if sltd exists in cum.h5 (note, sltd might be from other tropo correction).
  --nomask  Do not use results/mask for STD statistics.
+ --sbovl   Flag if this is related to BOI data (will be auto-identified in the next release)
 
 Notes
 =====
@@ -44,6 +46,8 @@ Negative value means the correction increased scatter.
 
 #%% Change log
 """
+20261029 ML
+ - minor improvement to load them if not in the h5 file
 20250211 Muhammet Nergizci, COMET-Uni of Leeds, 16/05/2026
  - original implementation
 
@@ -68,7 +72,12 @@ import multiprocessing as multi
 import LiCSBAS_io_lib as io_lib
 import re
 from scipy.interpolate import interp1d
-
+try:
+    from lics_tstools import correct_cum_from_tifs
+    LTS = True
+except:
+    print('WARNING, licsar_extra not installed - required to load corrections to cum file')
+    LTS = False
 
 class Usage(Exception):
     """Usage context manager"""
@@ -290,6 +299,7 @@ def main(argv=None):
     iono = False
     gacos = False
     maskflag = True
+    sbovl = False
 
     try:
         n_para = len(os.sched_getaffinity(0))
@@ -304,7 +314,7 @@ def main(argv=None):
             opts, args = getopt.getopt(
                 argv[1:],
                 "ht:ieg",
-                ["help", "tide", "iono", "gacos", "nomask"]
+                ["help", "tide", "iono", "gacos", "nomask", "sbovl"]
             )
         except getopt.error as msg:
             raise Usage(msg)
@@ -323,6 +333,8 @@ def main(argv=None):
                 gacos = True
             elif o == "--nomask":
                 maskflag = False
+            elif o == "--sbovl":
+                sbovl = True
 
         if not tsadir:
             raise Usage("No tsa directory given, -t is not optional!")
@@ -336,6 +348,11 @@ def main(argv=None):
         print("  " + str(err.msg), file=sys.stderr)
         print("\nFor help, use -h or --help.\n", file=sys.stderr)
         return 2
+
+    if sbovl:
+        if gacos:
+            print('disabling GACOS since you work with sbovl data')
+            gacos = False
 
     #%% Directory and file setting
     tsadir = os.path.abspath(tsadir)
@@ -355,7 +372,7 @@ def main(argv=None):
     if not os.path.exists(ref12file):
         raise Usage(f"No 12ref.txt exists in {infodir}")
 
-    #%% Read cum.h5
+    #%% Read cumfile
     print(f"Reading cumulative file: {cumfile}", flush=True)
 
     cumh5 = h5.File(cumfile, "r")
@@ -364,7 +381,7 @@ def main(argv=None):
 
     # Use cum_orig if it already exists, so repeated runs always start from original data
     if "cum_orig" in cumh5:
-        print("cum_orig already exists in cum.h5; using existing original cumulative.", flush=True)
+        print(f"cum_orig already exists in {cumfile}; using existing original cumulative.", flush=True)
         cum_org = cumh5["cum_orig"][()]
         cum_org_backup = cum_org.copy()
     else:
@@ -376,7 +393,14 @@ def main(argv=None):
     if tide:
         if "tide" not in cumh5:
             cumh5.close()
-            raise Usage("Option --tide was given, but dataset 'tide' does not exist in cum.h5")
+            if LTS:
+                if sbovl:
+                    correct_cum_from_tifs(cumfile, 'TIDES', 'tide.geo.azi.tif', 1000, directcorrect=False, sbovl=sbovl, newcumname='tide')
+                else:
+                    correct_cum_from_tifs(cumfile, 'TIDES', 'tide.geo.tif', 1000, directcorrect=False, sbovl=sbovl, newcumname='tide')
+                cumh5 = h5.File(cumfile, "r")
+            else:
+                raise Usage("Option --tide was given, but dataset 'tide' does not exist in "+cumfile)
         tide_org = cumh5["tide"][()]
     else:
         tide_org = None
@@ -384,7 +408,14 @@ def main(argv=None):
     if iono:
         if "iono" not in cumh5:
             cumh5.close()
-            raise Usage("Option --iono was given, but dataset 'iono' does not exist in cum.h5")
+            if LTS:
+                if sbovl:
+                    correct_cum_from_tifs(cumfile, 'IONO', 'geo.iono.sTECA.tif', 14000, directcorrect=False, sbovl=sbovl, newcumname='iono')
+                else:
+                    correct_cum_from_tifs(cumfile, 'IONO', 'geo.iono.tif', 55.465/(4*np.pi), directcorrect=False, sbovl=sbovl, newcumname='iono')
+                cumh5 = h5.File(cumfile, "r")
+            else:
+                raise Usage("Option --iono was given, but dataset 'iono' does not exist in "+cumfile)
         iono_org = cumh5["iono"][()]
     else:
         iono_org = None
@@ -392,7 +423,11 @@ def main(argv=None):
     if gacos:
         if "sltd" not in cumh5:
             cumh5.close()
-            raise Usage("Option --gacos was given, but dataset 'sltd' does not exist in cum.h5")
+            if LTS:
+                correct_cum_from_tifs(cumfile, 'GACOS', 'sltd.geo.tif', -55.465/(4*np.pi), directcorrect=False, sbovl=sbovl, newcumname='sltd')
+                cumh5 = h5.File(cumfile, "r")
+            else:
+                raise Usage("Option --gacos was given, but dataset 'sltd' does not exist in "+cumfile)
         gacos_org = cumh5["sltd"][()]
     else:
         gacos_org = None

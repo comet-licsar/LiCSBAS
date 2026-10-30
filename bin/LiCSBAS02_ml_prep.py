@@ -23,8 +23,8 @@ Outputs in GEOCml*/ (downsampled if indicated):
  - yyyymmdd_yyyymmdd/
    - yyyymmdd_yyyymmdd.unw[.png] (float32)
    - yyyymmdd_yyyymmdd.cc (uint8)
-   - yyyymmdd_yyyymmdd.sbovldiff.adf.mm[.png] (float32) (if --sbovl is used)
-   - yyyymmdd_yyyymmdd.sbovldiff.adf.cc (uint8) (if --sbovl is used)
+   - yyyymmdd_yyyymmdd.[s]bovldiff.adf.mm[.png] (float32) (if --sbovl is used)
+   - yyyymmdd_yyyymmdd.[s]bovldiff.adf.cc (uint8) (if --sbovl is used)
  - baselines (may be dummy)
  - EQA.dem_par
  - slc.mli.par
@@ -40,12 +40,12 @@ LiCSBAS02_ml_prep.py -i GEOCdir [-o GEOCmldir] [-n nlook] [--freq float] [--n_pa
 
  -i  Path to the input GEOC dir containing stack of geotiff data
  -o  Path to the output GEOCml dir (Default: GEOCml[nlook])
- -n  Number of donwsampling factor (Default: 1, no downsampling)
+ -n  Number of downsampling factor (Default: 1, no downsampling)
  --freq    Radar frequency in Hz (Default: 5.405e9 for Sentinel-1)
            (e.g., 1.27e9 for ALOS, 1.2575e9 for ALOS-2/U, 1.2365e9 for ALOS-2/{F,W})
  --n_para  Number of parallel processing (Default: # of usable CPU)
  --plot_cc Plot coherence png image
- --sbovl multilook sbovl or bovl
+ --sbovl  Performing the multilooking on sbovl or bovl data instead (recommending -o GEOCBOImlX)
  
 """
 #%% Change log

@@ -53,7 +53,7 @@ LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] 
  --get_tides Download tide data as well if available
  --get_mli  Download MLI (multilooked intensity) data as well if available
  --n_para  Number of parallel downloading (Default: 4)
- --sbovl Download sbovl or bovl from portal to process!
+ --sbovl Download sbovl or bovl from portal to process (this would also use azi iono/tides if selected and existing)
  --minbtemp  Minimum Btemp in days (Default: 0 = not use)
  --maxbtemp  Maximum Btemp in days (Default: 0 = not use)
  --skip_unw To skip downloading unwrapped data
@@ -306,12 +306,16 @@ def main(argv=None):
     print('', flush=True)
 
 
-    #%% Atmospheric correction data if specified
+    #%% Additional correction data if specified
+    if sbovl:
+        extrastr='.azi'
+    else:
+        extrastr = ''
     epoch_products = [
         (get_gacos, 'GACOS', '{}.sltd.geo.tif'),
         (get_era5, 'ERA5', '{}.icams.sltd.geo.tif'),
-        (get_iono, 'IONO', '{}.geo.iono.tif'),
-        (get_tides, 'TIDES', '{}.tide.geo.tif'),
+        (get_iono, 'IONO', '{}.geo.iono'+extrastr+'.tif'),
+        (get_tides, 'TIDES', '{}.tide.geo'+extrastr+'.tif'),
     ]
     enabled_products = [(name, filename) for enabled, name, filename in epoch_products
                         if enabled]
