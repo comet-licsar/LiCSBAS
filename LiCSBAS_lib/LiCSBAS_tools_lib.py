@@ -470,16 +470,16 @@ def get_cmap(cmap_name, cmapN=256):
         _cmap = cm_isce()
         flag = 1
     elif cmap_name.startswith('SCM'):
-        import cmcrameri.cm as CMAP  # or try the original 'from licsbas.colormaps import SCM as CMAP'
+        import cmcrameri.cm as CMAP  # or try the original 'import SCM as CMAP'
         flag = 2
     elif cmap_name.startswith('cmc'):
-        import cmcrameri.cm as CMAP  # or try the original 'from licsbas.colormaps import SCM as CMAP'
+        import cmcrameri.cm as CMAP  # or try the original 'import SCM as CMAP'
         flag = 2
     elif cmap_name.startswith('GMT'):
-        from licsbas.colormaps import GMT as CMAP
+        import GMT as CMAP
         flag = 2
     elif cmap_name.startswith('cmocean'):
-        from licsbas.colormaps import cmocean as CMAP
+        import cmocean as CMAP
         flag = 2
     elif cmap_name.startswith('colorcet'):
         import colorcet as CMAP

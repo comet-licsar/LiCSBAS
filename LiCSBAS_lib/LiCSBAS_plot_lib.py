@@ -45,8 +45,8 @@ from matplotlib import pyplot as plt
 from matplotlib import dates as mdates
 from matplotlib import colors
 
-from licsbas import tools_lib
-from licsbas import inv_lib
+import LiCSBAS_tools_lib as tools_lib
+import LiCSBAS_inv_lib as inv_lib
 
 
 #%%
