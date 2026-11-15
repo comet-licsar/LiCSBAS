@@ -19,6 +19,39 @@ LiCSBAS also contains visualization tools to interactively display the time seri
 
 THIS IS RESEARCH CODE PROVIDED TO YOU "AS IS" WITH NO WARRANTIES OF CORRECTNESS. USE AT YOUR OWN RISK.
 
+## Installation
+
+LiCSBAS can be installed with `pip` (Python >= 3.10 required). The library modules (from `LiCSBAS_lib/`) are installed so that the usual
+`import LiCSBAS_tools_lib`, `import LiCSBAS_meta`, `from LiCSBAS_extras import *` etc. work in any environment:
+
+```bash
+# from a checkout of the repository (or a release tarball)
+pip install .
+
+# or directly from the repository
+pip install 'git+https://github.com/comet-licsar/LiCSBAS.git'
+```
+
+**GDAL** (Python bindings) is expected to be provided by your OS/distribution or conda and is *not* installed by pip,
+e.g. `conda install -c conda-forge gdal` or `sudo apt install python3-gdal` (see `apt.txt`).  A conda environment is recommended:
+see `environment.yml`.
+
+### Optional extras
+
+| Extra | Installs | Needed for |
+| --- | --- | --- |
+| `unwrap` | [licsar_extra](https://github.com/comet-licsar/licsar_extra) | GPU unwrapping in `LiCSBAS02to05_unwrap.py` and corrections in `LiCSBAS131_corrections.py` |
+| `comcat` | usgs-libcomcat | `LiCSBAS_get_eqoffsets.py` only |
+| `all` | both of the above | e.g. `pip install .[all]` |
+
+`licsar_extra` is **optional** — all other steps work without it.
+
+### Running the steps
+
+The workflow steps are the scripts in `bin/`, normally launched from a checkout via `batch_LiCSBAS.sh`
+or by adding `bin/` to your `PATH` (see `bashrc_LiCSBAS.sh`). After a pip install the libraries these scripts
+import are already available, so the `PYTHONPATH` line in `bashrc_LiCSBAS.sh` is no longer needed (it remains harmless).
+
 ## Documentation and Bug Reports
 
 If you have found an issue or bug using the main branch, please report it on the [issues page](https://github.com/comet-licsar/LiCSBAS/issues).
