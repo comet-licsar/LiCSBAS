@@ -1,5 +1,4 @@
 shapely
-xarray
 rioxarray
 networkx
 ipympl

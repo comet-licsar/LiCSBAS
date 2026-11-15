@@ -1,0 +1,10 @@
+name: licsbas
+channels:
+  - conda-forge
+dependencies:
+  - shapely
+  - rioxarray
+  - networkx
+  - pygmt
+  - ipympl
+  - usgs-libcomcat

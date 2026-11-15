@@ -73,11 +73,15 @@ import LiCSBAS_io_lib as io_lib
 import re
 from scipy.interpolate import interp1d
 try:
-    from lics_tstools import correct_cum_from_tifs
+    from licsar_extra.lics_tstools import correct_cum_from_tifs
     LTS = True
 except:
-    print('WARNING, licsar_extra not installed - required to load corrections to cum file')
-    LTS = False
+    try:
+        from lics_tstools import correct_cum_from_tifs
+        LTS = True
+    except:
+        print('WARNING, licsar_extra not installed - required to load corrections to cum file')
+        LTS = False
 
 class Usage(Exception):
     """Usage context manager"""
