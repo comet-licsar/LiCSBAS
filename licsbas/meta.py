@@ -1,5 +1,5 @@
 # version control
-ver='1.15.1'
+from licsbas import __version__ as ver  # single version source (licsbas/__init__.py)
 date='2024-11-26'
 author="The COMET dev team (ML,QO,JM,LS,MN,..) on top of original codes by Dr. Yu Morishita, supervised primarily by Prof. Andy Hooper"
 

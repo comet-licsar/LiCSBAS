@@ -30,8 +30,8 @@ v1.0 20190708 Yu Morioshita, Uni of Leeds and GSI
 
 import os
 import numpy as np
-import LiCSBAS_io_lib as io_lib
-import LiCSBAS_tools_lib as tools_lib
+from licsbas import io_lib
+from licsbas import tools_lib
 
 os.environ['QT_QPA_PLATFORM']='offscreen'
 import warnings

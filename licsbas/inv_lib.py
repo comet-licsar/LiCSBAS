@@ -52,7 +52,7 @@ from astropy.utils import NumpyRNGContext
 #from scipy.sparse.linalg import lsqr as sparselsq
 #from scipy.sparse.linalg import lsmr as sparselsq
 #from scipy.sparse import csr_array, csc_array  # csr_matrix, csc_matrix # but maybe coo_matrix would be better for G? to be checked
-import LiCSBAS_tools_lib as tools_lib
+from licsbas import tools_lib
 try:
     from sklearn.linear_model import RANSACRegressor
 except:
