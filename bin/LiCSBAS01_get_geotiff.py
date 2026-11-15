@@ -56,7 +56,7 @@ LiCSBAS01_get_geotiff.py [-f frameID] [-s yyyymmdd] [-e yyyymmdd] [--get_gacos] 
  --sbovl Download sbovl or bovl from portal to process (this would also use azi iono/tides if selected and existing)
  --minbtemp  Minimum Btemp in days (Default: 0 = not use)
  --maxbtemp  Maximum Btemp in days (Default: 0 = not use)
- --skip_unw To skip downloading unwrapped data
+ --skip_unw To skip downloading unwrapped data (useful if starting from pha or sbovl)
 """
 #%% Change log
 '''
@@ -191,7 +191,7 @@ def main(argv=None):
         print("  "+str(err.msg), file=sys.stderr)
         print("\nFor help, use -h or --help.\n", file=sys.stderr)
         return 2
- 
+
 
     #%% Determine frameID
     wd = os.getcwd()

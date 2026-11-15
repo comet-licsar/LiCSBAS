@@ -45,7 +45,7 @@ LiCSBAS02_ml_prep.py -i GEOCdir [-o GEOCmldir] [-n nlook] [--freq float] [--n_pa
            (e.g., 1.27e9 for ALOS, 1.2575e9 for ALOS-2/U, 1.2365e9 for ALOS-2/{F,W})
  --n_para  Number of parallel processing (Default: # of usable CPU)
  --plot_cc Plot coherence png image
- --sbovl  Performing the multilooking on sbovl or bovl data instead (recommending -o GEOCBOImlX)
+ --sbovl  Performing the multilooking on (s)bovl data instead (recommending -o GEOC_BOVL_mlX)
  
 """
 #%% Change log
@@ -193,6 +193,7 @@ def main(argv=None):
         return 2
 
     if sbovl:
+        print('Running in (s)bovl regime')
         if n_valid_thre == 0.5: #This is needed as sbovl is already sparse data.
             n_valid_thre = 0.1
         # if coh_thre == 0.2:
