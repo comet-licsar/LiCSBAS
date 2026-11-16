@@ -1009,6 +1009,8 @@ if __name__ == "__main__":
         pax, = axv.plot([point_y], [point_x], 'k', linewidth=3)
         pax2, = axv.plot([point_y], [point_x], 'Pk')
 
+        # sync fig and pts
+        fig = pts
         ### Plot time series at clicked point
         lastevent = []
         def printcoords(event):
@@ -1431,7 +1433,6 @@ if __name__ == "__main__":
             axts_corr.legend()
             
             fig.canvas.draw()
-
 
 
 
