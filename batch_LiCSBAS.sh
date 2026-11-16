@@ -16,7 +16,7 @@
 #  16: LiCSBAS16_filt_ts.py
 
 #
-# Status of COMET dev version - the experimental functions are turned on with 
+#
 #
 #################
 ### Settings ####
@@ -24,13 +24,16 @@
 start_step="01"	# 01-05, 11-16
 end_step="16"	# 01-05, 11-16
 
-cometdev='0' # shortcut to use COMET's experimental/dev functions. At this moment, '1' will turn on the nullification. Recommended: 0
-eqoffs="n"  # if 'y', it will do: get_eq_offsets, then invert. if singular_gauss, then set use of model (not recommended now, experimental/need some work).
 nlook="1"	# multilook factor, used in step02
 GEOCmldir="GEOCml${nlook}"	# If start from 11 or later after doing 03-05, use e.g., GEOCml${nlook}GACOSmaskclip
 n_para="" # Number of parallel processing in step 02-05,12,13,16. default: number of usable CPU
 gpu="n"	# y/n
 check_only="n" # y/n. If y, not run scripts and just show commands to be done
+
+### Miscellaneous Settings ####
+cometdev='0' # shortcut to use some of COMET's experimental/dev functions (not recommended)
+eqoffs="n"  # if 'y', it will do: get_eq_offsets, then invert. if singular_gauss, then set use of model (not recommended now, experimental/need some work).
+sbovl="n"   # if 'y', it will perform sbovl processing chain
 sbovl_abs="n" #if y, will close the referencing in step 12,13,16 and add ICC+ESD offset and apply absolute SET and Iono correction to sbovl time series #MN
 
 logdir="log"
@@ -69,34 +72,44 @@ p02to05_op_GEOCdir="" # by default, if none, it will use GEOC directory
 ### Frequently used options. If blank, use default. ###
 p01_start_date=""	# default: 20141001
 p01_end_date=""	# default: today
+p01_n_para="" # default: 4
+p01_minbtemp="" # default: 0 (not used)
+p01_maxbtemp="" # default: 0 (not used)
 p01_get_gacos="n" # y/n
+p01_get_era5="n" # y/n
+p01_get_iono="n" # y/n
+p01_get_tides="n" # y/n
 p01_get_pha="n" # y/n
 p01_get_mli="n" # y/n
-p01_sbovl="n"
-p02_sbovl="n"
-p04_sbovl="n"
+p01_sbovl=$sbovl
+p01_skip_unw="n" # y/n
+p02_sbovl=$sbovl
+# p04_sbovl=$sbovl
 p11_unw_thre=""	# default: 0.3
 p11_coh_thre=""	# default: 0.05
 p11_s_param="n" # y/n
-p11_sbovl="n"
+p11_sbovl=$sbovl
 p120_use="n"  # y/n
-p120_sbovl="n"
+p120_sbovl=$sbovl
 p12_loop_thre=""	# default: 1.5 rad. With --nullify, recommended higher value (as this is an average over the whole scene)
 p12_multi_prime="y"	# y/n. y recommended
 p12_nullify="" # y/n. y recommended
 p12_rm_ifg_list=""	# List file containing ifgs to be manually removed
-p12_skippngs="" # y/n. n by default
+p12_skippngs="n" # y/n. n by default
 p13_nullify_noloops="" # y/n. n by default (but it is recommended to use this option with p12_nullify)
 p13_ignore_nullification="" # y/n. n by default
 p13_singular="" # y/n. n by default
 p13_singular_gauss="" # y/n. n by default
 p13_skippngs="" # y/n. n by default
-p13_sbovl="n"
+p13_sbovl=$sbovl
+p13resid_rerun="n" # y/n. default: n
 # p131_sbovl_abs="n" ## adding ICC+ESD offfset and apply SET and Iono correction to sbovl time series
-p131_sbovl_model="n" ## adding RANSAC model guide for daz values to handle the outliers especially between 2018-2021
-p131_sbovl_tide="n"
-p131_sbovl_iono="n"
-p14_sbovl="n"
+p131_sbovl_model="y" ##  directly use the RANSAC model rather than original daz values.
+#Corrections is applied here incase reunw is closed
+p131_tide="n"
+p131_iono="n"
+p131_gacos="n"
+p14_sbovl=$sbovl
 p15_coh_thre=""	# default: 0.05
 p15_n_unw_r_thre=""	# default: 1.5
 p15_vstd_thre=""	# default: 100 mm/yr
@@ -109,9 +122,7 @@ p15_n_loop_err_ratio_thre=""	# default: 0.7 - in future we will switch to this r
 p15_resid_rms_thre=""	# default: 15 mm
 p15_avg_phasebias="" # default: not used. Setting 1 or 1.2 rad is good option
 p15_n_gap_use_merged="y" # default: 'y'
-p15_sbovl="n"
-# p15_sbovl_tide="n" ##these already depend on p131_sbovl_tide and p131_sbovl_iono, so I will use them to call
-# p15_sbovl_iono="n"
+p15_sbovl=$sbovl
 p16_filtwidth_km=""	# default: 2 km
 p16_filtwidth_yr=""	# default: avg_interval*3 yr
 p16_deg_deramp=""	# 1, bl, or 2. default: no deramp
@@ -125,9 +136,7 @@ p16_ex_range=""	# e.g. 10:100/20:200 (ix start from 0)
 p16_ex_range_geo=""	# e.g. 130.11/131.12/34.34/34.6 (in deg)
 p16_interpolate_nans="y"  # will interpolate nans in unmasked pixels
 p16_skippngs="" # y/n. n by default
-p16_sbovl="n"
-# p16_sbovl_tide="n" ##these already depend on p131_sbovl_tide and p131_sbovl_iono, so I will use them to call
-# p16_sbovl_iono="n"
+p16_sbovl=$sbovl
 
 ### Less frequently used options. If blank, use default. ###
 p01_frame=""	# e.g. 021D_04972_131213 
@@ -162,7 +171,7 @@ p120_ignoreconncomp="n" # y/n
 p12_GEOCmldir=""        # default: $GEOCmldir
 p12_TSdir=""    # default: TS_$GEOCmldir
 p12_n_para=$n_para	# default: # of usable CPU
-p12_nullify_fix_ref='' # y/n
+p12_nullify_fix_ref='n' # y/n
 p13_GEOCmldir=""        # default: $GEOCmldir
 p13_TSdir=""    # default: TS_$GEOCmldir
 p13_inv_alg=""	# LS (default) or WLS
@@ -182,9 +191,6 @@ p15_noautoadjust="n" # y/n. default: n
 p16_TSdir=""    # default: TS_$GEOCmldir
 p16_nomask="n"	# y/n. default: n
 p16_n_para=$n_para   # default: # of usable CPU
-
-##just for sbovl high residual detection
-p13resid_rerun="n" # y/n. default: n
 
 
 # eqoffs
@@ -219,12 +225,18 @@ if [ $start_step -le 01 -a $end_step -ge 01 ];then
   if [ ! -z $p01_start_date ];then p01_op="$p01_op -s $p01_start_date"; fi
   if [ ! -z $p01_end_date ];then p01_op="$p01_op -e $p01_end_date"; fi
   if [ ! -z $p01_n_para ];then p01_op="$p01_op --n_para $p01_n_para"; fi
+  if [ ! -z $p01_minbtemp ];then p01_op="$p01_op --minbtemp $p01_minbtemp"; fi
+  if [ ! -z $p01_maxbtemp ];then p01_op="$p01_op --maxbtemp $p01_maxbtemp"; fi
   # Add --sbovl option if p01_sbovl is "y"
   if [ "$p01_sbovl" == "y" ]; then p01_op="$p01_op --sbovl"; fi
   if [ "$p01_rngoff" == "y" ]; then p01_op="$p01_op --rngoff"; fi
-    if [ "$p01_get_gacos" == "y" ]; then p01_op="$p01_op --get_gacos"; fi
-    if [ "$p01_get_pha" == "y" ]; then p01_op="$p01_op --get_pha"; fi
-    if [ "$p01_get_mli" == "y" ]; then p01_op="$p01_op --get_mli"; fi
+  if [ "$p01_get_gacos" == "y" ]; then p01_op="$p01_op --get_gacos"; fi
+  if [ "$p01_get_era5" == "y" ]; then p01_op="$p01_op --get_era5"; fi
+  if [ "$p01_get_iono" == "y" ]; then p01_op="$p01_op --get_iono"; fi
+  if [ "$p01_get_tides" == "y" ]; then p01_op="$p01_op --get_tides"; fi
+  if [ "$p01_get_pha" == "y" ]; then p01_op="$p01_op --get_pha"; fi
+  if [ "$p01_get_mli" == "y" ]; then p01_op="$p01_op --get_mli"; fi
+  if [ "$p01_skip_unw" == "y" ]; then p01_op="$p01_op --skip_unw"; fi
 
   if [ $check_only == "y" ];then
     echo "LiCSBAS01_get_geotiff.py $p01_op"
@@ -338,7 +350,7 @@ if [ $step -eq 04 -a $start_step -le 04 -a $end_step -ge 04 ];then
     if [ ! -z $p04_mask_coh_thre_ifg ];then p04_op="$p04_op -s $p04_mask_coh_thre_ifg"; fi
     if [ ! -z $p04_mask_range ];then p04_op="$p04_op -r $p04_mask_range"; fi
     if [ ! -z $p04_mask_range_file ];then p04_op="$p04_op -f $p04_mask_range_file"; fi
-    if [ "$p04_sbovl" == "y" ]; then p04_op="$p04_op --sbovl"; fi
+    # if [ "$p04_sbovl" == "y" ]; then p04_op="$p04_op --sbovl"; fi
     if [ ! -z $p04_n_para ];then p04_op="$p04_op --n_para $p04_n_para";
     elif [ ! -z $n_para ];then p04_op="$p04_op --n_para $n_para";fi
 
@@ -501,7 +513,7 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
 fi
 
 # This section is for step 13 rerun if the user sets p13resid_rerun to "y".
-# This is necessary for the SBOI rerun to identify problematic interferogram pairs
+# This is necessary for the sbovl rerun to identify problematic interferogram pairs
 # to remove in the first iterative step, and then rerun step 13 after removing
 # high-RMS interferograms.
 
@@ -644,45 +656,84 @@ if [ $start_step -le 13 -a $end_step -ge 13 ];then
   fi
 fi
 
-###TODO I know it is not tidy but I need to call them before step 14 for sbovl processing, MN
+# MN: Corrections: tide, iono, and gacos are applied after LiCSBAS13 (all optional).
+# The original cumulative time series is preserved as `cum_orig`,
+# while the corrected time series is saved as `cum` in cum.h5.
 if [ $start_step -le 13 -a $end_step -ge 13 ];then
-  if [ "$p13_sbovl" == "y" ]; then
-    if [ "$sbovl_abs" == "y" ]; then
-      # p131_sbovl_abs='y' #no need anymore, MN
-      extra="-t $TSdir"
-      if [ "$p131_sbovl_model" == "y" ]; then
-        extra="$extra --model"
+  # if [ "$p13_sbovl" == "y" ]; then
+  if [ "$sbovl_abs" == "y" ]; then
+    #MN TODO here need to be updated to call absolute corrections of sbovl.
+    extra="-t $TSdir"
+    if [ "$p131_sbovl_model" == "y" ]; then
+      extra="$extra --model"
+    fi
+    if [ "$check_only" == "y" ];then
+      # MN: The corrections are now applied in an absolute sense.
+      # After adding DAZ + sbovl, all correction layers should therefore be removed
+      # in the same absolute sense. However, the RANSAC model already makes the DAZ
+      # values fit well, so ignoring residual absolute errors should be acceptable.
+      
+      # echo 'python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'tide.geo.azi.tif', 1000, directcorrect = False, sbovl=True)"'
+      # echo 'python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'geo.iono.sTECA.tif', 14000, directcorrect = False, sbovl=True)"'
+      echo "LiCSBAS131_boi_absolute.py $extra"
+    else
+      # python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'tide.geo.azi.tif', 1000, directcorrect = False, sbovl=True)"
+      # python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'geo.iono.sTECA.tif', 14000, directcorrect = False, sbovl=True)"
+      LiCSBAS131_boi_absolute.py $extra
+    fi
+  else
+    extra="-t $TSdir"
+    if [ "$check_only" == "y" ];then
+      if [ "$p131_tide" == "y" ]; then
+        extra="$extra --tide"
+        if [ "$p13_sbovl" == "y" ]; then
+          echo "python3 -c \"from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'TIDES', 'tide.geo.azi.tif', 1000, directcorrect = False, sbovl=True)\""
+        else
+          echo "python3 -c \"from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'TIDES', 'tide.geo.tif', 1000, directcorrect = False, sbovl=False)\""
+        fi
       fi
-      # if [ "$p131_sbovl_tide" == "y" ]; then
-      #   extra="$extra --tide"
-      # fi
-      # if [ "$p131_sbovl_iono" == "y" ]; then
-      #   extra="$extra --iono"
-      # fi 
-      if [ "$check_only" == "y" ];then
-        echo 'python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'tide.geo.azi.tif', 1000, directcorrect = False, sbovl=True)"'
-        echo 'python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'geo.iono.code.sTECA.tif', 14000, directcorrect = False, sbovl=True)"'
-        echo "LiCSBAS131_boi_absolute.py $extra"
-      else
-        python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'tide.geo.azi.tif', 1000, directcorrect = False, sbovl=True)"
-        python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'geo.iono.code.sTECA.tif', 14000, directcorrect = False, sbovl=True)"
-        LiCSBAS131_boi_absolute.py $extra
+      if [ "$p131_iono" == "y" ]; then
+        extra="$extra --iono"
+        if [ "$p13_sbovl" == "y" ]; then
+          echo "python3 -c \"from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'IONO', 'geo.iono.sTECA.tif', 14000, directcorrect = False, sbovl=True)\""
+        else
+          echo "python3 -c \"from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'IONO', 'geo.iono.tif', 55.465/(4*np.pi), directcorrect = False, sbovl=False)\""
+        fi
+      fi
+      if [ "$p131_gacos" == "y" ]; then
+        extra="$extra --gacos"
+        if [ "$p13_sbovl" == "n" ]; then
+          echo "python3 -c \"from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GACOS', 'sltd.geo.tif', -55.465/(4*np.pi), directcorrect = False, sbovl=False)\""
+        fi
+      fi
+      if [[ "$extra" == *"--tide"* || "$extra" == *"--iono"* || "$extra" == *"--gacos"* ]]; then
+        echo "LiCSBAS131_corrections.py $extra"
       fi
     else
-      if [ "$check_only" == "y" ];then
-        if [ "$p131_sbovl_tide" == "y" ]; then
-          echo 'python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'tide.geo.azi.tif', 1000, directcorrect = False, sbovl=True)"'
+      if [ "$p131_tide" == "y" ]; then
+        extra="$extra --tide"
+        if [ "$p13_sbovl" == "y" ]; then
+          python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'TIDES', 'tide.geo.azi.tif', 1000, directcorrect = False, sbovl=True)"
+        else
+          python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'TIDES', 'tide.geo.tif', 1000, directcorrect = False, sbovl=False)"
         fi
-        if [ "$p131_sbovl_iono" == "y" ]; then  
-          echo 'python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'geo.iono.code.sTECA.tif', 14000, directcorrect = False, sbovl=True)"'
+      fi
+      if [ "$p131_iono" == "y" ]; then
+        extra="$extra --iono"
+        if [ "$p13_sbovl" == "y" ]; then
+          python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'IONO', 'geo.iono.sTECA.tif', 14000, directcorrect = False, sbovl=True)"
+        else
+          python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'IONO', 'geo.iono.tif', 55.465/(4*np.pi), directcorrect = False, sbovl=False)"
         fi
-      else
-        if [ "$p131_sbovl_tide" == "y" ]; then
-          python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'tide.geo.azi.tif', 1000, directcorrect = False, sbovl=True)"
+      fi
+      if [ "$p131_gacos" == "y" ]; then
+        extra="$extra --gacos"
+        if [ "$p13_sbovl" == "n" ]; then
+          python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GACOS', 'sltd.geo.tif', -55.465/(4*np.pi), directcorrect = False, sbovl=False)"
         fi
-        if [ "$p131_sbovl_iono" == "y" ]; then
-          python3 -c "from lics_tstools import *; correct_cum_from_tifs('$TSdir/cum.h5', 'GEOC.EPOCHS', 'geo.iono.code.sTECA.tif', 14000, directcorrect = False, sbovl=True)"
-        fi
+      fi
+      if [[ "$extra" == *"--tide"* || "$extra" == *"--iono"* || "$extra" == *"--gacos"* ]]; then
+        LiCSBAS131_corrections.py -t $TSdir $extra
       fi
     fi
   fi
@@ -775,12 +826,12 @@ if [ $start_step -le 16 -a $end_step -ge 16 ];then
     if [ "$sbovl_abs" == "y" ];then
       p16_op="$p16_op --sbovl_abs ";
     fi 
-    if [ "$p131_sbovl_tide" == "y" ];then
-      p16_op="$p16_op --tide"
-    fi
-    if [ "$p131_sbovl_iono" == "y" ];then
-      p16_op="$p16_op --iono"
-    fi
+    # if [ "$p131_tide" == "y" ];then 
+    #   p16_op="$p16_op --tide"
+    # fi
+    # if [ "$p131_iono" == "y" ];then
+    #   p16_op="$p16_op --iono"
+    # fi
   fi
   if [ "$p16_skippngs" == "y" ];then p16_op="$p16_op --nopngs"; fi
 
@@ -803,4 +854,3 @@ if [ $check_only == "y" ];then
   echo "Above commands will run when you change check_only to \"n\""
   echo ""
 fi
-

@@ -30,7 +30,7 @@ LiCSBAS14_vel_std.py -t tsadir [-i cumfile] [--mem_size float] [--gpu] [--ransac
  --ransac     Recalculate velocity free from outliers (use RANSAC algorithm)
  --skipexisting  Skip if exists
  --sbovl      sbovl option
- --sbovl_abs  sbovl option for recalculate the absolute velocity, this is skip for referecing step for sbovl
+ --sbovl_abs  recalculate the absolute velocity of sbovl, referecing steps are skipped!
  --bootnum    Number of bootstrap iterations (Default: 100)
 """
 #%% Change log
@@ -162,8 +162,8 @@ def main(argv=None):
     
     cum_keys = []
     if sbovl_abs:
-        # Process all three if sbovl (absolute) is specified
-        for k in ['cum','cum_abs']: #TODO you can remove some of them later. Redundant but we need to try all for comparison of correction. 'cum_abs_notide','cum_abs_notide_noiono', 'cum_abs_noiono'
+        # Process all three if absolute values are specified
+        for k in ['cum','cum_abs']: #TODO you can remove some of them later. Redundant but we need to try all for comparison of correction.
             if k in cumh5:
                 cum_keys.append(k)
     else:

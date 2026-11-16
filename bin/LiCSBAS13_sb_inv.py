@@ -88,7 +88,7 @@ LiCSBAS13_sb_inv.py -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float] 
  --nullify_noloops   Nullifies data from ifgs not included in any loop, both ifg and pixel based noloop_ifgs. Uses data before nullification (optional step 12)
  --nullify_noloops_use_data_after_nullification  This would nullify noloop_ifgs after the nullification (usually not recommended)
  --sbovl running the inversion on sbovl data (input is in mm)
- --sbovl_abs running the inversion on sbovl data, and use absolute values of sbovl data, not referenced to the reference point
+ --sbovl_abs recalculate the absolute velocity of sbovl, referecing steps are skipped!
  --ignore_nullification  Use of unwrapped data before the unwrapping error nullification (step 12) if performed.
  --estimate_ts_errors  This will estimate cumulated time series errors from increment residuals. For NSBAS only (for now). WLS would also use weights to form covariance matrix
 """
@@ -222,7 +222,7 @@ def main(argv=None):
     nullify_noloops = False
     nullify_noloops_use_data_after_nullification = False
     sbovl = False
-    sbovl_abs = False ##No need to set this to True if sbovl is not set MN
+    sbovl_abs = False
     debugflag = False
 
     try:
@@ -426,8 +426,8 @@ def main(argv=None):
         if not sbovl:
             if not os.path.exists(bad_ifg12file):
                 raise Usage('No 12bad_ifg.txt file exists in {}!'.format(infodir))
-        if not os.path.exists(reffile):
-            raise Usage('No 12ref.txt file exists in {}!'.format(infodir))
+            if not os.path.exists(reffile):
+                raise Usage('No 12ref.txt file exists in {}!'.format(infodir))
     except Usage as err:
         print("\nERROR:", file=sys.stderr, end='')
         print("  "+str(err.msg), file=sys.stderr)
@@ -552,13 +552,18 @@ def main(argv=None):
     n_im = len(imdates)
     n_unw_thre = int(n_unw_r_thre*n_im)
 
+    if n_ifg <= 1 or n_im <= 1:
+        print('ERROR - there is only '+(str(n_ifg))+' data to process - cancelling')
+        exit()
+
+
     ##this necesarry to apply step 15, we ignore step12 therefore coh_avg and n_unw not created.
     if sbovl:
         ### Calc coh avg and n_unw
         coh_avg = np.zeros((length, width), dtype=np.float32)
         n_coh = np.zeros((length, width), dtype=np.int16)
         n_unw = np.zeros((length, width), dtype=np.int16)
-    
+
         btemps = tools_lib.calc_temporal_baseline(ifgdates)
         thisbtemp = max(set(btemps), key=btemps.count)
         coh_avg_freq = np.zeros((length, width), dtype=np.float32)
@@ -889,7 +894,7 @@ def main(argv=None):
                 if not sbovl_abs:
                     unw = unw - ref_unw[i] ## Remove reference phase
                 elif not printed_sbovl_warning:
-                    print('SBOVL_abs: no reference removal set up as you set the sbovl_abs!')
+                    print('sbovl_abs: no reference removal set up as you set the sbovl_abs!')
                     printed_sbovl_warning = True  ##This helps to print the warning only once
                 unwpatch[i] = unw
                 f.close()
@@ -1003,7 +1008,7 @@ def main(argv=None):
             if inv_alg == 'WLS':
                 varpatch = varpatch[ix_unnan_pt,:] ## keep only unnan data
 
-            print('  {}/{} points removed due to not enough ifg data...'.format(n_pt_all-n_pt_unnan, n_pt_all), flush=True)
+            print('  {}/{} points removed due to not enough ifg data (n_unw_thre={})'.format(n_pt_all-n_pt_unnan, n_pt_all, n_unw_thre), flush=True)
 
             #%% Compute number of gaps, ifg_noloop, maxTlen point-by-point
             if n_pt_unnan != 0:

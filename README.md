@@ -19,6 +19,39 @@ LiCSBAS also contains visualization tools to interactively display the time seri
 
 THIS IS RESEARCH CODE PROVIDED TO YOU "AS IS" WITH NO WARRANTIES OF CORRECTNESS. USE AT YOUR OWN RISK.
 
+## Installation
+
+LiCSBAS can be installed with `pip` (Python >= 3.10 required). The library modules (from `LiCSBAS_lib/`) are installed so that the usual
+`import LiCSBAS_tools_lib`, `import LiCSBAS_meta`, `from LiCSBAS_extras import *` etc. work in any environment:
+
+```bash
+# from a checkout of the repository (or a release tarball)
+pip install .
+
+# or directly from the repository
+pip install 'git+https://github.com/comet-licsar/LiCSBAS.git'
+```
+
+**GDAL** (Python bindings) is expected to be provided by your OS/distribution or conda and is *not* installed by pip,
+e.g. `conda install -c conda-forge gdal` or `sudo apt install python3-gdal` (see `apt.txt`).  A conda environment is recommended:
+see `environment.yml`.
+
+### Optional extras
+
+| Extra | Installs | Needed for |
+| --- | --- | --- |
+| `unwrap` | [licsar_extra](https://github.com/comet-licsar/licsar_extra) | GPU unwrapping in `LiCSBAS02to05_unwrap.py` and corrections in `LiCSBAS131_corrections.py` |
+| `comcat` | usgs-libcomcat | `LiCSBAS_get_eqoffsets.py` only |
+| `all` | both of the above | e.g. `pip install .[all]` |
+
+`licsar_extra` is **optional** — all other steps work without it.
+
+### Running the steps
+
+The workflow steps are the scripts in `bin/`, normally launched from a checkout via `batch_LiCSBAS.sh`
+or by adding `bin/` to your `PATH` (see `bashrc_LiCSBAS.sh`). After a pip install the libraries these scripts
+import are already available, so the `PYTHONPATH` line in `bashrc_LiCSBAS.sh` is no longer needed (it remains harmless).
+
 ## Documentation and Bug Reports
 
 If you have found an issue or bug using the main branch, please report it on the [issues page](https://github.com/comet-licsar/LiCSBAS/issues).
@@ -27,6 +60,31 @@ We assume users are familiar with the standard installation procedure of Github 
 including the installation procedure (if you follow this procedure, please be aware of the different repository URL, this version of LiCSBAS resides at [github.com/comet-licsar/licsbas](https://github.com/comet-licsar/licsbas) while the original wiki refers to the discontinued [github.com/yumorishita/licsbas](https://github.com/yumorishita/licsbas)).
 
 Similarly, the original [quick start](https://github.com/yumorishita/LiCSBAS/wiki/2_0_workflow#quick-start) describes processing philosophy that we keep in our version and only further maintain and develop.  
+
+## Installation
+
+For detailed information, please see the original  [**wiki**](https://github.com/yumorishita/LiCSBAS/wiki).
+Our recommendation is to use Linux OS or UNIX in general, but MobaXterm should allow installation on Windows if really needed.
+After git clone this repository:
+```bash
+git clone https://github.com/comet-licsar/LiCSBAS.git
+cd LiCSBAS
+```
+With [(micro)mamba](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html) or conda, you can create and activate environment:
+```bash
+# "${SHELL}" <(curl -L micro.mamba.pm)  # to install micromamba
+micromamba env create -f environment.yml
+micromamba activate licsbas
+# micromamba env update -n licsbas -f environment_optional.yml   # to add some optional extras
+# pip install git+https://github.com/comet-licsar/licsar_extra.git  # easiest way to install extra tools for reunwrapping and iono/tide corrections (requires SNAPHU)
+```
+Afterwards, you need only to set path prior to using LiCSBAS commands using:
+```bash
+./bashrc_LiCSBAS.sh
+# LiCSBAS_check_install.py # to check if installation ran ok 
+```
+
+## Development strategy
 
 We keep regular release strategy of 1-2 releases per year.
 The 'main' branch is considered stable and relatively up-to-date (if the main branch contains bug, please report it to us).
@@ -57,6 +115,15 @@ The tutorial still uses the original LiCSBAS tutorial data that can be downloade
 
 - Sample batch script: [batch_LiCSBAS_sample_CF.sh](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/documents/batch_LiCSBAS_sample_CF.sh) (2021/3/11 updated)
 - Sample results: [LiCSBAS_sample_CF.tar.gz](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/sample/LiCSBAS_sample_CF.tar.gz) (63MB) (2021/3/11 updated)
+
+## Batch Processing
+
+We recommend users to get familiar with LiCSBAS via tutorial above.
+Once understood, you can set own batch script simply by
+```bash
+copy_batch_LiCSBAS.sh
+nano batch_LiCSBAS.sh # i.e. edit the file in your favourite editor
+```
 
 ## Citations
 

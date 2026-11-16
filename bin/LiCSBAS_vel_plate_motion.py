@@ -102,12 +102,12 @@ def main(argv=None):
                 sbovl = True
                 sbovl_abs = True
                 keep_absolute = True
-                print("Running in SBOI mode, also absolute velocity will be kept.")
+                print("Running in sbovl mode, also absolute velocity will be kept.")
             elif o == '--input':
                 input= a
 
         if sbovl:
-            print("Running in SBOI mode")
+            print("Running in sbovl mode")
             # keep_absolute = True
             if outfile == 'vel_pmm_fixed_los.tif':
                 outfile = 'vel_pmm_fixed_azi.tif'
@@ -122,7 +122,7 @@ def main(argv=None):
                 input = 'vel.mskd'
             elif sbovl_abs:
                 if not os.path.exists(os.path.join(tsdir, 'results', input)):
-                    raise Usage(f'Error, the {input} file does not exist - please check SBOI processing.')
+                    raise Usage(f'Error, the {input} file does not exist - please check sbovl processing.')
             else:
                 raise Usage('Error, the vel_filt.mskd file does not exist - please finish processing incl step 16')
         if plate not in plates:

@@ -18,7 +18,7 @@ LiCSBAS_out2nc.py [-i infile] [-o outfile] [-m yyyymmdd]
  -o  Output netCDF4 file (Default: output.nc)
  -m  Master (reference) date (Default: first date) - TODO: bperps are fixed-referred to the 1st date
  --alignsar, -A  Export complete cube as developed within AlignSAR (all amplitudes, coherences, calc D_A, mean amp, TODO: atmo_error based on step 16)
- --ref_geo  Reference area in geographical coordinates as: lon1/lon2/lat1/lat2
+ --ref_geo  Reference area in geographical coordinates as: lon1/lon2/lat1/lat2  (you can use "--ref_geo median" to median-fix the dataset)
  --clip_geo  Area to clip in geographical coordinates as: lon1/lon2/lat1/lat2
  --compress, -C  use zlib compression (very small files but time series may take long to load in GIS)
  --postfilter will interpolate VEL only through empty areas and filter in space
@@ -27,6 +27,7 @@ LiCSBAS_out2nc.py [-i infile] [-o outfile] [-m yyyymmdd]
  --zarr  The output will be stored in the zarr format
  --addtif   Optionally you can directly include your external tif file as new data layer (it will get resampled using nearest neigbour interpolation)
  --cf   Export the cube to CF-compliant form (to be used e.g. via ncWMS etc.)
+ --xcube  Set basics for viewing via xcube
 """
 #%% Change log
 '''
@@ -436,7 +437,7 @@ def toalignsar(tsdir, cube, filestoadd = []):  # ncfile, outncfile, filestoadd =
         cube['DEM'].values = cumnf.hgt.values #np.flipud(cumnf.hgt.values)
         cube['DEM'].attrs['unit']='m'
         cube['DEM']=cube['DEM'].where(cube['DEM'] != 0)
-    #
+    #   ttt
     if filestoadd:
         for tif in filestoadd:
             try:
@@ -612,7 +613,7 @@ def main(argv=None):
         argv = sys.argv
         
     start = time.time()
-    ver=1.1; date=20241011; author="M.Lazecky"
+    ver=1.5; date=20260718; author="M.Lazecky"
     print("\n{} ver{} {} {}".format(os.path.basename(argv[0]), ver, date, author), flush=True)
     print("{} {}".format(os.path.basename(argv[0]), ' '.join(argv[1:])), flush=True)
 
@@ -633,11 +634,17 @@ def main(argv=None):
     filestoadd = []
     tozarr =False
     tocf = False
+    toxcube = False
+    do_not_compress = [] # anything to be NOT compressed..
+    medianfix = False
+    title = False
 
     #%% Read options
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "hi:o:m:r:CA", ["help", "alignsar", "cf", "zarr", "addtif=", "extracol=", "compress","postfilter","clip_geo=", "ref_geo=", "apply_mask", "mask="])
+            opts, args = getopt.getopt(argv[1:], "hi:o:m:r:CA", ["help", "alignsar", "cf", "xcube", "title=",
+                                                                 "zarr", "addtif=", "extracol=", "compress",
+                                                                 "postfilter","clip_geo=", "ref_geo=", "apply_mask", "mask="])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -652,6 +659,11 @@ def main(argv=None):
                 extracols.append(a)
             elif o == '--cf':
                 tocf = True
+            elif o == '--xcube':
+                toxcube = True
+                tocf = True # useful..
+                medianfix = True
+                compress = True # very useful - now using just level 1 (with shuffle) - very good!
             elif o == '--addtif':
                 print('Final datacube will include imported '+a)
                 filestoadd.append(a)
@@ -666,15 +678,22 @@ def main(argv=None):
             elif o == '-r':
                 refarea = a
                 print('ref area in radar coords not implemented yet')
+            elif o == '--title':
+                title = a
             elif o == '--clip_geo':
                 cliparea_geo = a
                 minclipx, maxclipx, minclipy, maxclipy = cliparea_geo.split('/')
                 minclipx, maxclipx, minclipy, maxclipy = float(minclipx), float(maxclipx), float(minclipy), float(maxclipy)
             elif o == '--ref_geo':
                 refarea_geo = a
-                minrefx, maxrefx, minrefy, maxrefy = refarea_geo.split('/')
-                minrefx, maxrefx, minrefy, maxrefy = float(minrefx), float(maxrefx), float(minrefy), float(maxrefy)
-                centre_refx, centre_refy = (minrefx+maxrefx)/2, (minrefy+maxrefy)/2
+                if refarea_geo == 'median':
+                    print('setting median fix for reference')
+                    medianfix = True
+                    refarea_geo = []
+                else:
+                    minrefx, maxrefx, minrefy, maxrefy = refarea_geo.split('/')
+                    minrefx, maxrefx, minrefy, maxrefy = float(minrefx), float(maxrefx), float(minrefy), float(maxrefy)
+                    centre_refx, centre_refy = (minrefx+maxrefx)/2, (minrefy+maxrefy)/2
             #elif o == '--mask':
             #    maskfile = a
             elif o == '--apply_mask':
@@ -720,7 +739,11 @@ def main(argv=None):
     cube['cum'] = cube['cum'] - cube['cum'].sel(time=imd_m)
     
     #reference it
-    if refarea_geo:
+    if medianfix:
+        print('Reference set to median - TODO: better check which layers, now only vel, cum. Also, need to fix rms')
+        for v in ['cum', 'vel']:
+            cube[v] = cube[v] - cube[v].median(["lat", "lon"])
+    elif refarea_geo:
         #ref = cube.rio.clip_box(minrefx, minrefy, maxrefx, maxrefy)
         ref = cube.sel(lon=slice(minrefx, maxrefx), lat=slice(maxrefy,minrefy))
         if len(ref.vel) == 0:
@@ -734,6 +757,10 @@ def main(argv=None):
             #for v in ['cum', 'vel', 'vel_filt']:
             for v in ['cum', 'vel']:
                 cube[v] = cube[v] - refcoh[v].median(["lat", "lon"])
+            centre_refy = float(ref.lat.mean())
+            centre_refx = float(ref.lon.mean())
+            cube.attrs['ref_lon'] = centre_refx
+            cube.attrs['ref_lat'] = centre_refy
     else:
         # just load default ref point
         #if np.isnan(centre_refx):
@@ -746,9 +773,9 @@ def main(argv=None):
         refcoords = grep1line('<coordinates>',refkml)
         refcoords = refcoords.split('>')[1].split('<')[0].split(',')
         centre_refx, centre_refy = float(refcoords[0]), float(refcoords[1])
-    
-    cube.attrs['ref_lon'] = centre_refx
-    cube.attrs['ref_lat'] = centre_refy
+        cube.attrs['ref_lon'] = centre_refx
+        cube.attrs['ref_lat'] = centre_refy
+
     # netcdf does not support boolean, so:
     cube.attrs['filtered_version'] = int(cube.attrs['filtered_version']*1)
     
@@ -779,6 +806,31 @@ def main(argv=None):
     cube.rio.set_spatial_dims(x_dim="lon", y_dim="lat", inplace=True)
     cube.rio.write_crs("EPSG:4326", inplace=True)
 
+    if toxcube:
+        # need to avoid int64 in attrs:
+        cube.attrs['filtered_version'] = str(cube.attrs['filtered_version'])
+        # set valid_min/max and some basic palettes
+        for v in cube.data_vars:
+            if 'lat' in cube[v].coords:
+                cube[v].attrs['valid_max'] = float(cube[v].max())
+                cube[v].attrs['valid_min'] = float(cube[v].min())
+                #if float(cube[v].max())
+                if v in ['vel', 'cum']:
+                    cube[v].attrs['color_bar_name'] = 'bwr'
+                    cmin = float(cube[v].quantile(0.01, skipna=True))
+                    cmax = float(cube[v].quantile(0.99, skipna=True))
+                    cube[v].attrs['color_value_min'] = cmin
+                    cube[v].attrs['color_value_max'] = cmax
+                elif v in ['loop_ph_avg_abs', 'rms', 'vstd', 'stc']:
+                    cube[v].attrs['color_bar_name'] = 'YlGnBu'
+                    cube[v].attrs['color_value_min'] = 0.0
+                else:
+                    cube[v].attrs['color_bar_name'] = 'viridis'
+                #
+                if v == 'coh':
+                    cube[v].attrs['color_value_min'] = 0.0
+                    cube[v].attrs['color_value_max'] = 0.8
+
     if tocf:
         ds = cube #xr.open_dataset(infile, decode_times=True, mask_and_scale=False)
         # 1) Fix lat: remove any NaNs, flip to increasing if necessary
@@ -798,9 +850,9 @@ def main(argv=None):
         # If time is not decoded, you can leave it; otherwise ensure CF attrs below reflect original units.
         # Set CF-standard attributes for coords
         ds = ds.assign_coords({
+            "time": ds["time"],
             "lat": ds["lat"],
-            "lon": ds["lon"],
-            "time": ds["time"]
+            "lon": ds["lon"]
         })
         ds["lat"].attrs.update({"units": "degrees_north", "standard_name": "latitude", "axis": "Y"})
         ds["lon"].attrs.update({"units": "degrees_east", "standard_name": "longitude", "axis": "X"})
@@ -822,13 +874,16 @@ def main(argv=None):
                 v.attrs["standard_name"] = stdname
             if longname:
                 v.attrs["long_name"] = longname
-        fix_units("cum", stdname="cumulative_displacement", longname="cumulative_displacement", units="mm")
-        fix_units("vel", units="mm year-1")
-        fix_units("vstd", units="mm year-1")
-        fix_units("rms", units="mm")
-        fix_units("stc", units="mm")
-        fix_units("coh", units="1")
-        fix_units("loop_ph_avg_abs", units="rad")
+        fix_units("cum", stdname="cumulative_displacement", longname="cumulative displacement", units="mm")
+        fix_units("vel", longname = 'linear velocity', units="mm year-1")
+        fix_units("vstd", longname='bootstrapped velocity stddev', units="mm year-1")
+        fix_units("rms", longname='RMSE of inversion redisuals', units="mm")
+        fix_units("stc", longname='spatio-temporal consistence', units="mm")
+        # fix_units("coh", units="1")
+        fix_units("loop_ph_avg_abs", longname='average absolute loop phase error', units="rad")
+        if 'coh' in ds:
+            # if 'time' in ds['coh'].coords:
+            ds['coh'].attrs['long_name'] = 'average coherence'
         #
         # 5) Remove _FillValue from coordinate variables if present (coordinates must be numeric arrays)
         for c in ["lat", "lon", "time"]:
@@ -843,9 +898,12 @@ def main(argv=None):
         ds.attrs["Conventions"] = "CF-1.8"
         #
         # 8) Choose encoding for compression and chunking for ncWMS: time chunk = 1
-        comp = dict(zlib=True, complevel=4)
+        if compress:
+            comp = dict(zlib=True, shuffle=True, complevel=1) # 4)  # compression level 1 should be quite optimal for performance
+        else:
+            comp = dict(zlib=False)
         # Choose chunks: time/32, lat/128, lon/128 (adjust lat/lon chunk sizes if needed)
-        chunktime = 32
+        chunktime = 8  # 32  #### small might be actually better.. (?)
         chunklat = 128
         chunklon = 128
         nt = ds.dims.get("time", chunktime)
@@ -868,16 +926,27 @@ def main(argv=None):
                 else:
                     chunks.append(ds.dims[d])
             encoding[v]["chunksizes"] = tuple(chunks)
+            #if compress:
+            #    if v not in do_not_compress:
+            #        encoding[v]['zlib'] = True
+            #        encoding[v]['complevel'] = 5
         # For coordinate variables ensure they are not compressed (optional)
         encoding["lat"] = {"dtype": ds["lat"].dtype}
         encoding["lon"] = {"dtype": ds["lon"].dtype}
         encoding["time"] = {"dtype": 'i4'}  # ds["time"].dtype}
-        # 9) Write out using netCDF4_classic format
-        ds.to_netcdf(outfile, format="NETCDF4_CLASSIC", encoding=encoding)
-        print("Wrote", outfile)
+        cube = ds # just in case...
+
+    # some details:
+    if title:
+        cube.attrs['title'] = title
+
+    from pathlib import Path
+    Path(outfile+'.lock').touch()
 
     if not tozarr:
-        if (compress and not alignsar):
+        if tocf:
+            encode = encoding
+        elif (compress and not alignsar):
             if postfilter:
                 encode = {'cum': {'zlib': True, 'complevel': 9}, 'vel': {'zlib': True, 'complevel': 9},
                 'coh': {'zlib': True, 'complevel': 9}, 'rms': {'zlib': True, 'complevel': 9},
@@ -892,7 +961,11 @@ def main(argv=None):
             # if not compress then at least encode only time to keep standard NetCDF:
             encode = {'time': {'dtype': 'i4'}}
 
-        cube.to_netcdf(outfile, encoding=encode)
+        # store:
+        if tocf:
+            cube.to_netcdf(outfile, format="NETCDF4_CLASSIC", encoding=encode) # not sure if needed
+        else:
+            cube.to_netcdf(outfile, encoding=encode)
         if alignsar:
             print('Trying to compress additionally')
             cmd = 'nccopy -d 5 '+outfile+' '+outfile+'.tmp.nc'
@@ -905,7 +978,9 @@ def main(argv=None):
         cube.to_zarr(outfile)
         #except:
         #    print('error storing to zarr - ')
-        
+    
+    os.remove(outfile+'.lock')
+
     #if alignsar:
     #    # will just load it from stored since we will use the non-load approach for amps/cohs to save memory
     #    del cube

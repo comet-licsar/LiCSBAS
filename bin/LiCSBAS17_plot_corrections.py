@@ -20,7 +20,7 @@ Arguments:
  -i    cum(_filt).h5 file (default cum.h5)
  -o    Output PNG file name (default: <frame>.corrections.png)
  -r   Reference area in lon/lat format (e.g., 30:40/50:60) to subtract mean value
---sboi Run in SBOI mode to preserve absolute velocity (azimuth instead of LOS)
+--sbovl Run in sbovl mode to preserve absolute velocity (azimuth instead of LOS)
 """
 
 #%% Imports
@@ -31,8 +31,9 @@ import time
 import getopt
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
-import cmcrameri.cm as cmc
+# not used:
+# import matplotlib.pyplot as plt
+# import cmcrameri.cm as cmc
 import pygmt
 
 import LiCSBAS_plot_lib as plot_lib
@@ -64,14 +65,14 @@ def main(argv=None):
     tsdir = ''
     frame = None
     output_file = None
-    sboi = False
+    sbovl = False
     keep_absolute = False
     refarea = []
     cumfile = 'cum.h5'
 
     # Argument parsing
     try:
-        opts, _ = getopt.getopt(argv[1:], "ht:i:o:r:", ["help", "sboi"])
+        opts, _ = getopt.getopt(argv[1:], "ht:i:o:r:", ["help", "sbovl"])
         for opt, arg in opts:
             if opt in ('-h', '--help'):
                 print(__doc__)
@@ -84,8 +85,8 @@ def main(argv=None):
                 output_file = arg
             elif opt == '-r':
                 refarea = arg
-            elif opt == '--sboi':
-                sboi = True
+            elif opt == '--sbovl':
+                sbovl = True
                 # keep_absolute = True
 
         if not tsdir:
@@ -109,18 +110,18 @@ def main(argv=None):
     vel_file = os.path.join(workdir, f'{frame}.vel_filt.mskd.eurasia.geo.tif')
     cum_file = os.path.join(tsdir, cumfile)
 
-    if sboi:
+    if sbovl:
         corrections = {
             "tide": {
                 "fname": tide_file,
-                "field": "GEOC.EPOCHS",
+                "field": "TIDES",
                 "input_tif": "tide.geo.azi.tif",
                 "scale": 1000,
             },
             "iono": {
                 "fname": iono_file,
-                "field": "GEOC.EPOCHS",
-                "input_tif": "geo.iono.code.sTECA.tif",
+                "field": "IONO",
+                "input_tif": "geo.iono.sTECA.tif",
                 "scale": 14000,
             },
         }
@@ -128,14 +129,14 @@ def main(argv=None):
          corrections = {
             "tide": {
                 "fname": tide_file,
-                "field": "GEOC.EPOCHS",
+                "field": "TIDES",
                 "input_tif": "tide.geo.tif",
                 "scale": 1000,
             },
             "iono": {
                 "fname": iono_file,
-                "field": "GEOC.EPOCHS",
-                "input_tif": "geo.iono.code.tif",
+                "field": "IONO",
+                "input_tif": "geo.iono.tif",
                 "scale": 55.465 / (4 * np.pi),
             },
             "sltd": {
@@ -184,10 +185,10 @@ def main(argv=None):
     # Load data
     tide = np.fromfile(tide_file, dtype='float32').reshape(shape)
     iono = np.fromfile(iono_file, dtype='float32').reshape(shape)
-    if not sboi:
+    if not sbovl:
         gacos = np.fromfile(gacos_file, dtype='float32').reshape(shape)
     vlos = lts.load_tif2xr(vel_file)
-    vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', sboi=sboi).interp_like(vlos)
+    vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', azi=sbovl).interp_like(vlos)
 
     # Reference area subtraction if needed
     if not keep_absolute:
@@ -207,13 +208,13 @@ def main(argv=None):
         mean_val = np.nanmean(iono[refy1:refy2, refx1:refx2])
         mean_val = np.nan_to_num(mean_val, nan=0.0)
         iono -= mean_val
-        if not sboi:
+        if not sbovl:
             mean_val = np.nanmean(gacos[refy1:refy2, refx1:refx2])
             mean_val = np.nan_to_num(mean_val, nan=0.0)
             gacos -= mean_val
 
     # Uncorrected velocity
-    if sboi:
+    if sbovl:
         gacos = np.zeros_like(vlos.data)
     vlos_uncorrected = vlos.data - tide - iono - vlos_eurasia.data + gacos
 
@@ -222,7 +223,7 @@ def main(argv=None):
     post_lon, post_lat = cum.post_lon.item(), cum.post_lat.item()
 
     # Create grids
-    if sboi:
+    if sbovl:
         grids = {
             "vlos_uncorrected": create_geogrid(vlos_uncorrected, corner_lon, corner_lat, post_lon, post_lat),
             "tide": create_geogrid(tide, corner_lon, corner_lat, post_lon, post_lat),
@@ -248,21 +249,24 @@ def main(argv=None):
 
     #prepareing dem for figure
     ###demfile
-    dem_file='earth_relief_fullAHB_30s.nc'
+    # dem_file='earth_relief_fullAHB_30s.nc'
     # Upload data
-    batchdir = os.environ.get("BATCH_CACHE_DIR")
-    dem = os.path.join(batchdir, dem_file)
+    # batchdir = os.environ.get("BATCH_CACHE_DIR")
+    # dem = os.path.join(batchdir, dem_file)
+    dem = 'dem.30s.nc'
     dem_resolution='30s'
-    merged_dir = '/home/users/mnergiz/1.gmt_workout/2.turkey_paper/merged_track_polys'
-    tr1_dir='/home/users/mnergiz/1.gmt_workout/1.turkey_paper'
-    fault_file=f'{tr1_dir}/data/GEM_NAEF.shp'
+    fault_file = 'faults.shp'
+    gem_file = 'GEM_TR.shp'
+    # merged_dir = '/home/users/mnergiz/1.gmt_workout/2.turkey_paper/merged_track_polys'
+    # tr1_dir='/home/users/mnergiz/1.gmt_workout/1.turkey_paper'
+    # fault_file=f'{tr1_dir}/data/GEM_NAEF.shp'
     #####
     # DEM downloading
     if not os.path.exists(dem):
         print('DEM is downloading please wait! After downloading, the process will be faster!')
         try:
             # Download the earth relief data and save it to a file
-            grid = pygmt.datasets.load_earth_relief(resolution=dem_resolution, region=RR_used)
+            grid = pygmt.datasets.load_earth_relief(resolution=dem_resolution, region=[25,50,25,50])
             # Saving the grid to a NetCDF file
             grid.to_netcdf(dem)
             print(f"Data successfully downloaded and saved to {dem}")
@@ -271,7 +275,7 @@ def main(argv=None):
     else:
         print(f'DEM already exists!')
     
-    if not sboi:
+    if not sbovl:
         # Figure creation
         fig = pygmt.Figure()
         pygmt.config(MAP_FRAME_PEN='0.7p,black',FONT_LABEL='12p,Helvetica', FONT_ANNOT='10p,Helvetica',MAP_FRAME_TYPE="inside",FORMAT_GEO_MAP="DD")
@@ -329,8 +333,10 @@ def main(argv=None):
             pygmt.config(MAP_FRAME_TYPE="inside")
             if i == 0 or i == 5:
                 fig.basemap(projection="M5c", region=region, frame=["x2f1","y2f1",'WSne'])
-                fig.plot(data=f'{tr1_dir}/data/GEM_TR.shp', pen="0.5p,black",transparency=70)
-                fig.plot(data=fault_file, pen="1p,black",transparency=50)   
+                if os.path.exists(gem_file):
+                    fig.plot(data=gem_file, pen="0.5p,black",transparency=70)
+                if os.path.exists(fault_file):
+                    fig.plot(data=fault_file, pen="1p,black",transparency=50)
             else:
                 fig.basemap(projection="M3c", region=region, frame=["x2f1","y2f1",'wsne'])
                 
@@ -381,7 +387,7 @@ def main(argv=None):
             pygmt.makecpt(cmap="gray", series=[-200, 10000, 3000], continuous=True, reverse=True)
             fig.grdimage(grid=dem,cmap=True,region=region,shading=True,frame=False)
             pygmt.makecpt(cmap="vik", series=cmap_range)
-            decomp3d_Vn_xyz='sboi.xyz'
+            decomp3d_Vn_xyz='sbovl.xyz'
             plot_lib.da_to_xyz(grid, decomp3d_Vn_xyz,varname="Vn")
             # PlOT dsc_file
             fig.plot(data=decomp3d_Vn_xyz, style="c0.05c", fill="+z", cmap=True)
@@ -400,13 +406,15 @@ def main(argv=None):
             pygmt.config(MAP_FRAME_TYPE="inside")
             if i == 0 or i == 4:
                 fig.basemap(projection="M5c", region=region, frame=["x2f1","y2f1",'WSne'])
-                fig.plot(data=f'{tr1_dir}/data/GEM_TR.shp', pen="0.5p,black",transparency=70)
-                fig.plot(data=fault_file, pen="1p,black",transparency=50)   
+                if os.path.exists(gem_file):
+                    fig.plot(data=gem_file, pen="0.5p,black",transparency=70)
+                if os.path.exists(fault_file):
+                    fig.plot(data=fault_file, pen="1p,black",transparency=50)
             else:
                 fig.basemap(projection="M3c", region=region, frame=["x2f1","y2f1",'wsne'])
         # Save output
         if not output_file:
-            output_file = f"{frame}.corrections_SBOI.png"
+            output_file = f"{frame}.corrections_sbovl.png"
         
         
         

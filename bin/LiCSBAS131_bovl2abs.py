@@ -156,7 +156,7 @@ def main(argv=None):
     # ...
     # and then remove it, so e.g.:
     # lts.correct_cum_from_tifs(TS_GEOCml10mask/cum.h5, GEOC.EPOCHS, tide.geo.azi.tif, 1000, directcorrect = False, sbovl=True)
-    # lts.correct_cum_from_tifs(TS_GEOCml10mask/cum.h5, GEOC.EPOCHS, geo.iono.code.sTECA.tif, 14000, directcorrect = False, sbovl=True)
+    # lts.correct_cum_from_tifs(TS_GEOCml10mask/cum.h5, GEOC.EPOCHS, geo.iono.sTECA.tif, 14000, directcorrect = False, sbovl=True)
     
     
     #%%Read cum.h5, add daz values and remove tide and iono corrections
@@ -181,7 +181,7 @@ def main(argv=None):
         print('trying to correct for SET')
         try:
             cube.close()
-            lts.correct_cum_from_tifs(cumfile, 'GEOC.EPOCHS', 'tide.geo.azi.tif', 1000, directcorrect=False,
+            lts.correct_cum_from_tifs(cumfile, 'TIDES', 'tide.geo.azi.tif', 1000, directcorrect=False,
                               sbovl=True)
             cube = xr.open_dataset(cumfile)
         except:
@@ -190,7 +190,7 @@ def main(argv=None):
         print('trying to correct for iono')
         try:
             cube.close()
-            lts.correct_cum_from_tifs(cumfile, 'GEOC.EPOCHS', 'geo.iono.code.sTECA.tif', 14000,
+            lts.correct_cum_from_tifs(cumfile, 'IONO', 'geo.iono.sTECA.tif', 14000,
                               directcorrect=False, sbovl=True)
             cube = xr.open_dataset(cumfile)
         except:
@@ -665,9 +665,9 @@ for xx in E N U; do for x in $xx.tif $xx.l.tif $xx.r.tif; do create_preview_pygm
     else:
         cum_abs_notide_noiono = cum_abs_notide.copy()
     '''
-    
-    
-    
+
+
+
     # Save corrected datasets based on availability and flags
     print(f"Writing corrected cumulative datasets to {cumfile} ...")
     with h5.File(cumfile, 'r+') as f:

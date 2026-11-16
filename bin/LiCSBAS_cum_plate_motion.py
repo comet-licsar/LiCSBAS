@@ -102,10 +102,10 @@ def main(argv=None):
                 sbovl = True
                 sbovl_abs = True
                 keep_absolute = True
-                print("Running in SBOI mode, also absolute velocity will be kept.")
+                print("Running in sbovl mode, also absolute velocity will be kept.")
 
         if sbovl:
-            print("Running in SBOI mode")
+            print("Running in sbovl mode")
             # keep_absolute = True
             if outfile == 'vel_pmm_fixed_los.tif':
                 outfile = 'vel_pmm_fixed_azi.tif'
@@ -124,7 +124,7 @@ def main(argv=None):
                 input = f'cum_{imd_p}-{imd_s}.mask'
             elif sbovl_abs:
                 if not os.path.exists(os.path.join(tsdir, 'results', input)):
-                    raise Usage(f'Error, the {input} file does not exist - please check SBOI processing.')
+                    raise Usage(f'Error, the {input} file does not exist - please check sbovl processing.')
             else:
                 raise Usage('Error, the cum_filt.mskd file does not exist - please finish processing incl step 16')
 
@@ -142,7 +142,7 @@ def main(argv=None):
     else:
         vlos_eurfile = tsdir+'/results/vel_eurasia_los.tif'
     #if not os.path.exists(vlos_eurfile):
-    vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', vlos_eurfile, sboi=sbovl)
+    vlos_eurasia = lts.generate_pmm_velocity(frame, 'Eurasia', 'GEOC', vlos_eurfile, sbovl=sbovl)
     #else:
     #    vlos_eurasia = lts.load_tif2xr(vlos_eurfile)
     cum_tiffile = tsdir+f'/results/cum_filt_{imd_p}-{imd_s}.mask.tif'
