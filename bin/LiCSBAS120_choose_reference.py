@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the new console entry point ``licsbas-120-choose-reference``.
+"""DEPRECATED wrapper for the console entry point ``licsbas-120-choose-reference``.
 
-This thin shim keeps the legacy ``PATH`` workflow (e.g. ``bashrc_LiCSBAS.sh``)
-working. Prefer the entry point, or ``python -m _120_choose_reference``.
+Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
+Prefer the entry point, or ``python -m licsbas.steps._120_choose_reference``.
 """
 import sys
 
-from _120_choose_reference import main
+from licsbas.steps._120_choose_reference import main
 
-sys.exit(main())
+sys.exit(main() or 0)

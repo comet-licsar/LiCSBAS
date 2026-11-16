@@ -1,6 +1,9 @@
-"""DEPRECATED compatibility shim: use ``_epochs2cum`` instead.
+"""DEPRECATED compatibility shim: use ``licsbas.steps._epochs2cum`` instead.
+
+Kept for backwards compatibility; will be removed a few releases after the
+v3.0 series.
 """
 import importlib as _importlib
 import sys as _sys
 
-_sys.modules[__name__] = _importlib.import_module("_epochs2cum")
+_sys.modules[__name__] = _importlib.import_module("licsbas.steps._epochs2cum")

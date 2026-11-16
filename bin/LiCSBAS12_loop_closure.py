@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the new console entry point ``licsbas-12-loop-closure``.
+"""DEPRECATED wrapper for the console entry point ``licsbas-12-loop-closure``.
 
-This thin shim keeps the legacy ``PATH`` workflow (e.g. ``bashrc_LiCSBAS.sh``)
-working. Prefer the entry point, or ``python -m _12_loop_closure``.
+Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
+Prefer the entry point, or ``python -m licsbas.steps._12_loop_closure``.
 """
 import sys
 
-from _12_loop_closure import main
+from licsbas.steps._12_loop_closure import main
 
-sys.exit(main())
+sys.exit(main() or 0)

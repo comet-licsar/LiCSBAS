@@ -1,6 +1,9 @@
-"""DEPRECATED compatibility shim: use ``_120_choose_reference`` instead.
+"""DEPRECATED compatibility shim: use ``licsbas.steps._120_choose_reference`` instead.
+
+Kept for backwards compatibility; will be removed a few releases after the
+v3.0 series.
 """
 import importlib as _importlib
 import sys as _sys
 
-_sys.modules[__name__] = _importlib.import_module("_120_choose_reference")
+_sys.modules[__name__] = _importlib.import_module("licsbas.steps._120_choose_reference")

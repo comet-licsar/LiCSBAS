@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the new console entry point ``licsbas-decomposelos``.
+"""DEPRECATED wrapper for the console entry point ``licsbas-decomposelos``.
 
-This thin shim keeps the legacy ``PATH`` workflow (e.g. ``bashrc_LiCSBAS.sh``)
-working. Prefer the entry point, or ``python -m _decomposelos``.
+Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
+Prefer the entry point, or ``python -m licsbas.steps._decomposelos``.
 """
 import sys
 
-from _decomposelos import main
+from licsbas.steps._decomposelos import main
 
-sys.exit(main())
+sys.exit(main() or 0)

@@ -1,6 +1,7 @@
 """DEPRECATED compatibility shim: use ``licsbas.inv_lib`` instead.
 
-Removed in a future release once old import conventions are retired.
+Kept for backwards compatibility; will be removed a few releases after the
+v3.0 series.
 """
 import importlib as _importlib
 import sys as _sys

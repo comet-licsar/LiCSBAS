@@ -123,240 +123,239 @@ def make_kmz(lat1, lat2, lon1, lon2, pngfile, kmzfile, pngcfile, description):
 #%% Main
 ## Not use def main to use global valuables
 def main(argv=None):
-    if __name__ == "__main__":
-        argv = sys.argv
+    argv = sys.argv
 
-        ver="1.11.0"; date=20210205; author="Y. Morishita"
-        print("\n{} ver{} {} {}".format(os.path.basename(argv[0]), ver, date, author), flush=True)
-        print("{} {}".format(os.path.basename(argv[0]), ' '.join(argv[1:])), flush=True)
-
-
-        #%% Set default
-        infile = []
-        parfile = []
-        cmap_name = "cmc.roma_r"
-        cmin = None
-        cmax = None
-        auto_crange = 99.0
-        n_color = 256
-        cycle = 3.0
-        nodata = 0
-        endian = 'little'
-        pngname = []
-        kmzname = []
-        interp = 'nearest' #'antialiased'
+    ver="1.11.0"; date=20210205; author="Y. Morishita"
+    print("\n{} ver{} {} {}".format(os.path.basename(argv[0]), ver, date, author), flush=True)
+    print("{} {}".format(os.path.basename(argv[0]), ' '.join(argv[1:])), flush=True)
 
 
-        #%% Read options
+    #%% Set default
+    infile = []
+    parfile = []
+    cmap_name = "cmc.roma_r"
+    cmin = None
+    cmax = None
+    auto_crange = 99.0
+    n_color = 256
+    cycle = 3.0
+    nodata = 0
+    endian = 'little'
+    pngname = []
+    kmzname = []
+    interp = 'nearest' #'antialiased'
+
+
+    #%% Read options
+    try:
         try:
-            try:
-                opts, args = getopt.getopt(argv[1:], "hi:p:c:", ["help", "cmin=", "cmax=", "auto_crange=", "n_color=", "cycle=", "nodata=", "bigendian", "png=", "kmz=", "title="])
-            except getopt.error as msg:
-                raise Usage(msg)
-            for o, a in opts:
-                if o == '-h' or o == '--help':
-                    print(__doc__)
-                    sys.exit(0)
-                elif o == '-i':
-                    infile = a
-                elif o == '-p':
-                    parfile = a
-                elif o == '-c':
-                    cmap_name = a
-                elif o == '--cmin':
-                    cmin = float(a)
-                elif o == '--cmax':
-                    cmax = float(a)
-                elif o == '--auto_crange':
-                    auto_crange = float(a)
-                elif o == '--n_color':
-                    n_color = int(a)
-                elif o == '--cycle':
-                    cycle = float(a)
-                elif o == '--nodata':
-                    nodata = float(a)
-                elif o == '--bigendian':
-                    endian = 'big'
-                elif o == '--png':
-                    pngname = a
-                elif o == '--kmz':
-                    kmzname = a
-                elif o == '--title':
-                    title = a
+            opts, args = getopt.getopt(argv[1:], "hi:p:c:", ["help", "cmin=", "cmax=", "auto_crange=", "n_color=", "cycle=", "nodata=", "bigendian", "png=", "kmz=", "title="])
+        except getopt.error as msg:
+            raise Usage(msg)
+        for o, a in opts:
+            if o == '-h' or o == '--help':
+                print(__doc__)
+                sys.exit(0)
+            elif o == '-i':
+                infile = a
+            elif o == '-p':
+                parfile = a
+            elif o == '-c':
+                cmap_name = a
+            elif o == '--cmin':
+                cmin = float(a)
+            elif o == '--cmax':
+                cmax = float(a)
+            elif o == '--auto_crange':
+                auto_crange = float(a)
+            elif o == '--n_color':
+                n_color = int(a)
+            elif o == '--cycle':
+                cycle = float(a)
+            elif o == '--nodata':
+                nodata = float(a)
+            elif o == '--bigendian':
+                endian = 'big'
+            elif o == '--png':
+                pngname = a
+            elif o == '--kmz':
+                kmzname = a
+            elif o == '--title':
+                title = a
 
-            if not infile:
-                raise Usage('No image file given, -i is not optional!')
-            elif not os.path.exists(infile):
-                raise Usage('No {} exists!'.format(infile))
+        if not infile:
+            raise Usage('No image file given, -i is not optional!')
+        elif not os.path.exists(infile):
+            raise Usage('No {} exists!'.format(infile))
 
-        except Usage as err:
-            print("\nERROR:", file=sys.stderr, end='')
-            print("  "+str(err.msg), file=sys.stderr)
-            print("\nFor help, use -h or --help.\n", file=sys.stderr)
+    except Usage as err:
+        print("\nERROR:", file=sys.stderr, end='')
+        print("  "+str(err.msg), file=sys.stderr)
+        print("\nFor help, use -h or --help.\n", file=sys.stderr)
+        sys.exit(2)
+
+    # fix in updated versions:
+    if cmap_name.startswith(r'SCM.'):
+        cmap_name = 'cmc.'+cmap_name.split('.')[1]
+
+
+    #%% Get info and Read data
+    if gdal.IdentifyDriver(infile): ## If Geotiff or grd
+        geotiff = gdal.Open(infile)
+        data = geotiff.ReadAsArray()
+        if data.ndim > 2:
+            print('\nERROR: {} has multiple bands and cannot be displayed.\n'.format(infile), file=sys.stderr)
             sys.exit(2)
 
-        # fix in updated versions:
-        if cmap_name.startswith(r'SCM.'):
-            cmap_name = 'cmc.'+cmap_name.split('.')[1]
+        length, width = data.shape
+        lon_w_p, dlon, _, lat_n_p, _, dlat = geotiff.GetGeoTransform()
+        lat_s_p = lat_n_p+dlat*length
+        lon_e_p = lon_w_p+dlon*width
+        if data.dtype == np.float32:
+            data[data==nodata] = np.nan
 
-    
-        #%% Get info and Read data
-        if gdal.IdentifyDriver(infile): ## If Geotiff or grd
-            geotiff = gdal.Open(infile)
-            data = geotiff.ReadAsArray()
-            if data.ndim > 2:
-                print('\nERROR: {} has multiple bands and cannot be displayed.\n'.format(infile), file=sys.stderr)
-                sys.exit(2)
+    else: ## Not GeoTIFF
+        if not parfile:
+            print('\nERROR: No par file given, -p is not optional!\n', file=sys.stderr)
+            sys.exit(2)
+        elif not os.path.exists(parfile):
+            print('\nERROR: No {} exists!\n'.format(parfile), file=sys.stderr)
+            sys.exit(2)
 
-            length, width = data.shape
-            lon_w_p, dlon, _, lat_n_p, _, dlat = geotiff.GetGeoTransform()
-            lat_s_p = lat_n_p+dlat*length
-            lon_e_p = lon_w_p+dlon*width
-            if data.dtype == np.float32:
-                data[data==nodata] = np.nan
-
-        else: ## Not GeoTIFF
-            if not parfile:
-                print('\nERROR: No par file given, -p is not optional!\n', file=sys.stderr)
-                sys.exit(2)
-            elif not os.path.exists(parfile):
-                print('\nERROR: No {} exists!\n'.format(parfile), file=sys.stderr)
-                sys.exit(2)
-
+        try:
             try:
-                try:
-                    ### EQA.dem_par
-                    width = int(subp.check_output(['grep', 'width', parfile]).decode().split()[1].strip())
-                    length = int(subp.check_output(['grep', 'nlines', parfile]).decode().split()[1].strip())
-                except:
-                    ### slc.mli.par
-                    width = int(subp.check_output(['grep', 'range_samples', parfile]).decode().split()[1].strip())
-                    length = int(subp.check_output(['grep', 'azimuth_lines', parfile]).decode().split()[1].strip())
+                ### EQA.dem_par
+                width = int(subp.check_output(['grep', 'width', parfile]).decode().split()[1].strip())
+                length = int(subp.check_output(['grep', 'nlines', parfile]).decode().split()[1].strip())
             except:
-                print('No fields about width/length found in {}!'.format(parfile), file=sys.stderr)
+                ### slc.mli.par
+                width = int(subp.check_output(['grep', 'range_samples', parfile]).decode().split()[1].strip())
+                length = int(subp.check_output(['grep', 'azimuth_lines', parfile]).decode().split()[1].strip())
+        except:
+            print('No fields about width/length found in {}!'.format(parfile), file=sys.stderr)
+            sys.exit(2)
+
+        if kmzname:
+            try:
+                ### EQA.dem_par
+                dlat = float(io_lib.get_param_par(parfile, 'post_lat'))
+                dlon = float(io_lib.get_param_par(parfile, 'post_lon'))
+
+                lat_n_g = float(io_lib.get_param_par(parfile, 'corner_lat')) #grid reg
+                lon_w_g = float(io_lib.get_param_par(parfile, 'corner_lon')) #grid reg
+                ## Grid registration to pixel registration by shifing half pixel
+                lat_n_p = lat_n_g - dlat/2
+                lon_w_p = lon_w_g - dlon/2
+                lat_s_p = lat_n_p+dlat*length
+                lon_e_p = lon_w_p+dlon*width
+            except:
+                print('No fields about geo for kmz found in {}!'.format(parfile), file=sys.stderr)
                 sys.exit(2)
 
-            if kmzname:
-                try:
-                    ### EQA.dem_par
-                    dlat = float(io_lib.get_param_par(parfile, 'post_lat'))
-                    dlon = float(io_lib.get_param_par(parfile, 'post_lon'))
-
-                    lat_n_g = float(io_lib.get_param_par(parfile, 'corner_lat')) #grid reg
-                    lon_w_g = float(io_lib.get_param_par(parfile, 'corner_lon')) #grid reg
-                    ## Grid registration to pixel registration by shifing half pixel
-                    lat_n_p = lat_n_g - dlat/2
-                    lon_w_p = lon_w_g - dlon/2
-                    lat_s_p = lat_n_p+dlat*length
-                    lon_e_p = lon_w_p+dlon*width
-                except:
-                    print('No fields about geo for kmz found in {}!'.format(parfile), file=sys.stderr)
-                    sys.exit(2)
-
-            ### Read data
-            if os.path.getsize(infile) == length*width:
-                print('File format: uint8')
-                data = io_lib.read_img(infile, length, width, np.uint8, endian=endian)
-            else:
-                data = io_lib.read_img(infile, length, width, endian=endian)
-                data[data==nodata] = np.nan
-
-
-        #%% Get cmap, set cyclic and color range
-        cmap = tools_lib.get_cmap(cmap_name, n_color)
-
-        if cmap_name == 'cm_insar' or \
-                cmap_name == 'cm_isce' or \
-                (cmap_name.startswith('cmc') and 'O' in cmap_name) or \
-                (cmap_name.startswith('SCM') and 'O' in cmap_name) or \
-                'GMT.cyclic' in cmap_name or \
-                'cmocean.phase' in cmap_name or \
-                (cmap_name.startswith('colorcet') and
-                 re.search(r'C[1-5]', cmap_name) is not None):
-            print('\n{} is a cyclic cmap.'.format(cmap_name))
-            cyclic= True
-            data = np.angle(np.exp(1j*(data/cycle))*cycle)
-            cmin = -np.pi
-            cmax = np.pi
-            interp = 'nearest'
+        ### Read data
+        if os.path.getsize(infile) == length*width:
+            print('File format: uint8')
+            data = io_lib.read_img(infile, length, width, np.uint8, endian=endian)
         else:
-            cyclic= False
-
-        if cmin is None and cmax is None: ## auto
-            climauto = True
-            cmin = np.nanpercentile(data, 100-auto_crange)
-            cmax = np.nanpercentile(data, auto_crange)
-        else:
-            climauto = False
-            if cmin is None: cmin = np.nanpercentile(data, 100-auto_crange)
-            if cmax is None: cmax = np.nanpercentile(data, auto_crange)
+            data = io_lib.read_img(infile, length, width, endian=endian)
+            data[data==nodata] = np.nan
 
 
-        #%% Output kmz
-        if kmzname:
-            ### Make png
-            os.environ['QT_QPA_PLATFORM']='offscreen'
-            dpi = 100
-            figsize2 = (width/dpi, length/dpi)
-            plt.figure(figsize=figsize2, dpi=dpi)
-            plt.imshow(data, clim=[cmin, cmax], cmap=cmap, interpolation=interp)
-            plt.axis('off')
-            plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
-            pngnametmp = kmzname.replace('.kmz', '_tmp.png')
-            plt.savefig(pngnametmp, dpi=dpi, transparent=True)
-            plt.close()
+    #%% Get cmap, set cyclic and color range
+    cmap = tools_lib.get_cmap(cmap_name, n_color)
 
-            ### Make cbar png
-            fig, ax = plt.subplots(figsize=(3, 1))
-            norm = mpl.colors.Normalize(cmin, cmax)
-            cbar = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm, orientation='horizontal')
-            pngcfile = kmzname.replace('.kmz', '_ctmp.png')
-            plt.tight_layout()
-            if cyclic:
-                cbar.set_ticks([])
-                descr_cycle = '{}*2pi/cycle'.format(cycle)
-            else:
-                descr_cycle = ''
-            plt.savefig(pngcfile, transparent=True)
-            plt.close()
+    if cmap_name == 'cm_insar' or \
+            cmap_name == 'cm_isce' or \
+            (cmap_name.startswith('cmc') and 'O' in cmap_name) or \
+            (cmap_name.startswith('SCM') and 'O' in cmap_name) or \
+            'GMT.cyclic' in cmap_name or \
+            'cmocean.phase' in cmap_name or \
+            (cmap_name.startswith('colorcet') and
+             re.search(r'C[1-5]', cmap_name) is not None):
+        print('\n{} is a cyclic cmap.'.format(cmap_name))
+        cyclic= True
+        data = np.angle(np.exp(1j*(data/cycle))*cycle)
+        cmin = -np.pi
+        cmax = np.pi
+        interp = 'nearest'
+    else:
+        cyclic= False
 
-            description = '<![CDATA[{}<img style="max-width:200px;" src="{}">]]>'.format(descr_cycle, os.path.basename(pngcfile))
-
-            make_kmz(lat_s_p, lat_n_p, lon_w_p, lon_e_p, pngnametmp, kmzname, pngcfile, description)
-
-            os.remove(pngnametmp)
-            if pngcfile:
-                os.remove(pngcfile)
-            print('\nOutput: {}\n'.format(kmzname))
-
-            if not pngname: sys.exit(0)
+    if cmin is None and cmax is None: ## auto
+        climauto = True
+        cmin = np.nanpercentile(data, 100-auto_crange)
+        cmax = np.nanpercentile(data, auto_crange)
+    else:
+        climauto = False
+        if cmin is None: cmin = np.nanpercentile(data, 100-auto_crange)
+        if cmax is None: cmax = np.nanpercentile(data, auto_crange)
 
 
-        #%% Plot figure
-        if pngname: os.environ['QT_QPA_PLATFORM']='offscreen'
-
-        figsize_x = 6 if length > width else 8
-        figsize = (figsize_x, ((figsize_x-2)*length/width))
-        plt.figure('{}'.format(infile), figsize)
+    #%% Output kmz
+    if kmzname:
+        ### Make png
+        os.environ['QT_QPA_PLATFORM']='offscreen'
+        dpi = 100
+        figsize2 = (width/dpi, length/dpi)
+        plt.figure(figsize=figsize2, dpi=dpi)
         plt.imshow(data, clim=[cmin, cmax], cmap=cmap, interpolation=interp)
-        if title:
-            plt.title(title)
-        if cyclic:
-            title = title+' {}*2pi/cycle'.format(cycle)
-            plt.title(title)
-            cbar = plt.colorbar()
-            cbar.set_ticks([])
-        else:
-            plt.colorbar()
-        plt.tight_layout()
+        plt.axis('off')
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        pngnametmp = kmzname.replace('.kmz', '_tmp.png')
+        plt.savefig(pngnametmp, dpi=dpi, transparent=True)
+        plt.close()
 
-        if pngname:
-            plt.savefig(pngname)
-            plt.close()
-            print('\nOutput: {}\n'.format(pngname))
-            sys.exit(0)
+        ### Make cbar png
+        fig, ax = plt.subplots(figsize=(3, 1))
+        norm = mpl.colors.Normalize(cmin, cmax)
+        cbar = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm, orientation='horizontal')
+        pngcfile = kmzname.replace('.kmz', '_ctmp.png')
+        plt.tight_layout()
+        if cyclic:
+            cbar.set_ticks([])
+            descr_cycle = '{}*2pi/cycle'.format(cycle)
         else:
-            plt.show()
+            descr_cycle = ''
+        plt.savefig(pngcfile, transparent=True)
+        plt.close()
+
+        description = '<![CDATA[{}<img style="max-width:200px;" src="{}">]]>'.format(descr_cycle, os.path.basename(pngcfile))
+
+        make_kmz(lat_s_p, lat_n_p, lon_w_p, lon_e_p, pngnametmp, kmzname, pngcfile, description)
+
+        os.remove(pngnametmp)
+        if pngcfile:
+            os.remove(pngcfile)
+        print('\nOutput: {}\n'.format(kmzname))
+
+        if not pngname: sys.exit(0)
+
+
+    #%% Plot figure
+    if pngname: os.environ['QT_QPA_PLATFORM']='offscreen'
+
+    figsize_x = 6 if length > width else 8
+    figsize = (figsize_x, ((figsize_x-2)*length/width))
+    plt.figure('{}'.format(infile), figsize)
+    plt.imshow(data, clim=[cmin, cmax], cmap=cmap, interpolation=interp)
+    if title:
+        plt.title(title)
+    if cyclic:
+        title = title+' {}*2pi/cycle'.format(cycle)
+        plt.title(title)
+        cbar = plt.colorbar()
+        cbar.set_ticks([])
+    else:
+        plt.colorbar()
+    plt.tight_layout()
+
+    if pngname:
+        plt.savefig(pngname)
+        plt.close()
+        print('\nOutput: {}\n'.format(pngname))
+        sys.exit(0)
+    else:
+        plt.show()
 
 if __name__ == "__main__":
     main()

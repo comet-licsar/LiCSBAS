@@ -334,134 +334,133 @@ def count_nans(cum):
 
 
 def main(argv=None):
-    if __name__ == "__main__":
-        start()
-        init_args()
+    start()
+    init_args()
 
-        # read input cum.h5
-        cumh5 = h5.File(args.cumfile, 'r')
-        imdates = cumh5['imdates'][()].astype(str).tolist()
-        cum = cumh5['cum']
+    # read input cum.h5
+    cumh5 = h5.File(args.cumfile, 'r')
+    imdates = cumh5['imdates'][()].astype(str).tolist()
+    cum = cumh5['cum']
+    if args.plot_cum:
+        plot_cum_grid(cum[:, ::args.downsample, ::args.downsample], imdates, args.cumfile, args.cumfile + ".png")
+
+    if args.count_nans:
+        count_nans(cum)
+
+    ### Calc dt in year
+    imdates_dt = ([dt.datetime.strptime(imd, '%Y%m%d').toordinal() for imd in imdates])
+    dt_cum = np.float32((np.array(imdates_dt) - imdates_dt[0]) / 365.25)
+    epochs = ([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates])
+    n_im = len(dt_cum)
+
+    if args.ref:
+        cum_ref = np.ones(cum.shape) * np.nan
+        for i in np.arange(n_im):
+            cum_ref[i, :, :] = cum[i, :, :] - cum[i, cum.shape[1] // 2, cum.shape[2] // 2]
         if args.plot_cum:
-            plot_cum_grid(cum[:, ::args.downsample, ::args.downsample], imdates, args.cumfile, args.cumfile + ".png")
+            plot_cum_grid(cum_ref[:, ::args.downsample, ::args.downsample], imdates, args.cumfile + "_ref2center", args.cumfile + "_ref2center.png")
+        cum = cum_ref
 
-        if args.count_nans:
-            count_nans(cum)
+    if args.ramp:
+        logger.info("Estimating a planar ramp per epoch...")
+        # downsample
+        small_cum = cum[:, ::args.downsample, ::args.downsample]
 
-        ### Calc dt in year
-        imdates_dt = ([dt.datetime.strptime(imd, '%Y%m%d').toordinal() for imd in imdates])
-        dt_cum = np.float32((np.array(imdates_dt) - imdates_dt[0]) / 365.25)
-        epochs = ([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates])
-        n_im = len(dt_cum)
+        # initialise
+        ramp_cum = np.zeros(small_cum.shape) * np.nan
+        range_coefs = np.zeros(n_im) * np.nan
+        azi_coefs = np.zeros(n_im) * np.nan
 
-        if args.ref:
-            cum_ref = np.ones(cum.shape) * np.nan
-            for i in np.arange(n_im):
-                cum_ref[i, :, :] = cum[i, :, :] - cum[i, cum.shape[1] // 2, cum.shape[2] // 2]
-            if args.plot_cum:
-                plot_cum_grid(cum_ref[:, ::args.downsample, ::args.downsample], imdates, args.cumfile + "_ref2center", args.cumfile + "_ref2center.png")
-            cum = cum_ref
+        # calc a best fit ramp for each epoch and register range and azimuth ramp parameters
+        for i in np.arange(n_im):
+            ramp_cum[i, :, :], range_coefs[i], azi_coefs[i] = fit_plane(small_cum[i, :, :], np.deg2rad(args.heading))
 
-        if args.ramp:
-            logger.info("Estimating a planar ramp per epoch...")
-            # downsample
-            small_cum = cum[:, ::args.downsample, ::args.downsample]
+        # calculate std of flattened cum displacement to use as weights
+        flat_cum = small_cum - ramp_cum
+        flat_std = np.array([np.nanstd(flat_cum[i, :, :]) for i in np.arange(n_im)])
+        flat_std[0] = flat_std[1]  # to avoid 0 weight for the first epoch
 
-            # initialise
-            ramp_cum = np.zeros(small_cum.shape) * np.nan
-            range_coefs = np.zeros(n_im) * np.nan
-            azi_coefs = np.zeros(n_im) * np.nan
+        # remove a linear trend from flat_std because std increases over time due to real signal
+        G = np.vstack([np.ones_like(dt_cum), dt_cum]).transpose()
+        olsfit = sm.OLS(flat_std.transpose(), G).fit()
+        detrended_flat_std = flat_std - olsfit.fittedvalues + olsfit.fittedvalues[0]
+        if np.nanmin(detrended_flat_std) < 0:  # to make sure all weights are safely above 0
+            detrended_flat_std = detrended_flat_std - np.nanmin(detrended_flat_std) + np.nanstd(detrended_flat_std)
 
-            # calc a best fit ramp for each epoch and register range and azimuth ramp parameters
-            for i in np.arange(n_im):
-                ramp_cum[i, :, :], range_coefs[i], azi_coefs[i] = fit_plane(small_cum[i, :, :], np.deg2rad(args.heading))
+        weights = 1 / detrended_flat_std ** 2
 
-            # calculate std of flattened cum displacement to use as weights
-            flat_cum = small_cum - ramp_cum
-            flat_std = np.array([np.nanstd(flat_cum[i, :, :]) for i in np.arange(n_im)])
-            flat_std[0] = flat_std[1]  # to avoid 0 weight for the first epoch
+        # model and plot ramp coefs time series
+        G = make_G(dt_cum)
+        d = np.vstack([range_coefs, azi_coefs]).transpose()
+        wlsfit = sm.WLS(d, G, weights=weights).fit()
 
-            # remove a linear trend from flat_std because std increases over time due to real signal
-            G = np.vstack([np.ones_like(dt_cum), dt_cum]).transpose()
-            olsfit = sm.OLS(flat_std.transpose(), G).fit()
-            detrended_flat_std = flat_std - olsfit.fittedvalues + olsfit.fittedvalues[0]
-            if np.nanmin(detrended_flat_std) < 0:  # to make sure all weights are safely above 0
-                detrended_flat_std = detrended_flat_std - np.nanmin(detrended_flat_std) + np.nanstd(detrended_flat_std)
+        vector_ramp_coef_resid = np.sqrt(np.sum(np.square(wlsfit.resid), axis=1))
+        vector_ramp_coef_resid_scaled = np.std(flat_std) / np.std(vector_ramp_coef_resid) * vector_ramp_coef_resid
+        sig = np.sqrt(detrended_flat_std**2 + vector_ramp_coef_resid_scaled**2)
+        plot_ramp_coef_time_series(epochs, range_coefs, azi_coefs, flat_std, detrended_flat_std, weights, vector_ramp_coef_resid_scaled, sig, wlsfit)
 
-            weights = 1 / detrended_flat_std ** 2
+        # plot 3D time series
+        if args.plot_cum:
+            ramp_cum[np.isnan(small_cum)] = np.nan
+            plot_cum_grid(ramp_cum, imdates, "Best-fit ramps {}".format(args.cumfile), args.cumfile + "_ramps.png")
+            plot_cum_grid(flat_cum, imdates, "Flattened {}".format(args.cumfile), args.cumfile + "_flattened.png")
 
-            # model and plot ramp coefs time series
-            G = make_G(dt_cum)
-            d = np.vstack([range_coefs, azi_coefs]).transpose()
-            wlsfit = sm.WLS(d, G, weights=weights).fit()
+    if args.linear:
+        ### Weighted Least Squares Inversion
+        G = make_G(dt_cum)
+        if args.ramp:  # use residuals of ramp coefs seasonal models and deramped std for weighting the inversion
+            result_cube, stderr_cube, resid_cube = calc_vel_and_err(cum, G, sig)
+        else:  # unweighted inversion
+            result_cube, stderr_cube, resid_cube = calc_vel_and_err(cum, G, np.ones_like(dt_cum))
 
-            vector_ramp_coef_resid = np.sqrt(np.sum(np.square(wlsfit.resid), axis=1))
-            vector_ramp_coef_resid_scaled = np.std(flat_std) / np.std(vector_ramp_coef_resid) * vector_ramp_coef_resid
-            sig = np.sqrt(detrended_flat_std**2 + vector_ramp_coef_resid_scaled**2)
-            plot_ramp_coef_time_series(epochs, range_coefs, azi_coefs, flat_std, detrended_flat_std, weights, vector_ramp_coef_resid_scaled, sig, wlsfit)
+        # save linear velocity
+        vel = result_cube[1]
+        vstd = stderr_cube[1]
+        vel.tofile('{}_vel'.format(args.cumfile))
+        vstd.tofile('{}_vstd'.format(args.cumfile))
+        if args.plot_vel:
+            from licsbas import plot_lib
+            plot_lib.make_im_png(vel, '{}_vel.png'.format(args.cumfile), cmc.roma.reversed(), 'vel {}'.format(args.cumfile))
+            plot_lib.make_im_png(vstd, '{}_vstd.png'.format(args.cumfile), 'viridis', 'vstd {}'.format(args.cumfile))
 
-            # plot 3D time series
-            if args.plot_cum:
-                ramp_cum[np.isnan(small_cum)] = np.nan
-                plot_cum_grid(ramp_cum, imdates, "Best-fit ramps {}".format(args.cumfile), args.cumfile + "_ramps.png")
-                plot_cum_grid(flat_cum, imdates, "Flattened {}".format(args.cumfile), args.cumfile + "_flattened.png")
+        if args.season:
+            coef_s = result_cube[2]
+            coef_c = result_cube[3]
+            coef_s_sigma = stderr_cube[2]
+            coef_c_sigma = stderr_cube[3]
 
-        if args.linear:
-            ### Weighted Least Squares Inversion
-            G = make_G(dt_cum)
-            if args.ramp:  # use residuals of ramp coefs seasonal models and deramped std for weighting the inversion
-                result_cube, stderr_cube, resid_cube = calc_vel_and_err(cum, G, sig)
-            else:  # unweighted inversion
-                result_cube, stderr_cube, resid_cube = calc_vel_and_err(cum, G, np.ones_like(dt_cum))
+            doy0 = (dt.datetime.strptime(imdates[0], '%Y%m%d') - dt.datetime.strptime(imdates[0][0:4] + '0101','%Y%m%d')).days
+            amp = np.sqrt(coef_s ** 2 + coef_c ** 2)
+            delta_t = np.arctan2(-coef_c, coef_s) / 2 / np.pi * 365.25  ## wrt 1st img
+            delta_t = delta_t + doy0  ## wrt Jan 1
+            delta_t[delta_t < 0] = delta_t[delta_t < 0] + 365.25  # 0-365.25
+            delta_t[delta_t > 365.25] = delta_t[delta_t > 365.25] - 365.25
 
-            # save linear velocity
-            vel = result_cube[1]
-            vstd = stderr_cube[1]
-            vel.tofile('{}_vel'.format(args.cumfile))
-            vstd.tofile('{}_vstd'.format(args.cumfile))
+            amp.tofile('{}_amp'.format(args.cumfile))
+            delta_t.tofile('{}_delta_t'.format(args.cumfile))
+            amp_max = np.nanpercentile(amp, 99)
+
             if args.plot_vel:
-                from licsbas import plot_lib
-                plot_lib.make_im_png(vel, '{}_vel.png'.format(args.cumfile), cmc.roma.reversed(), 'vel {}'.format(args.cumfile))
-                plot_lib.make_im_png(vstd, '{}_vstd.png'.format(args.cumfile), 'viridis', 'vstd {}'.format(args.cumfile))
+                plot_lib.make_im_png(amp, '{}_amp.png'.format(args.cumfile), 'viridis', 'amp {}'.format(args.cumfile), vmin=0, vmax=amp_max)
+                plot_lib.make_im_png(delta_t, '{}_delta_t.png'.format(args.cumfile), cmc.romaO.reversed(), 'delta_t {}'.format(args.cumfile))
 
-            if args.season:
-                coef_s = result_cube[2]
-                coef_c = result_cube[3]
-                coef_s_sigma = stderr_cube[2]
-                coef_c_sigma = stderr_cube[3]
+            if args.de_season:
+                # add linear and residual component as an easier way to remove the seasonal component
+                linear_cube = np.dot(G[:, 1], vel)
+                de_seasoned_cube = linear_cube + resid_cube
+                print('\nWriting to HDF5 file...')
+                de_seasoned_h5 = h5.File(args.cumfile[:-2]+'de_seasoned.h5', 'w')
+                de_seasoned_h5.create_dataset('imdates', data=[np.int32(imd) for imd in imdates])
+                de_seasoned_h5.create_dataset('amp', data=amp, compression='gzip')
+                de_seasoned_h5.create_dataset('delta_t', data=delta_t, compression='gzip')
+                de_seasoned_h5.create_dataset('de_seasoned_cube', data=de_seasoned_cube, compression='gzip')
+                de_seasoned_h5.close()
 
-                doy0 = (dt.datetime.strptime(imdates[0], '%Y%m%d') - dt.datetime.strptime(imdates[0][0:4] + '0101','%Y%m%d')).days
-                amp = np.sqrt(coef_s ** 2 + coef_c ** 2)
-                delta_t = np.arctan2(-coef_c, coef_s) / 2 / np.pi * 365.25  ## wrt 1st img
-                delta_t = delta_t + doy0  ## wrt Jan 1
-                delta_t[delta_t < 0] = delta_t[delta_t < 0] + 365.25  # 0-365.25
-                delta_t[delta_t > 365.25] = delta_t[delta_t > 365.25] - 365.25
+        if args.plot_cum:
+            plot_cum_grid(resid_cube[:, ::args.downsample, ::args.downsample], imdates, "Resid {} (linear={}, season={})".format(args.cumfile, str(args.linear), str(args.season)), args.cumfile + "resid.png")
 
-                amp.tofile('{}_amp'.format(args.cumfile))
-                delta_t.tofile('{}_delta_t'.format(args.cumfile))
-                amp_max = np.nanpercentile(amp, 99)
-
-                if args.plot_vel:
-                    plot_lib.make_im_png(amp, '{}_amp.png'.format(args.cumfile), 'viridis', 'amp {}'.format(args.cumfile), vmin=0, vmax=amp_max)
-                    plot_lib.make_im_png(delta_t, '{}_delta_t.png'.format(args.cumfile), cmc.romaO.reversed(), 'delta_t {}'.format(args.cumfile))
-
-                if args.de_season:
-                    # add linear and residual component as an easier way to remove the seasonal component
-                    linear_cube = np.dot(G[:, 1], vel)
-                    de_seasoned_cube = linear_cube + resid_cube
-                    print('\nWriting to HDF5 file...')
-                    de_seasoned_h5 = h5.File(args.cumfile[:-2]+'de_seasoned.h5', 'w')
-                    de_seasoned_h5.create_dataset('imdates', data=[np.int32(imd) for imd in imdates])
-                    de_seasoned_h5.create_dataset('amp', data=amp, compression='gzip')
-                    de_seasoned_h5.create_dataset('delta_t', data=delta_t, compression='gzip')
-                    de_seasoned_h5.create_dataset('de_seasoned_cube', data=de_seasoned_cube, compression='gzip')
-                    de_seasoned_h5.close()
-
-            if args.plot_cum:
-                plot_cum_grid(resid_cube[:, ::args.downsample, ::args.downsample], imdates, "Resid {} (linear={}, season={})".format(args.cumfile, str(args.linear), str(args.season)), args.cumfile + "resid.png")
-
-        cumh5.close()
-        finish()
+    cumh5.close()
+    finish()
 
 if __name__ == "__main__":
     main()

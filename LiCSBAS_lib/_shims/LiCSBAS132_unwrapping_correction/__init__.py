@@ -1,6 +1,9 @@
-"""DEPRECATED compatibility shim: use ``_132_unwrapping_correction`` instead.
+"""DEPRECATED compatibility shim: use ``licsbas.steps._132_unwrapping_correction`` instead.
+
+Kept for backwards compatibility; will be removed a few releases after the
+v3.0 series.
 """
 import importlib as _importlib
 import sys as _sys
 
-_sys.modules[__name__] = _importlib.import_module("_132_unwrapping_correction")
+_sys.modules[__name__] = _importlib.import_module("licsbas.steps._132_unwrapping_correction")

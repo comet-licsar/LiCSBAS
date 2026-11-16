@@ -87,57 +87,56 @@ def finish():
 
 
 def main(argv=None):
-    if __name__ == "__main__":
-        init_args()
-        start()
+    init_args()
+    start()
 
-        # Open existing cum.h5 for reading metadata
-        cumh5 = h5.File(args.existing_cumh5file, 'a')
+    # Open existing cum.h5 for reading metadata
+    cumh5 = h5.File(args.existing_cumh5file, 'a')
 
-        # if adding all available epochs into cube
-        if not args.same_epochs_as_existing_h5:
-            # add epochs into cube referenced to the first epoch
-            tifList = sorted(glob.glob(os.path.join(args.input_dir, '*'+args.input_suffix)))
-            ref_tif = OpenTif(tifList[0])
-            cube = np.ones([len(tifList), ref_tif.ysize, ref_tif.xsize])
-            for i, tif in enumerate(tifList):
-                print(tif)
-                slice = OpenTif(tif)
-                cube[i, :, :] = slice.data - ref_tif.data
-        else:  # keep the epochs the same as in existing h5
-            ref_tif = OpenTif(glob.glob(os.path.join(args.input_dir, str(cumh5['imdates'][0])+"*"+args.input_suffix))[0])
-            cube = np.ones([len(cumh5['imdates']), ref_tif.ysize, ref_tif.xsize])
-            for i, tif in enumerate(cumh5['imdates']):
-                print(tif)
-                slice = OpenTif(glob.glob(os.path.join(args.input_dir, str(cumh5['imdates'][i])+"*"+args.input_suffix))[0])
-                cube[i, :, :] = slice.data - ref_tif.data
+    # if adding all available epochs into cube
+    if not args.same_epochs_as_existing_h5:
+        # add epochs into cube referenced to the first epoch
+        tifList = sorted(glob.glob(os.path.join(args.input_dir, '*'+args.input_suffix)))
+        ref_tif = OpenTif(tifList[0])
+        cube = np.ones([len(tifList), ref_tif.ysize, ref_tif.xsize])
+        for i, tif in enumerate(tifList):
+            print(tif)
+            slice = OpenTif(tif)
+            cube[i, :, :] = slice.data - ref_tif.data
+    else:  # keep the epochs the same as in existing h5
+        ref_tif = OpenTif(glob.glob(os.path.join(args.input_dir, str(cumh5['imdates'][0])+"*"+args.input_suffix))[0])
+        cube = np.ones([len(cumh5['imdates']), ref_tif.ysize, ref_tif.xsize])
+        for i, tif in enumerate(cumh5['imdates']):
+            print(tif)
+            slice = OpenTif(glob.glob(os.path.join(args.input_dir, str(cumh5['imdates'][i])+"*"+args.input_suffix))[0])
+            cube[i, :, :] = slice.data - ref_tif.data
 
-        ### Get scaling factor
-        if args.radian2mm:
-            speed_of_light = 299792458 #m/s
-            radar_frequency = 5405000000.0 #Hz
-            wavelength = speed_of_light/radar_frequency #meter
-            coef_r2m = -wavelength/4/np.pi*1000 #rad -> mm, positive is -LOS
-        else:
-            coef_r2m = 1
+    ### Get scaling factor
+    if args.radian2mm:
+        speed_of_light = 299792458 #m/s
+        radar_frequency = 5405000000.0 #Hz
+        wavelength = speed_of_light/radar_frequency #meter
+        coef_r2m = -wavelength/4/np.pi*1000 #rad -> mm, positive is -LOS
+    else:
+        coef_r2m = 1
 
-        # write into new cum.h5
-        gacosh5 = h5.File(args.outfile, 'w')
-        compress = 'gzip'
-        gacosh5.create_dataset('cum', data=cube*coef_r2m, compression=compress)
-        gacosh5.create_dataset('refarea', data=cumh5['refarea'] )
-        gacosh5.create_dataset('imdates', data=cumh5['imdates'] )
-        gacosh5.create_dataset('corner_lat', data=cumh5['refarea'])
-        gacosh5.create_dataset('corner_lon', data=cumh5['corner_lon'])
-        gacosh5.create_dataset('post_lat', data=cumh5['post_lat'])
-        gacosh5.create_dataset('post_lon', data=cumh5['post_lon'])
+    # write into new cum.h5
+    gacosh5 = h5.File(args.outfile, 'w')
+    compress = 'gzip'
+    gacosh5.create_dataset('cum', data=cube*coef_r2m, compression=compress)
+    gacosh5.create_dataset('refarea', data=cumh5['refarea'] )
+    gacosh5.create_dataset('imdates', data=cumh5['imdates'] )
+    gacosh5.create_dataset('corner_lat', data=cumh5['refarea'])
+    gacosh5.create_dataset('corner_lon', data=cumh5['corner_lon'])
+    gacosh5.create_dataset('post_lat', data=cumh5['post_lat'])
+    gacosh5.create_dataset('post_lon', data=cumh5['post_lon'])
 
-        # close new cum.h5
-        gacosh5.close()
+    # close new cum.h5
+    gacosh5.close()
 
-        # close existing cum.h5
-        cumh5.close()
+    # close existing cum.h5
+    cumh5.close()
 
-        finish()
+    finish()
 if __name__ == "__main__":
     main()

@@ -1,6 +1,9 @@
-"""DEPRECATED compatibility shim: use ``_11_check_unw`` instead.
+"""DEPRECATED compatibility shim: use ``licsbas.steps._11_check_unw`` instead.
+
+Kept for backwards compatibility; will be removed a few releases after the
+v3.0 series.
 """
 import importlib as _importlib
 import sys as _sys
 
-_sys.modules[__name__] = _importlib.import_module("_11_check_unw")
+_sys.modules[__name__] = _importlib.import_module("licsbas.steps._11_check_unw")

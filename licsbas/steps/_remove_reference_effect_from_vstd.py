@@ -398,169 +398,168 @@ def safe_random_subset(n, max_points=50000):
 
 
 def main(argv=None):
-    if __name__ == "__main__":
-        start()
-        init_args()
+    start()
+    init_args()
 
-        plt.rcParams["font.family"] = "sans-serif"
-        plt.rcParams["font.sans-serif"] = ["Nimbus Sans"]
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["Nimbus Sans"]
 
-        tif = OpenTif(args.infile)
+    tif = OpenTif(args.infile)
 
-        result = None
-        model = None
+    result = None
+    model = None
 
-        try:
-            # prepare profile data
-            nonnan_mask, sig_nonnan, dist = get_profile_data(tif)
+    try:
+        # prepare profile data
+        nonnan_mask, sig_nonnan, dist = get_profile_data(tif)
 
-            if len(sig_nonnan) < 10:
-                raise ValueError("Too few valid pixels in input raster.")
+        if len(sig_nonnan) < 10:
+            raise ValueError("Too few valid pixels in input raster.")
 
-            # calc stats along profile
-            median, std, bincenters = calc_median_std(dist, sig_nonnan)
+        # calc stats along profile
+        median, std, bincenters = calc_median_std(dist, sig_nonnan)
 
-            # fit variogram models
-            results, median_used, std_used, bincenters_used = try_fit_all_models(median, std, bincenters)
-            result, model = choose_best_model(results)
+        # fit variogram models
+        results, median_used, std_used, bincenters_used = try_fit_all_models(median, std, bincenters)
+        result, model = choose_best_model(results)
 
-            # scale sig_nonnan based on variogram model
-            sig_nonnan_scaled = scale_value_by_variogram_ratio(sig_nonnan, dist, result, model)
+        # scale sig_nonnan based on variogram model
+        sig_nonnan_scaled = scale_value_by_variogram_ratio(sig_nonnan, dist, result, model)
 
-            # populate scaled uncertainty map
-            new_map = np.ones(nonnan_mask.shape, dtype=float) * np.nan
-            new_map[nonnan_mask] = sig_nonnan_scaled
-            new_map = new_map.reshape(tif.data.shape)
+        # populate scaled uncertainty map
+        new_map = np.ones(nonnan_mask.shape, dtype=float) * np.nan
+        new_map[nonnan_mask] = sig_nonnan_scaled
+        new_map = new_map.reshape(tif.data.shape)
 
-            fit_scaled = scale_value_by_variogram_ratio(result['best_fit'], bincenters_used, result, model)
+        fit_scaled = scale_value_by_variogram_ratio(result['best_fit'], bincenters_used, result, model)
 
-            # output modeling parameters
-            parameters_ifgfile = 'vstd_rescaling_parameters.txt'
-            model_str = (
-                f"{model} "
-                f"nugget={result['best_values']['n']:.3f} "
-                f"sill={result['best_values']['p'] + result['best_values']['n']:.3f} "
-                f"range={result['best_values']['r']:.3f}"
+        # output modeling parameters
+        parameters_ifgfile = 'vstd_rescaling_parameters.txt'
+        model_str = (
+            f"{model} "
+            f"nugget={result['best_values']['n']:.3f} "
+            f"sill={result['best_values']['p'] + result['best_values']['n']:.3f} "
+            f"range={result['best_values']['r']:.3f}"
+        )
+        print(model_str)
+        with open(parameters_ifgfile, 'w') as f:
+            print(model_str, file=f)
+
+        # plotting
+        fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(6.4, 4.8))
+
+        subset = safe_random_subset(len(dist), max_points=50000)
+
+        vmax1 = np.percentile(sig_nonnan[subset], 95) if len(subset) > 0 else np.nanpercentile(sig_nonnan, 95)
+        vmax1 = max(vmax1, 1e-6)
+
+        ax1.scatter(
+            dist[subset], sig_nonnan[subset],
+            c=sig_nonnan[subset], s=0.1, vmin=0, vmax=vmax1
+        )
+        ax1.plot(bincenters_used, median_used, linewidth=2, c="gold")
+        ax1.plot(bincenters_used, median_used + std_used, linewidth=1, c="gold")
+        ax1.plot(bincenters_used, median_used - std_used, linewidth=1, c="gold")
+        ax1.plot(
+            bincenters_used, result['best_fit'], linewidth=2, c="red",
+            label='n={:.2f}, s={:.2f}, r={:.1f}'.format(
+                result['best_values']['n'],
+                result['best_values']['p'] + result['best_values']['n'],
+                result['best_values']['r']
             )
-            print(model_str)
-            with open(parameters_ifgfile, 'w') as f:
-                print(model_str, file=f)
+        )
+        ax1.set_xlim((0, bincenters_used[-1]))
+        ax1.set_ylim((0, min(2, np.nanmax(median_used + 3 * std_used))))
+        ax1.tick_params(labelbottom=False)
+        ax1.set_ylabel(r"$\sigma$(LOS), mm/yr")
+        ax1.set_title("Uncertainty Profile")
+        ax1.legend(loc=4)
 
-            # plotting
-            fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(6.4, 4.8))
+        vmax3 = np.percentile(sig_nonnan_scaled[subset], 95) if len(subset) > 0 else np.nanpercentile(sig_nonnan_scaled, 95)
+        vmax3 = max(vmax3, 1e-6)
 
-            subset = safe_random_subset(len(dist), max_points=50000)
+        ax3.scatter(
+            dist[subset], sig_nonnan_scaled[subset],
+            c=sig_nonnan_scaled[subset], s=0.1, vmin=0, vmax=vmax3
+        )
+        ax3.plot(bincenters_used, fit_scaled, linewidth=2, c="red")
+        ax3.set_ylim((0, vmax3))
+        ax3.set_xlabel("Distance to reference, km")
+        ax3.set_ylabel(r"$\sigma$(LOS), mm/yr")
+        ax3.set_title("Scaled Uncertainty Profile")
+        ax3.set_xlim((0, bincenters_used[-1]))
 
-            vmax1 = np.percentile(sig_nonnan[subset], 95) if len(subset) > 0 else np.nanpercentile(sig_nonnan, 95)
-            vmax1 = max(vmax1, 1e-6)
+        im = ax2.imshow(tif.data, vmin=0, vmax=vmax1, interpolation='nearest')
+        ax2.plot(tif.ref_loc[1], tif.ref_loc[0], marker="o", markersize=5, c='gold')
+        divider = make_axes_locatable(ax2)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        fig.colorbar(im, cax=cax, label="mm/yr")
+        ax2.set_title("Uncertainty Map")
 
-            ax1.scatter(
-                dist[subset], sig_nonnan[subset],
-                c=sig_nonnan[subset], s=0.1, vmin=0, vmax=vmax1
-            )
-            ax1.plot(bincenters_used, median_used, linewidth=2, c="gold")
-            ax1.plot(bincenters_used, median_used + std_used, linewidth=1, c="gold")
-            ax1.plot(bincenters_used, median_used - std_used, linewidth=1, c="gold")
-            ax1.plot(
-                bincenters_used, result['best_fit'], linewidth=2, c="red",
-                label='n={:.2f}, s={:.2f}, r={:.1f}'.format(
-                    result['best_values']['n'],
-                    result['best_values']['p'] + result['best_values']['n'],
-                    result['best_values']['r']
-                )
-            )
-            ax1.set_xlim((0, bincenters_used[-1]))
-            ax1.set_ylim((0, min(2, np.nanmax(median_used + 3 * std_used))))
-            ax1.tick_params(labelbottom=False)
-            ax1.set_ylabel(r"$\sigma$(LOS), mm/yr")
-            ax1.set_title("Uncertainty Profile")
-            ax1.legend(loc=4)
+        im = ax4.imshow(new_map, vmin=0, vmax=vmax3, interpolation='nearest')
+        divider = make_axes_locatable(ax4)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        fig.colorbar(im, cax=cax, label="mm/yr")
+        ax4.set_title("Scaled Uncertainty Map")
+        ax4.set_xlabel(tif.basename[:17], labelpad=15)
 
-            vmax3 = np.percentile(sig_nonnan_scaled[subset], 95) if len(subset) > 0 else np.nanpercentile(sig_nonnan_scaled, 95)
-            vmax3 = max(vmax3, 1e-6)
+        for ax in [ax2, ax4]:
+            ax.set_xticks([])
+            ax.set_yticks([])
 
-            ax3.scatter(
-                dist[subset], sig_nonnan_scaled[subset],
-                c=sig_nonnan_scaled[subset], s=0.1, vmin=0, vmax=vmax3
-            )
-            ax3.plot(bincenters_used, fit_scaled, linewidth=2, c="red")
-            ax3.set_ylim((0, vmax3))
-            ax3.set_xlabel("Distance to reference, km")
-            ax3.set_ylabel(r"$\sigma$(LOS), mm/yr")
-            ax3.set_title("Scaled Uncertainty Profile")
-            ax3.set_xlim((0, bincenters_used[-1]))
+        plt.tight_layout()
+        fig.savefig(args.png, format='PNG', dpi=150, bbox_inches='tight')
 
-            im = ax2.imshow(tif.data, vmin=0, vmax=vmax1, interpolation='nearest')
-            ax2.plot(tif.ref_loc[1], tif.ref_loc[0], marker="o", markersize=5, c='gold')
-            divider = make_axes_locatable(ax2)
-            cax = divider.append_axes('right', size='5%', pad=0.05)
-            fig.colorbar(im, cax=cax, label="mm/yr")
-            ax2.set_title("Uncertainty Map")
+        # export tif
+        write_output_tif(args.outfile, tif, new_map)
 
-            im = ax4.imshow(new_map, vmin=0, vmax=vmax3, interpolation='nearest')
-            divider = make_axes_locatable(ax4)
-            cax = divider.append_axes('right', size='5%', pad=0.05)
-            fig.colorbar(im, cax=cax, label="mm/yr")
-            ax4.set_title("Scaled Uncertainty Map")
-            ax4.set_xlabel(tif.basename[:17], labelpad=15)
+    except Exception as e:
+        print(f"entering exception, plot till before scaling only: {e}")
 
-            for ax in [ax2, ax4]:
-                ax.set_xticks([])
-                ax.set_yticks([])
+        # prepare profile data
+        nonnan_mask, sig_nonnan, dist = get_profile_data(tif)
+        median, std, bincenters = calc_median_std(dist, sig_nonnan)
 
-            plt.tight_layout()
-            fig.savefig(args.png, format='PNG', dpi=150, bbox_inches='tight')
+        valid = np.isfinite(median) & np.isfinite(std) & np.isfinite(bincenters)
+        median = median[valid]
+        std = std[valid]
+        bincenters = bincenters[valid]
 
-            # export tif
-            write_output_tif(args.outfile, tif, new_map)
+        fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(6.4, 4.8))
 
-        except Exception as e:
-            print(f"entering exception, plot till before scaling only: {e}")
+        subset = safe_random_subset(len(dist), max_points=50000)
+        vmax = np.percentile(sig_nonnan[subset], 95) if len(subset) > 0 else np.nanpercentile(sig_nonnan, 95)
+        vmax = max(vmax, 1e-6)
 
-            # prepare profile data
-            nonnan_mask, sig_nonnan, dist = get_profile_data(tif)
-            median, std, bincenters = calc_median_std(dist, sig_nonnan)
+        ax1.scatter(dist[subset], sig_nonnan[subset], c=sig_nonnan[subset], s=0.1, vmin=0, vmax=vmax)
+        if len(bincenters) > 0:
+            ax1.plot(bincenters, median, linewidth=2, c="gold")
+            ax1.plot(bincenters, median + std, linewidth=1, c="gold")
+            ax1.plot(bincenters, median - std, linewidth=1, c="gold")
+            ax1.set_xlim((0, bincenters[-1]))
+            ax1.set_ylim((0, min(2, np.nanmax(median + 3 * std))))
 
-            valid = np.isfinite(median) & np.isfinite(std) & np.isfinite(bincenters)
-            median = median[valid]
-            std = std[valid]
-            bincenters = bincenters[valid]
+        ax1.tick_params(labelbottom=False)
+        ax1.set_ylabel(r"$\sigma$(LOS), mm/yr")
+        ax1.set_title("Uncertainty Profile")
 
-            fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, figsize=(6.4, 4.8))
+        im = ax2.imshow(tif.data, vmin=0, vmax=vmax, interpolation='nearest')
+        ax2.plot(tif.ref_loc[1], tif.ref_loc[0], marker="o", markersize=5, c='gold')
+        divider = make_axes_locatable(ax2)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        fig.colorbar(im, cax=cax, label="mm/yr")
+        ax2.set_title("Uncertainty Map")
 
-            subset = safe_random_subset(len(dist), max_points=50000)
-            vmax = np.percentile(sig_nonnan[subset], 95) if len(subset) > 0 else np.nanpercentile(sig_nonnan, 95)
-            vmax = max(vmax, 1e-6)
+        ax3.axis('off')
+        ax4.axis('off')
 
-            ax1.scatter(dist[subset], sig_nonnan[subset], c=sig_nonnan[subset], s=0.1, vmin=0, vmax=vmax)
-            if len(bincenters) > 0:
-                ax1.plot(bincenters, median, linewidth=2, c="gold")
-                ax1.plot(bincenters, median + std, linewidth=1, c="gold")
-                ax1.plot(bincenters, median - std, linewidth=1, c="gold")
-                ax1.set_xlim((0, bincenters[-1]))
-                ax1.set_ylim((0, min(2, np.nanmax(median + 3 * std))))
+        ax2.set_xticks([])
+        ax2.set_yticks([])
 
-            ax1.tick_params(labelbottom=False)
-            ax1.set_ylabel(r"$\sigma$(LOS), mm/yr")
-            ax1.set_title("Uncertainty Profile")
+        plt.tight_layout()
+        fig.savefig(args.png, format='PNG', dpi=150, bbox_inches='tight')
 
-            im = ax2.imshow(tif.data, vmin=0, vmax=vmax, interpolation='nearest')
-            ax2.plot(tif.ref_loc[1], tif.ref_loc[0], marker="o", markersize=5, c='gold')
-            divider = make_axes_locatable(ax2)
-            cax = divider.append_axes('right', size='5%', pad=0.05)
-            fig.colorbar(im, cax=cax, label="mm/yr")
-            ax2.set_title("Uncertainty Map")
-
-            ax3.axis('off')
-            ax4.axis('off')
-
-            ax2.set_xticks([])
-            ax2.set_yticks([])
-
-            plt.tight_layout()
-            fig.savefig(args.png, format='PNG', dpi=150, bbox_inches='tight')
-
-        finish()
+    finish()
 
 if __name__ == "__main__":
     main()

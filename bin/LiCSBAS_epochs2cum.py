@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the new console entry point ``licsbas-epochs2cum``.
+"""DEPRECATED wrapper for the console entry point ``licsbas-epochs2cum``.
 
-This thin shim keeps the legacy ``PATH`` workflow (e.g. ``bashrc_LiCSBAS.sh``)
-working. Prefer the entry point, or ``python -m _epochs2cum``.
+Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
+Prefer the entry point, or ``python -m licsbas.steps._epochs2cum``.
 """
 import sys
 
-from _epochs2cum import main
+from licsbas.steps._epochs2cum import main
 
-sys.exit(main())
+sys.exit(main() or 0)

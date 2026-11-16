@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the new console entry point ``licsbas-01-get-geotiff-alos``.
+"""DEPRECATED wrapper for the console entry point ``licsbas-01-get-geotiff-alos``.
 
-This thin shim keeps the legacy ``PATH`` workflow (e.g. ``bashrc_LiCSBAS.sh``)
-working. Prefer the entry point, or ``python -m _01_get_geotiff_alos``.
+Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
+Prefer the entry point, or ``python -m licsbas.steps._01_get_geotiff_alos``.
 """
 import sys
 
-from _01_get_geotiff_alos import main
+from licsbas.steps._01_get_geotiff_alos import main
 
-sys.exit(main())
+sys.exit(main() or 0)

@@ -45,7 +45,15 @@ except ImportError:
         from licsar_extra import lics_tstools as lts
     except ImportError:
         lts = None  # licsar_extra not installed (optional: pip install .[unwrap])
-from lics_unwrap import *
+try:
+    from lics_unwrap import *
+except ImportError:
+    try:
+        from licsar_extra.lics_unwrap import *
+    except ImportError:
+        print('ERROR: lics_unwrap (licsar_extra) is required for this step.')
+        print('Install with:  pip install .[unwrap]   (https://github.com/comet-licsar/licsar_extra)')
+        raise SystemExit from None
 
 class Usage(Exception):
     def __init__(self, msg):

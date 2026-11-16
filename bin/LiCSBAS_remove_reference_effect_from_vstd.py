@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the new console entry point ``licsbas-remove-reference-effect-from-vstd``.
+"""DEPRECATED wrapper for the console entry point ``licsbas-remove-reference-effect-from-vstd``.
 
-This thin shim keeps the legacy ``PATH`` workflow (e.g. ``bashrc_LiCSBAS.sh``)
-working. Prefer the entry point, or ``python -m _remove_reference_effect_from_vstd``.
+Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
+Prefer the entry point, or ``python -m licsbas.steps._remove_reference_effect_from_vstd``.
 """
 import sys
 
-from _remove_reference_effect_from_vstd import main
+from licsbas.steps._remove_reference_effect_from_vstd import main
 
-sys.exit(main())
+sys.exit(main() or 0)
