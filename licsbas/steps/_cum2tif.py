@@ -7,7 +7,13 @@ import h5py as h5
 import pandas as pd
 import numpy as np
 from datetime import datetime
-import lics_tstools as lts
+try:
+    import lics_tstools as lts
+except ImportError:
+    try:
+        from licsar_extra import lics_tstools as lts
+    except ImportError:
+        lts = None  # licsar_extra not installed (optional: pip install .[unwrap])
 import xarray as xr
 import multiprocessing as multi
 import re

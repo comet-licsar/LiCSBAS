@@ -70,7 +70,13 @@ import pandas as pd
 import datetime as dt
 import time
 #from licsbas.steps._out2nc import loadall2cube
-import daz_lib_licsar as dl
+try:
+    import daz_lib_licsar as dl
+except ImportError:
+    try:
+        from licsar_extra import daz_lib_licsar as dl
+    except ImportError:
+        dl = None  # licsar_extra not installed (optional: pip install .[unwrap])
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from sklearn.linear_model import RANSACRegressor, LinearRegression

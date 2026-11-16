@@ -41,7 +41,13 @@ import sys
 import time
 import numpy as np
 from licsbas import plot_lib
-import lics_tstools as lts
+try:
+    import lics_tstools as lts
+except ImportError:
+    try:
+        from licsar_extra import lics_tstools as lts
+    except ImportError:
+        lts = None  # licsar_extra not installed (optional: pip install .[unwrap])
 import cmcrameri.cm as cmc
 
 class Usage(Exception):

@@ -38,7 +38,13 @@ import pygmt
 
 from licsbas import plot_lib
 from licsbas import io_lib
-import lics_tstools as lts
+try:
+    import lics_tstools as lts
+except ImportError:
+    try:
+        from licsar_extra import lics_tstools as lts
+    except ImportError:
+        lts = None  # licsar_extra not installed (optional: pip install .[unwrap])
 from lics_unwrap import *
 
 class Usage(Exception):

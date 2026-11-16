@@ -74,7 +74,13 @@ import pandas as pd
 import datetime as dt
 import time
 #from licsbas.steps._out2nc import loadall2cube
-import daz_lib_licsar as dl
+try:
+    import daz_lib_licsar as dl
+except ImportError:
+    try:
+        from licsar_extra import daz_lib_licsar as dl
+    except ImportError:
+        dl = None  # licsar_extra not installed (optional: pip install .[unwrap])
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from sklearn.linear_model import RANSACRegressor, LinearRegression
@@ -143,9 +149,18 @@ def main(argv=None):
             return 2
     
     
-    import lics_tstools as lts
-    import daz_lib_licsar as dll
     import xarray as xr
+    try:
+        import lics_tstools as lts
+        import daz_lib_licsar as dll
+    except ImportError:
+        try:
+            import licsar_extra.lics_tstools as lts
+            import licsar_extra.daz_lib_licsar as dll
+        except ImportError:
+            print('ERROR: this step needs the licsar_extra tools (lics_tstools, daz_lib_licsar).')
+            print('Install with:  pip install .[unwrap]   (https://github.com/comet-licsar/licsar_extra)')
+            return 2
     # frame=''
     esds, frameta = dll.estimate_vels_frame(frame, True)
 
@@ -666,50 +681,6 @@ for xx in E N U; do for x in $xx.tif $xx.l.tif $xx.r.tif; do create_preview_pygm
         cum_abs_notide_noiono = cum_abs_notide.copy()
     '''
 
-
-
-    # Save corrected datasets based on availability and flags
-    print(f"Writing corrected cumulative datasets to {cumfile} ...")
-    with h5.File(cumfile, 'r+') as f:
-        ##let's remove the previous datasets if they exist
-        if refresh:
-            for key in ['cum_abs', 'cum_abs_notide', 'cum_abs_noiono', 'cum_abs_notide_noiono', 'vel_abs', 'vel_abs_notide', 'vel_abs_noiono', 'vel_abs_notide_noiono']:
-                if key in f:
-                    del f[key]
-                    
-        # Always save raw cumulative
-        if 'cum_abs' in f:
-            del f['cum_abs']
-        f.create_dataset('cum_abs', data=cum_abs.astype('float32'), compression='gzip')
-
-        # Save tide-corrected if applied and data exists
-        if tide_apply and tide_exists:
-            if 'cum_abs_notide' in f:
-                del f['cum_abs_notide']
-            f.create_dataset('cum_abs_notide', data=cum_abs_notide.astype('float32'), compression='gzip')
-        
-        # Save iono-corrected if only iono corrections applied and exist
-        if not (tide_apply and tide_exists) and iono_apply and iono_exists:
-            if 'cum_abs_noiono' in f:
-                del f['cum_abs_noiono']
-            f.create_dataset('cum_abs_noiono', data=cum_abs_notide_noiono.astype('float32'), compression='gzip')
-            
-        # Save tide+iono-corrected if both corrections applied and exist
-        if tide_apply and tide_exists and iono_apply and iono_exists:
-            if 'cum_abs_notide_noiono' in f:
-                del f['cum_abs_notide_noiono']
-            f.create_dataset('cum_abs_notide_noiono', data=cum_abs_notide_noiono.astype('float32'), compression='gzip')
-        
-
-    #%% Finish
-    elapsed_time = time.time()-start
-    hour = int(elapsed_time/3600)
-    minite = int(np.mod((elapsed_time/60),60))
-    sec = int(np.mod(elapsed_time,60))
-    print("\nElapsed time: {0:02}h {1:02}m {2:02}s".format(hour,minite,sec))
-
-    print('\n{} Successfully finished!!\n'.format(os.path.basename(argv[0])))
-    # print('Output directory: {}\n'.format(os.path.relpath(tsadir)))
 
 #%% main
 if __name__ == "__main__":
