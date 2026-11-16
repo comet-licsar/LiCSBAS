@@ -5,4 +5,4 @@ Public API (submodules):
     licsbas.inv_lib, licsbas.plot_lib, licsbas.extras,
     licsbas.steps (command-line steps), licsbas.colormaps (bundled cmaps).
 """
-__version__ = "3.0.0rc1"
+__version__ = "3.0.0"

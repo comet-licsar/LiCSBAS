@@ -34,7 +34,10 @@ import xarray as xr
 # not used:
 # import matplotlib.pyplot as plt
 # import cmcrameri.cm as cmc
-import pygmt
+try:
+    import pygmt
+except Exception:
+    pygmt = None  # optional viewer dependency (pip install 'licsbas[viewer]') or missing system GMT
 
 from licsbas import plot_lib
 from licsbas import io_lib
@@ -47,13 +50,13 @@ except ImportError:
         lts = None  # licsar_extra not installed (optional: pip install .[unwrap])
 try:
     from lics_unwrap import *
+    lics_unwrap_loaded = True
 except ImportError:
     try:
         from licsar_extra.lics_unwrap import *
+        lics_unwrap_loaded = True
     except ImportError:
-        print('ERROR: lics_unwrap (licsar_extra) is required for this step.')
-        print('Install with:  pip install .[unwrap]   (https://github.com/comet-licsar/licsar_extra)')
-        raise SystemExit from None
+        lics_unwrap_loaded = False  # licsar_extra not installed (optional: pip install .[unwrap])
 
 class Usage(Exception):
     def __init__(self, msg):
@@ -70,6 +73,10 @@ def create_geogrid(data_array, corner_lon, corner_lat, post_lon, post_lat):
     return xr.DataArray(data_array, coords={"lat": lats, "lon": lons}, dims=["lat", "lon"], name="z")
 
 def main(argv=None):
+    if pygmt is None:
+        raise RuntimeError("pygmt is required for this step. Install it with: pip install 'licsbas[viewer]'")
+    if not lics_unwrap_loaded:
+        raise RuntimeError("licsar_extra is required for this step. Install it with: pip install 'licsbas[unwrap]'")
     if argv is None:
         argv = sys.argv
     

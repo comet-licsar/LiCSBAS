@@ -1,5 +1,54 @@
 # Changelog — LiCSBAS
 
+## [3.0.0] — 2026-11-26 (branch `towards-v3`)
+
+**First stable v3 release**: `pip install licsbas` (or from this repo) now works
+end-to-end on Python 3.10–3.13. Changes on top of 3.0.0rc1:
+
+### Packaging finalisation
+- `LiCSBAS_lib/` shim layer **removed**: legacy *imports* (`import LiCSBAS_meta`)
+  are no longer emulated — use `licsbas.meta` etc. Legacy *commands* keep working:
+  `bin/` wrappers + `licsbas-*` / `licbas-*` console entry points + `python -m licsbas.steps.*`.
+  `bashrc_LiCSBAS.sh` / `start` now only put `bin/` on `PATH`.
+- Dependency audit (AST-based) finalised the hard-dependency list:
+  added `beautifulsoup4`, `psutil`, `cmcrameri`, `python-dateutil`, `utm`;
+  removed unused pins (`opendata`, `python-snappy`, `tqdm`, `numexpr`…);
+  `gdal-wheel` is pulled in automatically on x86_64/aarch64.
+- Everything optional now lives in extras: `.[unwrap]` (licsar_extra @ v1.6),
+  `.[plot]` (networkx, seaborn), `.[ml]` (scikit-learn), `.[viewer]`
+  (pygmt, ipympl, contextily, Pillow), `.[all]`.
+  `usgs-libcomcat` (eqoffsets step) is deliberately *not* an extra — its
+  dependency chain pulls in `openquake` and a source GDAL build.
+  Steps import these lazily and print install guidance when actually needed.
+- License declared in PEP 639 form (`license = "GPL-3.0-or-later"`, no more
+  build warning); classifiers cleaned.
+- Entry points cleaned: 14 broken/stale entries removed (plot-tile, plot-velocity*,
+  plot-network-multipolygon, extras, extras-light, meta-as-step), ALOS case fixed.
+
+### Robustness
+- Optional imports guarded everywhere: `pygmt` (viewer-only), `sklearn`
+  (`131_boi_absolute`, `131_bovl2abs`), `licsar_extra` (`02to05`, `17`),
+  `contextily`; SNAPHU presence is checked at run-time in `02to05` only
+  (clear message, no module-level abort).
+- `licsbas.extras` (pygmt viewer) raises a helpful ImportError with install
+  instructions when viewer extras / system GMT are missing.
+
+### Testing & CI
+- New `tests/test_smoke.py` (29 tests): package imports, all step modules import
+  without optional deps, all declared entry points resolve to a callable `main()`.
+- New `.github/workflows/ci.yml`: smoke job (py3.10–3.13 matrix) + viewer job
+  (installs system `gmt`, verifies pygmt extras).
+
+### Tutorial & Binder
+- Two notebooks in `tutorial/`: `tutorial.ipynb` (pygmt viewer via
+  `licsbas.extras`) and `tutorial_bash-compatible.ipynb`
+  (`licsbas-*` CLI + pygmt-free `pylight_plot_interactive`), plus an
+  alternative viewer cell in both; `%matplotlib widget` (ipympl) for
+  interactive plots.
+- Binder: `postBuild` unchanged (downloads tutorial data);
+  `apt.txt` now includes `gmt`; `install_complete.sh` rewritten for v3.
+- README updated (install, extras table, new binder/colab links).
+
 ## [3.0.0rc1] — 2026-11-16 (branch `towards-v3`)
 
 First **v3 release candidate**: LiCSBAS is now a proper, pip-installable Python package.

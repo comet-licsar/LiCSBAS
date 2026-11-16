@@ -20,15 +20,17 @@ LiCSBAS also contains visualization tools to interactively display the time seri
 THIS IS RESEARCH CODE PROVIDED TO YOU "AS IS" WITH NO WARRANTIES OF CORRECTNESS. USE AT YOUR OWN RISK.
 
 **v3 note (2026):** LiCSBAS now ships as a proper Python package (`licsbas`) installable with `pip`
-(see [Installation](#installation)). The old flat layout is emulated by compatibility layers:
-`import LiCSBAS_meta` → `licsbas.meta`, `LiCSBAS14_vel_std.py` on `PATH` → `licsbas-14-vel-std`
-console entry point, etc. Everything described below keeps working.
+(see [Installation](#installation)). The traditional CLI workflow is emulated:
+`LiCSBAS14_vel_std.py` on `PATH` (thin `bin/` wrapper) runs the same code as the
+`licsbas-14-vel-std` console entry point or `python -m licsbas.steps._14_vel_std`.
+Legacy *imports* (`import LiCSBAS_meta`) are no longer emulated — use `licsbas.meta`.
+Everything else described below keeps working.
 
 ## Installation
 
-LiCSBAS v3 is installable with `pip` (Python >= 3.10 required). It installs the `licsbas` package
-(library, steps, bundled colormaps) **and** a backwards-compatibility layer, so the traditional workflow
-(`LiCSBAS*.py` commands on `PATH`, `import LiCSBAS_meta` / `import LiCSBAS_tools_lib` style imports) keeps working unchanged.
+LiCSBAS v3 is installable with `pip` (Python >= 3.8, tested 3.10–3.13). It installs the `licsbas` package
+(library, steps, bundled colormaps) **plus** `bin/` wrappers and console entry points, so the traditional workflow
+(`LiCSBAS*.py` commands on `PATH`) keeps working unchanged.
 
 Our recommendation is to use Linux OS or UNIX in general, but MobaXterm should allow installation on Windows if really needed.
 
@@ -37,11 +39,12 @@ Our recommendation is to use Linux OS or UNIX in general, but MobaXterm should a
 ```bash
 git clone https://github.com/comet-licsar/LiCSBAS.git
 cd LiCSBAS
-pip install .                      # install licsbas + compatibility layer
+pip install .                      # install licsbas (licsbas-01-get-geotiff ... on PATH)
 # pip install 'git+https://github.com/comet-licsar/LiCSBAS.git'   # without a checkout
 ```
 
-**GDAL** (Python bindings) is expected to be provided by your OS/distribution or conda and is *not* installed by pip,
+**GDAL**: prebuilt `gdal-wheel` binaries are pulled in automatically on x86_64/aarch64.
+On other platforms, provide GDAL via your OS/distribution or conda,
 e.g. `conda install -c conda-forge gdal` or `sudo apt install python3-gdal` (see `apt.txt`).
 
 ### Option B — (micro)mamba/conda environment
@@ -51,18 +54,21 @@ e.g. `conda install -c conda-forge gdal` or `sudo apt install python3-gdal` (see
 micromamba env create -f environment.yml
 micromamba activate licsbas
 # micromamba env update -n licsbas -f environment_optional.yml   # to add some optional extras
-# pip install git+https://github.com/comet-licsar/licsar_extra.git  # optional extras for re-unwrap and iono/tide corrections (requires SNAPHU)
 ```
 
 ### Optional extras (pip extras)
 
 | Extra | Installs | Needed for |
 | --- | --- | --- |
-| `unwrap` | [licsar_extra](https://github.com/comet-licsar/licsar_extra) | GPU unwrapping in step `02to05` and corrections in `131_corrections` (needs SNAPHU) |
-| `comcat` | usgs-libcomcat | `LiCSBAS_get_eqoffsets.py` only |
-| `all` | both of the above | e.g. `pip install .[all]` |
+| `unwrap` | [licsar_extra](https://github.com/comet-licsar/licsar_extra) @ v1.6 | re-unwrapping in step `02to05` and corrections in `132` (needs SNAPHU) |
+| `plot` | networkx, seaborn | network plots (`120_choose_reference`, ERA5 plots, `tools_lib` helpers) |
+| `ml` | scikit-learn | RANSAC corrections in `131_boi_absolute` / `131_bovl2abs` |
+| `viewer` | pygmt, ipympl, contextily, Pillow | `licsbas.extras` (pygmt viewer) + Jupyter widgets (needs system `gmt`) |
+| `all` | all of the above | e.g. `pip install .[all]` |
 
-`licsar_extra` is **optional** — all other steps work without it.
+All extras are **optional** — the core pipeline works without any of them (each step imports them lazily and prints install guidance when actually needed).
+
+`LiCSBAS_get_eqoffsets.py` (earthquake-lookup offsets) needs `usgs-libcomcat`, which we deliberately do **not** ship as an extra because its dependency chain pulls in `openquake` and a source GDAL build; install it manually only if you use that step (e.g. `mamba install -c conda-forge libcomcat` or `pip install usgs-libcomcat` on a system with GDAL already installed).
 
 ### Running the steps
 
@@ -109,15 +115,16 @@ as she worked her way to her [article on Tian Shan](https://www.researchsquare.c
 
 ## Sample Products and Tutorial
 
-The latest tutorial is available as a [Jupyter Notebook](https://github.com/comet-licsar/LiCSBAS/blob/main/licsbas_tutorial.ipynb) that you can directly
-[run using Binder](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD?labpath=licsbas_tutorial.ipynb), or you can test the [dev branch version](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/dev?labpath=licsbas_tutorial.ipynb) that contains latest updates.  
+The latest tutorial is available as a [Jupyter Notebook](https://github.com/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial.ipynb) that you can directly
+[run using Binder](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD?labpath=tutorial/tutorial.ipynb), or you can test the [dev branch version](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/dev?labpath=tutorial/tutorial.ipynb) that contains latest updates.
+A [bash-compatible version](https://github.com/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial_bash-compatible.ipynb) (using `licsbas-*` console commands and the pygmt-free `pylight_plot_interactive` viewer) is also provided for environments without GMT.
 
 Furthermore, if you have Google account, you can use Google Colab:  
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/licsbas_tutorial.ipynb)  
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial.ipynb)  
 
 The tutorial still uses the original LiCSBAS tutorial data that can be downloaded separately if needed, including the sample scripts for learning outside of the notebook, that is:
 
-- Frame ID: 124D_04854_171313 (Italy)
+- Frame ID: 022D_04826_121209 (Italy, Campi Flegrei)
 - Time: 2016/09/09-2018/05/08 (~1.7 years, 67 epochs, ~217 interferograms)
 - Clipped around Campi Flegrei (14.03/14.22/40.78/40.90)
 

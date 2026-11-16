@@ -83,7 +83,10 @@ except ImportError:
         dl = None  # licsar_extra not installed (optional: pip install .[unwrap])
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from sklearn.linear_model import RANSACRegressor, LinearRegression
+try:
+    from sklearn.linear_model import RANSACRegressor, LinearRegression
+except ImportError:  # scikit-learn is optional
+    RANSACRegressor = LinearRegression = None
 
 class Usage(Exception):
     """Usage context manager"""
@@ -603,6 +606,8 @@ for xx in E N U; do for x in $xx.tif $xx.l.tif $xx.r.tif; do create_preview_pygm
         intercept_ransac = np.nan
         df_daz['daz_model'] = np.nan
     else:
+        if RANSACRegressor is None:
+            raise RuntimeError('scikit-learn is required for this step but not installed - pip install "licsbas[ml]"')
         reg = RANSACRegressor(base_estimator=LinearRegression()).fit(X[mask], y[mask])
         vel_ransac = reg.estimator_.coef_[0]
         intercept_ransac = reg.estimator_.intercept_
