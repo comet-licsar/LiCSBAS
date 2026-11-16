@@ -1,53 +1,36 @@
-# TODONEXT — proposed major changes
+# TODONEXT — LiCSBAS v3 follow-ups
 
-These are proposed (not yet implemented) larger improvements to LiCSBAS. A brief
-implementation plan is in [PLAN.md](PLAN.md).
+Done in this series (see CHANGELOG.md / PLAN.md): proper pip-packaged `licsbas`
+package, 53 console entry points, 61 legacy shims, guarded optional imports,
+`main()` wrapping, single-source versioning, cleaned repo/ignore files,
+CI-ready import tests.
 
-## 1. Proper package layout: `licsbas` importable package + console entry points
-- Today the library is used as flat, top-level modules (`import LiCSBAS_tools_lib`,
-  `import cmocean`, `import GMT`, ...), historically made visible via `PYTHONPATH`
-  (`bashrc_LiCSBAS.sh`) and now via `pip install .`. This pollutes the top-level
-  namespace and risks collisions with unrelated PyPI names (`cmocean`, `SCM`, `GMT`).
-- Move everything under a single package, e.g. `licsbas` (with `from licsbas import tools_lib, meta, ...`),
-  and move the `bin/` scripts into `licsbas.steps` (or `licsbas.bin`) renamed as modules.
-- Install the steps as console entry points (e.g. `licsbas-02-ml-prep`, `licsbas-131-corrections`,
-  or unified `licsbas 02_ml_prep`) using their existing `main(argv)` functions,
-  replacing the PATH/`.py-with-shebang` invocation style (`LiCSBAS14_vel_std.py ...`)
-  used by `batch_LiCSBAS.sh` and the wiki.
-- Keep thin compatibility shims for a few releases, then drop `bashrc_LiCSBAS.sh`
-  and the `bin/` directory.
+## Next release (3.0.0 final)
+- [ ] CI green on the new layout (see `.github/workflows/`), publish to PyPI as
+      `LiCSBAS 3.0.0`.
+- [ ] Decide the PyPI name: `LiCSBAS` (canonical, keeps import/package
+      distinction) vs `licsbas`. **Current packaging uses `LiCSBAS`.**
+- [ ] Tag `v3.0.0` and update the Binder/Colab tutorial links to the v3
+      layout (the tutorial notebook imports `LiCSBAS_*` — add a compatibility
+      header or switch to `from licsbas...`).
+- [ ] `licsar_extra`: pin a tag/release on PyPI (currently a git+URL extra).
 
-## 2. Single source of truth for dependencies and environment
-- Remove the parallel dependency definitions: `LiCSBAS_requirements.txt`,
-  `LiCSBAS_requirements_optional.txt`, `environment.yml`, `apt.txt`.
-  Keep `pyproject.toml` as the canonical list; generate `requirements*.txt`/`environment.yml`
-  from it in CI if they must stay for legacy users.
-- Prune clearly obsolete entries (e.g. `lapack` stub, `bottleneck`, `colorcet` — a bundled
-  fallback `backup_colorcet` already exists) and add sensible lower bounds.
+## v3.1+
+- [ ] Remove the legacy shims and `bin/` wrappers (only after a 3.x + one
+      extra release; emit DeprecationWarning 2 releases before removal).
+- [ ] Migrate steps off top-level globals in `main()` (argparser currently
+      relies on `globals()` in a few scripts).
+- [ ] `batch_LiCSBAS.sh`: fix unquoted `[ ... ]` tests (cosmetic
+      `unary operator expected` noise; e.g. lines using `$p12_multi_prime`).
+- [ ] Consider per-step `pyproject` metadata (per-step help, `--version`).
+- [ ] Docs: wiki pages still reference the old flat layout; add a
+      "v3 layout" page mapping old names → new names.
+- [ ] `LiCSBAS_get_eqoffsets`: make `usgs-libcomcat` a soft dependency (skip
+      with a warning instead of hard-exit).
+- [ ] Type hints / `mypy` clean baseline (start with `tools_lib` + `io_lib`).
 
-## 3. Publication and release process
-- Publish to PyPI (name: `licsbas`) with GitHub trusted publishing and a `bumpversion`/
-  single-source `__version__` (currently `LiCSBAS_meta.ver` and `pyproject.toml` can drift —
-  they already disagree).
-- Add a changelog fragment per release (currently only scattered docstrings).
-- Tag releases per the existing "1–2 releases per year" strategy.
-
-## 4. Repository hygiene and packaging test coverage
-- Stop shipping generated/IDE artifacts (`__pycache__`, `.idea/`) in the tree;
-  complete the `.gitignore` (`*.png`, `*json` are overly broad — they hide e.g. `LICENSE`-adjacent
-  files and real JSON data).
-- Add a smoke test: import every installed module + one cheap function from each
-  (e.g. colormap lookup, IO round-trip of a tiny h5) so `pip install .` regressions fail in CI
-  instead of in user notebooks.
-
-## 5. Untangling `licsar_extra`
-- `licsar_extra` is currently a git-URL extra (no version pin, no PyPI release).
-  Either publish it on PyPI with a real version, or move the needed `lics_unwrap` /
-  `lics_tstools` code into LiCSBAS proper under an optional import, so `pip install .[unwrap]`
-  is reproducible over time.
-- Unify the two unwrapping entry points (`02` vs `02to05`) that are duplicated in
-  `batch_LiCSBAS.sh` option parsing.
-
-## 6. Continuously integrated checks
-- GitHub Actions: build the wheel for Linux/macOS/Windows, check metadata,
-  and run the smoke tests from item 4 on the latest supported Python releases.
+## Housekeeping
+- [ ] Remove `LiCSBAS_lib/` entirely at 4.0 (shims go, `LiCSBAS*.py` names
+      deprecated in favour of `licsbas-*`).
+- [ ] Archive `LiCSBAS_requirements*.txt` / `environment*.yml` with a
+      deprecation notice (they are only kept to mirror v1/v2 setups).

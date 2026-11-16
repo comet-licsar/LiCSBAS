@@ -19,6 +19,11 @@ LiCSBAS also contains visualization tools to interactively display the time seri
 
 THIS IS RESEARCH CODE PROVIDED TO YOU "AS IS" WITH NO WARRANTIES OF CORRECTNESS. USE AT YOUR OWN RISK.
 
+**v3 note (2026):** LiCSBAS now ships as a proper Python package (`licsbas`) installable with `pip`
+(see [Installation](#installation)). The old flat layout is emulated by compatibility layers:
+`import LiCSBAS_meta` → `licsbas.meta`, `LiCSBAS14_vel_std.py` on `PATH` → `licsbas-14-vel-std`
+console entry point, etc. Everything described below keeps working.
+
 ## Installation
 
 LiCSBAS v3 is installable with `pip` (Python >= 3.10 required). It installs the `licsbas` package
@@ -65,12 +70,13 @@ Both invocation styles work and are equivalent (the legacy names run the same `m
 
 ```bash
 # new-style console entry points (installed by pip)
+licsbas-check-install            # sanity check of the installation
 licsbas-02-ml-prep --help
 licsbas-14-vel-std -t TS/
 
 # legacy workflow, exactly as before (PATH-based .py scripts)
 source bashrc_LiCSBAS.sh          # adds bin/ to PATH (the PYTHONPATH line is now optional)
-LiCSBAS_check_install.py          # sanity check
+LiCSBAS_check_install.py          # same sanity check, legacy name
 LiCSBAS14_vel_std.py -t TS/
 
 # batch pipeline (unchanged)
