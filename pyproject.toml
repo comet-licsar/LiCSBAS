@@ -10,11 +10,13 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "GPL-3.0-or-later" }
 authors = [
+    { name = "Milan Lazecky" },
+    { name = "Muhammet Nergizci" },
     { name = "Yu Morishita" },
     { name = "COMET Team" },
 ]
 maintainers = [
-    { name = "COMET Team", email = "espiritocz@gmail.com" },
+    { name = "COMET Team", email = "M.Lazecky@leeds.ac.uk" },
 ]
 keywords = ["InSAR", "LiCSAR", "time series", "displacement", "geodesy"]
 classifiers = [

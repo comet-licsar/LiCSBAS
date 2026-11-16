@@ -68,7 +68,10 @@ from licsbas import tools_lib
 from licsbas import plot_lib
 from matplotlib import pyplot as plt
 from matplotlib import dates as mdates
-import seaborn as sns
+try:
+    import seaborn as sns
+except:
+    print('seaborn not installed - will skip some plotting')
 
 class Usage(Exception):
     """Usage context manager"""
@@ -78,7 +81,7 @@ class Usage(Exception):
 #%% 
 def plot_gacos_info2(gacos_infofile, pngfile):
 
-    import seaborn as sns
+    # import seaborn as sns
     import pandas as pd
     import warnings
     warnings.simplefilter(action="ignore", category=FutureWarning)
@@ -141,16 +144,19 @@ def plot_gacos_info2(gacos_infofile, pngfile):
     #graph.ax_joint.set_xlabel('STD Before (rad)', fontweight='bold')
     #graph.ax_joint.set_ylabel('STD After (rad)', fontweight='bold')
     #graph.savefig(pngfile)
-    graph = sns.jointplot(x=df1.std_before, y=df1.std_after, kind ="hex",color="lightcoral")
-    #sns.lineplot([0, xylim1], [0, xylim1], ax=graph.ax_joint,linewidth=2, color='grey', alpha=0.5, zorder=2)
-    plt.plot([0, xylim1], [0, xylim1], linewidth=2, color='grey', alpha=0.5, zorder=2)
-    plt.text(xx-2, 0.5 , "Good: {:.2f}%\nNo Change: {:.2f}%\n".format(porpos,porcero),fontweight='bold')
-    plt.text(0.5, yy , "Bad: {:.2f}%".format(porneg),fontweight='bold' )
-    cbar_ax = graph.fig.add_axes([1, .25, .05, .4])  # x, y, width, height
-    plt.colorbar(cax=cbar_ax, label="Pixel count")
-    graph.ax_joint.set_xlabel('STD Before (rad)', fontweight='bold')
-    graph.ax_joint.set_ylabel('STD After (rad)', fontweight='bold')
-    graph.savefig(pngfile)
+    try:
+        graph = sns.jointplot(x=df1.std_before, y=df1.std_after, kind ="hex",color="lightcoral")
+        #sns.lineplot([0, xylim1], [0, xylim1], ax=graph.ax_joint,linewidth=2, color='grey', alpha=0.5, zorder=2)
+        plt.plot([0, xylim1], [0, xylim1], linewidth=2, color='grey', alpha=0.5, zorder=2)
+        plt.text(xx-2, 0.5 , "Good: {:.2f}%\nNo Change: {:.2f}%\n".format(porpos,porcero),fontweight='bold')
+        plt.text(0.5, yy , "Bad: {:.2f}%".format(porneg),fontweight='bold' )
+        cbar_ax = graph.fig.add_axes([1, .25, .05, .4])  # x, y, width, height
+        plt.colorbar(cax=cbar_ax, label="Pixel count")
+        graph.ax_joint.set_xlabel('STD Before (rad)', fontweight='bold')
+        graph.ax_joint.set_ylabel('STD After (rad)', fontweight='bold')
+        graph.savefig(pngfile)
+    except:
+        print('seaborn not installed, skipping STD before/after plot')
 
 
 
