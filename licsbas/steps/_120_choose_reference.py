@@ -453,16 +453,16 @@ def get_bperp_from_ifgdates(ifgdates):
     return bperp
 
 
-def plot_networks():
+def plot_networks(do_networkx = True):
     #%% Plot network
     bperp = get_bperp_from_ifgdates(ifgdates)
 
     pngfile = os.path.join(netdir, 'network120_red_no_ref.png')
     plot_lib.plot_network(ifgdates, bperp, noref_ifg, pngfile, plot_bad=True, label_name='NaN at Ref')
-
-    bperp = get_bperp_from_ifgdates(retained_ifgs)
-    pngfile = os.path.join(netdir, 'network120_remain_strong_cuts.png')
-    plot_lib.plot_strong_weak_cuts_network(retained_ifgs, bperp, weak_links, edge_cuts, node_cuts, pngfile, plot_weak=True)
+    if do_networkx:
+        bperp = get_bperp_from_ifgdates(retained_ifgs)
+        pngfile = os.path.join(netdir, 'network120_remain_strong_cuts.png')
+        plot_lib.plot_strong_weak_cuts_network(retained_ifgs, bperp, weak_links, edge_cuts, node_cuts, pngfile, plot_weak=True)
 
 
 def check_components_existence():
@@ -496,8 +496,15 @@ def main():
     plot_ref_proxies()
     save_reference_to_file()
     retained_ifgs = discard_ifg_with_all_nans_at_ref()
-    component_network_analysis(retained_ifgs)
-    plot_networks()
+    try:
+        import networkx as nx
+        do_networkx = True
+    except ImportError:
+        print("WARNING: NetworkX package not found. avoiding the additional network analysis")
+        do_networkx = False
+    if do_networkx:
+        component_network_analysis(retained_ifgs)
+    plot_networks(do_networkx)
     finish()
 
 

@@ -872,7 +872,7 @@ def read_range_geo(range_str, width, length, lat1, postlat, lon1, postlon):
     lat2 = lat1+postlat*(length-1)
     lon2 = lon1+postlon*(width-1)
 
-    if re.match('[+-]?\d+(?:\.\d+)?/[+-]?\d+(?:\.\d+)?/[+-]?\d+(?:\.\d+)?/[+-]?\d+(?:\.\d+)?', range_str):
+    if re.match(r'[+-]?\d+(?:\.\d+)?/[+-]?\d+(?:\.\d+)?/[+-]?\d+(?:\.\d+)?/[+-]?\d+(?:\.\d+)?', range_str):
         lon_w, lon_e, lat_s, lat_n = [float(s) for s in range_str.split('/')]
         x1 = int(np.round((lon_w - lon1)/postlon)) if lon_w > lon1 else 0
         x2 = int(np.round((lon_e - lon1)/postlon))+1 if lon_e < lon2 else width
@@ -920,7 +920,7 @@ def read_range_line_geo(range_str, width, length, lat_n, postlat, lon_w, postlon
     lat lon values are in grid registration
     """
 
-    if re.match('[+-]?\d+(?:\.\d+)?,[+-]?\d+(?:\.\d+)?/[+-]?\d+(?:\.\d+)?,[+-]?\d+(?:\.\d+)?', range_str):
+    if re.match(r'[+-]?\d+(?:\.\d+)?,[+-]?\d+(?:\.\d+)?/[+-]?\d+(?:\.\d+)?,[+-]?\d+(?:\.\d+)?', range_str):
         lon1, lat1, lon2, lat2 = [float(s) for s in re.split('[,/]', range_str)]
         x1 = int(np.round((lon1 - lon_w)/postlon))
         x2 = int(np.round((lon2 - lon_w)/postlon))

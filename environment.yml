@@ -1,7 +1,6 @@
 name: licsbas
 channels:
   - conda-forge
-  - nodefaults
 dependencies:
   - python>=3.8
   - astropy
@@ -12,18 +11,12 @@ dependencies:
   - numpy
   - psutil
   - requests
-  - shapely
   - statsmodels
-  - xarray
-  - rioxarray
   - lapack
   - netCDF4
   - bottleneck
   - colorcet
-  - networkx
   - scipy
   - cmcrameri
-  - pygmt
-  - ipympl
-  - usgs-libcomcat
   - utm
+  - xarray

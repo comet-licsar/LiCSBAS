@@ -1,4 +1,3 @@
-python>=3.8
 astropy
 beautifulsoup4
 h5py
@@ -7,10 +6,10 @@ numpy
 psutil
 requests
 statsmodels
-lapack
 netCDF4
 bottleneck
 colorcet
 scipy
 cmcrameri
 gdal
+xarray

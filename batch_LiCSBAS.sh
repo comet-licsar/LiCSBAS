@@ -16,7 +16,7 @@
 #  16: LiCSBAS16_filt_ts.py
 
 #
-# Status of COMET dev version - the experimental functions are turned on with 
+#
 #
 #################
 ### Settings ####
@@ -24,13 +24,16 @@
 start_step="01"	# 01-05, 11-16
 end_step="16"	# 01-05, 11-16
 
-cometdev='0' # shortcut to use COMET's experimental/dev functions. At this moment, '1' will turn on the nullification. Recommended: 0
-eqoffs="n"  # if 'y', it will do: get_eq_offsets, then invert. if singular_gauss, then set use of model (not recommended now, experimental/need some work).
 nlook="1"	# multilook factor, used in step02
 GEOCmldir="GEOCml${nlook}"	# If start from 11 or later after doing 03-05, use e.g., GEOCml${nlook}GACOSmaskclip
 n_para="" # Number of parallel processing in step 02-05,12,13,16. default: number of usable CPU
 gpu="n"	# y/n
 check_only="n" # y/n. If y, not run scripts and just show commands to be done
+
+### Miscellaneous Settings ####
+cometdev='0' # shortcut to use some of COMET's experimental/dev functions (not recommended)
+eqoffs="n"  # if 'y', it will do: get_eq_offsets, then invert. if singular_gauss, then set use of model (not recommended now, experimental/need some work).
+sbovl="n"   # if 'y', it will perform sbovl processing chain
 sbovl_abs="n" #if y, will close the referencing in step 12,13,16 and add ICC+ESD offset and apply absolute SET and Iono correction to sbovl time series #MN
 
 logdir="log"
@@ -78,16 +81,16 @@ p01_get_iono="n" # y/n
 p01_get_tides="n" # y/n
 p01_get_pha="n" # y/n
 p01_get_mli="n" # y/n
-p01_sbovl="n"
+p01_sbovl=$sbovl
 p01_skip_unw="n" # y/n
-p02_sbovl="n"
-p04_sbovl="n"
+p02_sbovl=$sbovl
+# p04_sbovl=$sbovl
 p11_unw_thre=""	# default: 0.3
 p11_coh_thre=""	# default: 0.05
 p11_s_param="n" # y/n
-p11_sbovl="n"
+p11_sbovl=$sbovl
 p120_use="n"  # y/n
-p120_sbovl="n"
+p120_sbovl=$sbovl
 p12_loop_thre=""	# default: 1.5 rad. With --nullify, recommended higher value (as this is an average over the whole scene)
 p12_multi_prime="y"	# y/n. y recommended
 p12_nullify="" # y/n. y recommended
@@ -98,7 +101,7 @@ p13_ignore_nullification="" # y/n. n by default
 p13_singular="" # y/n. n by default
 p13_singular_gauss="" # y/n. n by default
 p13_skippngs="" # y/n. n by default
-p13_sbovl="n"
+p13_sbovl=$sbovl
 p13resid_rerun="n" # y/n. default: n
 # p131_sbovl_abs="n" ## adding ICC+ESD offfset and apply SET and Iono correction to sbovl time series
 p131_sbovl_model="y" ##  directly use the RANSAC model rather than original daz values.
@@ -106,7 +109,7 @@ p131_sbovl_model="y" ##  directly use the RANSAC model rather than original daz 
 p131_tide="n"
 p131_iono="n"
 p131_gacos="n"
-p14_sbovl="n"
+p14_sbovl=$sbovl
 p15_coh_thre=""	# default: 0.05
 p15_n_unw_r_thre=""	# default: 1.5
 p15_vstd_thre=""	# default: 100 mm/yr
@@ -119,7 +122,7 @@ p15_n_loop_err_ratio_thre=""	# default: 0.7 - in future we will switch to this r
 p15_resid_rms_thre=""	# default: 15 mm
 p15_avg_phasebias="" # default: not used. Setting 1 or 1.2 rad is good option
 p15_n_gap_use_merged="y" # default: 'y'
-p15_sbovl="n"
+p15_sbovl=$sbovl
 p16_filtwidth_km=""	# default: 2 km
 p16_filtwidth_yr=""	# default: avg_interval*3 yr
 p16_deg_deramp=""	# 1, bl, or 2. default: no deramp
@@ -133,7 +136,7 @@ p16_ex_range=""	# e.g. 10:100/20:200 (ix start from 0)
 p16_ex_range_geo=""	# e.g. 130.11/131.12/34.34/34.6 (in deg)
 p16_interpolate_nans="y"  # will interpolate nans in unmasked pixels
 p16_skippngs="" # y/n. n by default
-p16_sbovl="n"
+p16_sbovl=$sbovl
 
 ### Less frequently used options. If blank, use default. ###
 p01_frame=""	# e.g. 021D_04972_131213 
@@ -347,7 +350,7 @@ if [ $step -eq 04 -a $start_step -le 04 -a $end_step -ge 04 ];then
     if [ ! -z $p04_mask_coh_thre_ifg ];then p04_op="$p04_op -s $p04_mask_coh_thre_ifg"; fi
     if [ ! -z $p04_mask_range ];then p04_op="$p04_op -r $p04_mask_range"; fi
     if [ ! -z $p04_mask_range_file ];then p04_op="$p04_op -f $p04_mask_range_file"; fi
-    if [ "$p04_sbovl" == "y" ]; then p04_op="$p04_op --sbovl"; fi
+    # if [ "$p04_sbovl" == "y" ]; then p04_op="$p04_op --sbovl"; fi
     if [ ! -z $p04_n_para ];then p04_op="$p04_op --n_para $p04_n_para";
     elif [ ! -z $n_para ];then p04_op="$p04_op --n_para $n_para";fi
 

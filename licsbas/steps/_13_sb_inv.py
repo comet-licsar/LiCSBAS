@@ -552,6 +552,10 @@ def main(argv=None):
     n_im = len(imdates)
     n_unw_thre = int(n_unw_r_thre*n_im)
 
+    if n_ifg <= 1 or n_im <= 1:
+        print('ERROR - there is only '+(str(n_ifg))+' data to process - cancelling')
+        exit()
+
     ##this necesarry to apply step 15, we ignore step12 therefore coh_avg and n_unw not created.
     if sbovl:
         ### Calc coh avg and n_unw
@@ -1003,7 +1007,7 @@ def main(argv=None):
             if inv_alg == 'WLS':
                 varpatch = varpatch[ix_unnan_pt,:] ## keep only unnan data
 
-            print('  {}/{} points removed due to not enough ifg data...'.format(n_pt_all-n_pt_unnan, n_pt_all), flush=True)
+            print('  {}/{} points removed due to not enough ifg data (n_unw_thre={})'.format(n_pt_all-n_pt_unnan, n_pt_all, n_unw_thre), flush=True)
 
             #%% Compute number of gaps, ifg_noloop, maxTlen point-by-point
             if n_pt_unnan != 0:
