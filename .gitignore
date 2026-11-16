@@ -1,7 +1,15 @@
-LiCSBAS_lib/__pycache__
-*.png
-*.pyc
-*json
-build/
+# Python
+__pycache__/
+*.py[cod]
 *.egg-info/
+build/
 dist/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+
+# LiCSBAS runtime output
+*.png
+log/
