@@ -1,5 +1,20 @@
 # Changelog — LiCSBAS
 
+## [unreleased] — branch `towards-v3`
+
+### Python batch processor (replaces batch_LiCSBAS.sh)
+- New `licsbas/batch.py` (CLI: `licsbas-batch`): all settings/flags of
+  `batch_LiCSBAS.sh` (standard chain, 02to05 re-unwrapping, sbovl/sbovl_abs,
+  optional steps 03-06, eqoffsets, tide/iono/gacos corrections, 120 re-run
+  after nullification, ...) are now a python `BatchConfig`;
+  steps are executed **in-process** through `licsbas.steps.*` (v3 layout).
+- New `licsbas/flowchart.py`: renders any processing chain to a PNG via the
+  Graphviz `dot` binary (no new python dependency).
+- `batch_LiCSBAS.sh` is now a thin wrapper around `python -m licsbas.batch`.
+- New `examples/`: `example_1_standard.py`, `example_2_reunw_02to05.py`,
+  `example_3_sbovl.py` — three ready-to-adapt chains, each also writing a
+  PNG flowchart of the performed steps.
+
 ## [3.0.0rc1] — 2026-11-16 (branch `towards-v3`)
 
 First **v3 release candidate**: LiCSBAS is now a proper, pip-installable Python package.

@@ -76,6 +76,7 @@ Documentation = "https://github.com/yumorishita/LiCSBAS/wiki"
 Issues = "https://github.com/comet-licsar/LiCSBAS/issues"
 
 [project.scripts]
+    "licsbas-batch" = "licsbas.batch:main"
     "licsbas-01-get-geotiff" = "licsbas.steps._01_get_geotiff:main"
     "licsbas-01-get-geotiff-alos" = "licsbas.steps._01_get_geotiff_alos:main"
     "licsbas-02-ml-prep" = "licsbas.steps._02_ml_prep:main"

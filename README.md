@@ -79,10 +79,11 @@ source bashrc_LiCSBAS.sh          # adds bin/ to PATH (the PYTHONPATH line is no
 LiCSBAS_check_install.py          # same sanity check, legacy name
 LiCSBAS14_vel_std.py -t TS/
 
-# batch pipeline (unchanged)
-copy_batch_LiCSBAS.sh
-nano batch_LiCSBAS.sh             # edit in your favourite editor
-./batch_LiCSBAS.sh
+# batch pipeline (now python; see licsbas/batch.py and examples/)
+./batch_LiCSBAS.sh --check-only                       # prints the commands
+python3 examples/example_1_standard.py --execute      # standard chain
+python3 examples/example_2_reunw_02to05.py --execute  # 02to05 re-unwrapping
+python3 examples/example_3_sbovl.py --execute         # SBOI (--sbovl) chain
 ```
 
 ## Documentation and Bug Reports
@@ -129,11 +130,28 @@ The tutorial still uses the original LiCSBAS tutorial data that can be downloade
 ## Batch Processing
 
 We recommend users to get familiar with LiCSBAS via tutorial above.
-Once understood, you can set own batch script simply by
-```bash
-copy_batch_LiCSBAS.sh
-nano batch_LiCSBAS.sh # i.e. edit the file in your favourite editor
+Once understood, run your chain via the **python batch processor**
+(`licsbas/batch.py`, installed entry point `licsbas-batch`, or the legacy
+`./batch_LiCSBAS.sh` wrapper). All options of the old `batch_LiCSBAS.sh`
+(01-16, 02to05 re-unwrapping, sbovl/sbovl_abs, optional 03-06, ...) are
+available as attributes of `licsbas.batch.BatchConfig`:
+
+```python
+from licsbas.batch import BatchConfig, run_batch, save_flowchart
+
+run_batch(cfg)            # dry run first: run_batch(cfg, dry_run=True)
+cfg = BatchConfig(start_step=1, end_step=16, nlook=10, sbovl=True,
+                  p01_start_date="20160909", p01_end_date="20180508")
+ save_flowchart(cfg, "chain.png")   # PNG flowchart of the chain (Graphviz)
 ```
+
+Ready-to-adapt example scripts (each also writes a PNG flowchart):
+
+- `examples/example_1_standard.py` — standard chain (historical defaults),
+- `examples/example_2_reunw_02to05.py` — re-unwrapping via `LiCSBAS02to05_unwrap.py`,
+- `examples/example_3_sbovl.py` — SBOI chain using the `--sbovl` options.
+
+For simple cases the old command line keeps working: `./batch_LiCSBAS.sh --help`.
 
 ## Citations
 
