@@ -31,9 +31,12 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
       import no longer exits at module level; `main()` errors with install guidance;
       `licsbas-get-eqoffsets` entry point added.
 - [ ] Consider per-step `pyproject` metadata (per-step help, `--version`).
+- [x] ~~Type hints / `mypy` clean baseline~~ — done in v3.0.0 final:
+      `[tool.mypy]` config in `pyproject.toml` + `mypy` CI job; `mypy licsbas/`
+      passes on all 68 source files. `--strict` remains a stretch goal:
+      annotate `tools_lib` + `io_lib` first, then widen.
 - [ ] Docs: wiki pages still reference the old flat layout; add a
       "v3 layout" page mapping old names → new names.
-- [ ] Type hints / `mypy` clean baseline (start with `tools_lib` + `io_lib`).
 - [ ] PyPI: publish `licsbas` (and consider a PyPI release of `licsar_extra`).
 
 ## Housekeeping

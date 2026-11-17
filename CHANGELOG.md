@@ -28,10 +28,15 @@ end-to-end on Python 3.10–3.13. Changes on top of 3.0.0rc1:
 ### Robustness
 - Optional imports guarded everywhere: `pygmt` (viewer-only), `sklearn`
   (`131_boi_absolute`, `131_bovl2abs`), `licsar_extra` (`02to05`, `17`),
-  `contextily`; SNAPHU presence is checked at run-time in `02to05` only
-  (clear message, no module-level abort).
+  `contextily`, `libcomcat` (`get_eqoffsets`); SNAPHU presence is checked at
+  run-time in `02to05` only (clear message, no module-level abort).
 - `licsbas.extras` (pygmt viewer) raises a helpful ImportError with install
   instructions when viewer extras / system GMT are missing.
+- Bugfixes found during finalization: `130_remove_noloops` had two broken
+  `.format()` calls (one crashed at runtime with a `TypeError`); four
+  `colormaps/*/__init__.py` declared `__all__` as a `set` (now `list`).
+- `mypy` baseline: `[tool.mypy]` config + CI job; `mypy licsbas/` passes
+  on all 68 source files.
 
 ### Testing & CI
 - New `tests/test_smoke.py` (29 tests): package imports, all step modules import

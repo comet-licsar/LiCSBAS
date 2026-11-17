@@ -164,3 +164,8 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["licsbas*"]
+
+[tool.mypy]
+# Baseline: the package must type-check clean with these settings.
+# (Full --strict / check_untyped_defs is tracked as a v3.1+ goal; see TODONEXT.md.)
+ignore_missing_imports = true
