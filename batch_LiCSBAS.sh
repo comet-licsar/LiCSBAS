@@ -209,7 +209,7 @@ echo "Log file:   $log"
 echo ""
 mkdir -p $logdir
 
-if [ $run_reunwrapping == "y" ]; then
+if [ "$1" == "y" ]; then
   # do some additional settings for the reunwrapping:
   p01_get_pha="y"
   p01_get_mli="y" # not really needed but useful for weighting in multilooking
@@ -238,7 +238,7 @@ if [ $start_step -le 01 -a $end_step -ge 01 ];then
   if [ "$p01_get_mli" == "y" ]; then p01_op="$p01_op --get_mli"; fi
   if [ "$p01_skip_unw" == "y" ]; then p01_op="$p01_op --skip_unw"; fi
 
-  if [ $check_only == "y" ];then
+  if [ "$1" == "y" ];then
     echo "LiCSBAS01_get_geotiff.py $p01_op"
   else
     LiCSBAS01_get_geotiff.py $p01_op 2>&1 | tee -a $log
@@ -300,7 +300,7 @@ else
     if [ "$p02_sbovl" == "y" ]; then p02_op="$p02_op --sbovl"; fi
     if [ "$p02_rngoff" == "y" ]; then p02_op="$p02_op --rngoff"; fi
 
-  if [ $check_only == "y" ];then
+  if [ "$1" == "y" ];then
       echo "LiCSBAS02_ml_prep.py $p02_op"
     else
     LiCSBAS02_ml_prep.py $p02_op 2>&1 | tee -a $log
@@ -313,7 +313,7 @@ fi
 for step in $order_op03_05; do ##1
 
 if [ $step -eq 03 -a $start_step -le 03 -a $end_step -ge 03 ];then
-  if [ $do03op_GACOS == "y" ]; then
+  if [ "$1" == "y" ]; then
     p03_op=""
     if [ ! -z $p03_inGEOCmldir ];then inGEOCmldir="$p03_inGEOCmldir";
       else inGEOCmldir="$GEOCmldir"; fi
@@ -322,11 +322,11 @@ if [ $step -eq 03 -a $start_step -le 03 -a $end_step -ge 03 ];then
       else outGEOCmldir="${inGEOCmldir}GACOS"; fi
     p03_op="$p03_op -o $outGEOCmldir"
     if [ ! -z $p03_gacosdir ];then p03_op="$p03_op -g $p03_gacosdir"; fi
-    if [ $p03_fillhole == "y" ];then p03_op="$p03_op --fillhole"; fi
+    if [ "$1" == "y" ];then p03_op="$p03_op --fillhole"; fi
     if [ ! -z $p03_n_para ];then p03_op="$p03_op --n_para $p03_n_para";
     elif [ ! -z $n_para ];then p03_op="$p03_op --n_para $n_para";fi
 
-    if [ $check_only == "y" ];then
+    if [ "$1" == "y" ];then
       echo "LiCSBAS03op_GACOS.py $p03_op"
     else
       LiCSBAS03op_GACOS.py $p03_op 2>&1 | tee -a $log
@@ -338,7 +338,7 @@ if [ $step -eq 03 -a $start_step -le 03 -a $end_step -ge 03 ];then
 fi
 
 if [ $step -eq 04 -a $start_step -le 04 -a $end_step -ge 04 ];then
-  if [ $do04op_mask == "y" ]; then
+  if [ "$1" == "y" ]; then
     p04_op=""
     if [ ! -z $p04_inGEOCmldir ];then inGEOCmldir="$p04_inGEOCmldir";
       else inGEOCmldir="$GEOCmldir"; fi
@@ -354,7 +354,7 @@ if [ $step -eq 04 -a $start_step -le 04 -a $end_step -ge 04 ];then
     if [ ! -z $p04_n_para ];then p04_op="$p04_op --n_para $p04_n_para";
     elif [ ! -z $n_para ];then p04_op="$p04_op --n_para $n_para";fi
 
-    if [ $check_only == "y" ];then
+    if [ "$1" == "y" ];then
       echo "LiCSBAS04op_mask_unw.py $p04_op"
     else
       LiCSBAS04op_mask_unw.py $p04_op 2>&1 | tee -a $log
@@ -366,7 +366,7 @@ if [ $step -eq 04 -a $start_step -le 04 -a $end_step -ge 04 ];then
 fi
 
 if [ $step -eq 05 -a $start_step -le 05 -a $end_step -ge 05 ];then
-  if [ $do05op_clip == "y" ]; then
+  if [ "$1" == "y" ]; then
     p05_op=""
     if [ ! -z $p05_inGEOCmldir ];then inGEOCmldir="$p05_inGEOCmldir";
       else inGEOCmldir="$GEOCmldir"; fi
@@ -379,7 +379,7 @@ if [ $step -eq 05 -a $start_step -le 05 -a $end_step -ge 05 ];then
     if [ ! -z $p05_n_para ];then p05_op="$p05_op --n_para $p05_n_para";
     elif [ ! -z $n_para ];then p05_op="$p05_op --n_para $n_para";fi
 
-    if [ $check_only == "y" ];then
+    if [ "$1" == "y" ];then
       echo "LiCSBAS05op_clip_unw.py $p05_op"
     else
       LiCSBAS05op_clip_unw.py $p05_op 2>&1 | tee -a $log
@@ -391,7 +391,7 @@ if [ $step -eq 05 -a $start_step -le 05 -a $end_step -ge 05 ];then
 fi
 
 if [ $step -eq 06 -a $start_step -le 06 -a $end_step -ge 06 ];then
-  if [ $do06op_ERA5 == "y" ]; then
+  if [ "$1" == "y" ]; then
     p06_op=""
     if [ ! -z $p06_inGEOCmldir ];then inGEOCmldir="$p06_inGEOCmldir";
       else inGEOCmldir="$GEOCmldir"; fi
@@ -400,11 +400,11 @@ if [ $step -eq 06 -a $start_step -le 06 -a $end_step -ge 06 ];then
       else outGEOCmldir="${inGEOCmldir}ERA5"; fi
     p06_op="$p06_op -o $outGEOCmldir"
     if [ ! -z $p06_era5dir ];then p06_op="$p06_op -g $p06_era5dir"; fi
-    if [ $p06_fillhole == "y" ];then p06_op="$p06_op --fillhole"; fi
+    if [ "$1" == "y" ];then p06_op="$p06_op --fillhole"; fi
     if [ ! -z $p06_n_para ];then p06_op="$p06_op --n_para $p06_n_para";
     elif [ ! -z $n_para ];then p06_op="$p06_op --n_para $n_para";fi
 
-    if [ $check_only == "y" ];then
+    if [ "$1" == "y" ];then
       echo "LiCSBAS03op_ERA5.py $p06_op"
     else
       LiCSBAS03op_ERA5.py $p06_op 2>&1 | tee -a $log
@@ -418,10 +418,10 @@ fi
 done ##1
 
 ### Determine name of TSdir
-if [ $start_step -gt 10 -a $do04op_mask == "y" ]; then
+if [ "$1" -gt 10 -a "$3" == "y" ]; then
   # If mask step was done, use the masked GEOCmldir
   GEOCmldir="${GEOCmldir}mask"
-elif [ $start_step -gt 10 -a $do05op_clip == "y" ]; then
+elif [ "$1" -gt 10 -a "$3" == "y" ]; then
   # If clip step was done, use the clipped GEOCmldir
   GEOCmldir="${GEOCmldir}clip"
 fi
@@ -438,9 +438,9 @@ if [ $start_step -le 11 -a $end_step -ge 11 ];then
   if [ ! -z $p11_coh_thre ];then p11_op="$p11_op -c $p11_coh_thre"; fi
   if [ ! -z $p11_minbtemp ];then p11_op="$p11_op --minbtemp $p11_minbtemp"; fi
   if [ ! -z $p11_maxbtemp ];then p11_op="$p11_op --maxbtemp $p11_maxbtemp"; fi
-  if [ $p11_sbovl == "y" ];then p11_op="$p11_op --sbovl"; fi
-  if [ $p11_s_param == "y" ];then p11_op="$p11_op -s"; fi
-  if [ $check_only == "y" ];then
+  if [ "$1" == "y" ];then p11_op="$p11_op --sbovl"; fi
+  if [ "$1" == "y" ];then p11_op="$p11_op -s"; fi
+  if [ "$1" == "y" ];then
     echo "LiCSBAS11_check_unw.py $p11_op"
   else
     LiCSBAS11_check_unw.py $p11_op 2>&1 | tee -a $log
@@ -452,16 +452,16 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
   if [ "$cometdev" -eq 1 ] || [ "$p120_sbovl" == "y" ]; then
     p120_use='y'
   fi
-  if [ $p120_use == "y" ]; then
+  if [ "$1" == "y" ]; then
     dirset="-c $GEOCmldir -d $GEOCmldir -t $TSdir "
     extra=""
-    if [ $p120_ignoreconncomp == "y" ]; then
+    if [ "$1" == "y" ]; then
         extra="--ignore_comp"
     fi
-    if [ $p120_sbovl == "y" ]; then
+    if [ "$1" == "y" ]; then
       extra="--sbovl"
     fi
-    if [ $check_only == "y" ];then
+    if [ "$1" == "y" ];then
       echo "LiCSBAS120_choose_reference.py $dirset "$extra
     else
       LiCSBAS120_choose_reference.py $dirset $extra 2>&1 | tee -a $log
@@ -469,7 +469,7 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
     fi
   fi
 
-  if [ $p120_sbovl != "y" ]; then
+  if [ "$1" != "y" ]; then
       p12_op=""
       # if [ $cometdev -eq 1 ]; then
       #    p12_nullify="y"
@@ -478,29 +478,29 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
         else p12_op="$p12_op -d $GEOCmldir"; fi
       if [ ! -z $p12_TSdir ];then p12_op="$p12_op -t $p12_TSdir"; fi
       if [ ! -z $p12_loop_thre ];then p12_op="$p12_op -l $p12_loop_thre"; fi
-      if [ $p12_multi_prime == "y" ];then p12_op="$p12_op --multi_prime"; fi
-      if [ $p12_nullify == "y" ];then p12_op="$p12_op --nullify"; fi
-      if [ $p12_nullify_fix_ref == "y" ]; then p12_op="$p12_op --nullify_fix_ref"; fi
-      if [ $p12_skippngs == "y" ];then p12_op="$p12_op --nopngs"; fi
+      if [ "$1" == "y" ];then p12_op="$p12_op --multi_prime"; fi
+      if [ "$1" == "y" ];then p12_op="$p12_op --nullify"; fi
+      if [ "$1" == "y" ]; then p12_op="$p12_op --nullify_fix_ref"; fi
+      if [ "$1" == "y" ];then p12_op="$p12_op --nopngs"; fi
       if [ ! -z $p12_rm_ifg_list ];then p12_op="$p12_op --rm_ifg_list $p12_rm_ifg_list"; fi
       if [ ! -z $p12_n_para ];then p12_op="$p12_op --n_para $p12_n_para";
       elif [ ! -z $n_para ];then p12_op="$p12_op --n_para $n_para";fi
     
-      if [ $check_only == "y" ];then
+      if [ "$1" == "y" ];then
         echo "LiCSBAS12_loop_closure.py $p12_op "
       else
         LiCSBAS12_loop_closure.py $p12_op 2>&1 | tee -a $log
         if [ ${PIPESTATUS[0]} -ne 0 ];then exit 1; fi
       fi
       # 2024/11/13: updated nullification may cause extra all-nans-in-ref area. Rerunning step 120 if set to be used
-      if [ $p12_nullify == "y" ];then
-      if [ $p120_use == "y" ]; then
+      if [ "$1" == "y" ];then
+      if [ "$1" == "y" ]; then
         dirset="-c $GEOCmldir -d $GEOCmldir -t $TSdir "
         extra=""
-        if [ $p120_ignoreconncomp == "y" ]; then
+        if [ "$1" == "y" ]; then
             extra="--ignore_comp"
         fi
-        if [ $check_only == "y" ];then
+        if [ "$1" == "y" ];then
           echo "LiCSBAS120_choose_reference.py $dirset "$extra
         else
           LiCSBAS120_choose_reference.py $dirset $extra 2>&1 | tee -a $log
@@ -518,7 +518,7 @@ fi
 # high-RMS interferograms.
 
 if [ $start_step -le 13 -a $end_step -ge 13 ];then
-  if [ $p13resid_rerun == "y" ];then
+  if [ "$1" == "y" ];then
     extra2='-t '$TSdir
     p13_skippngs="n" # rerunning step 13, so no need to create pngs
     # getting eq offsets here:
@@ -747,14 +747,14 @@ if [ $start_step -le 14 -a $end_step -ge 14 ];then
   
   if [ "$sbovl_abs" == "y" ];then p14_op="$p14_op --sbovl_abs"; #--ransac
     elif [ "$p14_sbovl" == "y" ];then p14_op="$p14_op --sbovl"; fi  
-  if [ $gpu == "y" ];then p14_op="$p14_op --gpu"; fi
+  if [ "$1" == "y" ];then p14_op="$p14_op --gpu"; fi
   if [ "$eqoffs" == "y" ] && [ "$p14_sbovl" != "y" ]; then
     # we then do not want to regenerate vstd
     extra='--skipexisting'
   else
     extra=''
   fi
-  if [ $check_only == "y" ];then
+  if [ "$1" == "y" ];then
     echo "LiCSBAS14_vel_std.py $extra $p14_op"
   else
     LiCSBAS14_vel_std.py $extra $p14_op 2>&1 | tee -a $log
@@ -849,7 +849,7 @@ if [ $start_step -le 16 -a $end_step -ge 16 ];then
   fi
 fi
 
-if [ $check_only == "y" ];then
+if [ "$1" == "y" ];then
   echo ""
   echo "Above commands will run when you change check_only to \"n\""
   echo ""

@@ -31,9 +31,9 @@ _Last updated: 2026-11-26, branch `towards-v3`._
 - **build**: `python -m build` → sdist+wheel OK, no warnings.
 
 ### Remaining before release
-1. `git add -A && git commit` (all the above).
-2. `git tag v3.0.0` → push branch + tag (needs credentials — not in env).
-3. Create GitHub release v3.0.0 (needs token).
+1. ~~`git add -A && git commit`~~ **DONE** — `7ac0e42` on `towards-v3`.
+2. ~~`git tag v3.0.0` → push branch + tag~~ **DONE** — pushed via SSH (branch + tag on origin).
+3. Create GitHub release v3.0.0 (needs a token — none in env; do via web UI or provide token).
 4. Optional: `pip upload` to PyPI as `licsbas` (needs account/token).
 
 ### Commands that were verified
