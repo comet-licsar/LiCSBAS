@@ -23,15 +23,16 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 ## v3.1+
 - [ ] **Do NOT remove `bin/` wrappers or `bashrc_LiCSBAS.sh`** — user requirement,
       they keep the traditional PATH-based workflow (already decided, kept in 3.0.0).
-- [ ] Migrate steps off top-level globals in `main()` (argparser currently
-      relies on `globals()` in a few scripts).
-- [ ] `copy_batch_LiCSBAS.sh`: fix unquoted `[ ... ]` tests (cosmetic
-      `unary operator expected` noise; e.g. lines using `$p12_multi_prime`).
+- [x] ~~Migrate steps off top-level globals in `main()`~~ — audited: only
+      `_13_sb_inv.py` uses `globals()`, intentionally (loop-var cleanup); no action needed.
+- [x] ~~`batch_LiCSBAS.sh`: fix unquoted `[ ... ]` tests~~ — done in v3.0.0 final
+      (122 tests quoted, `bash -n` clean).
+- [x] ~~`LiCSBAS_get_eqoffsets`: soften `usgs-libcomcat` missing-dep handling~~ —
+      import no longer exits at module level; `main()` errors with install guidance;
+      `licsbas-get-eqoffsets` entry point added.
 - [ ] Consider per-step `pyproject` metadata (per-step help, `--version`).
 - [ ] Docs: wiki pages still reference the old flat layout; add a
       "v3 layout" page mapping old names → new names.
-- [ ] `LiCSBAS_get_eqoffsets`: `usgs-libcomcat` import is guarded; refine to
-      *skip with a warning* instead of erroring out when missing.
 - [ ] Type hints / `mypy` clean baseline (start with `tools_lib` + `io_lib`).
 - [ ] PyPI: publish `licsbas` (and consider a PyPI release of `licsar_extra`).
 
