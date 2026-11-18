@@ -34,8 +34,10 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
       `[tool.mypy]` config in `pyproject.toml` + `mypy` CI job; `mypy licsbas/`
       passes on all 68 source files. `--strict` remains a stretch goal:
       annotate `tools_lib` + `io_lib` first, then widen.
-- [ ] Docs: wiki pages still reference the old flat layout; add a
-      "v3 layout" page mapping old names → new names.
+- [x] ~~Docs: wiki pages still reference the old flat layout~~ — done in v3.0.0 final:
+      main wiki pages ported to local `docs/` (01_installation, 02_workflow,
+      03_visualization, 04_other_tools, file_structure, links) with
+      old-name → `licbas-*` mappings; README documentation section links to them.
 - [ ] PyPI: publish `licsbas` (and consider a PyPI release of `licsar_extra`).
 
 ## Housekeeping
