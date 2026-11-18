@@ -53,7 +53,7 @@ def test_entry_points_registered():
                      "licsbas-16-filt-ts", "licsbas-17-plot-corrections",
                      "licsbas-plot-network", "licsbas-plot-ts",
                      "licsbas-flt2geotiff", "licsbas-out2nc",
-                     "licbas-get-geotiff", "licbas-unwrap"):
+                     "licsbas-get-geotiff", "licsbas-unwrap"):
         assert expected in names, f"missing entry point: {expected}"
 
 

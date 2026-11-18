@@ -1,8 +1,7 @@
 # TODONEXT — LiCSBAS v3 follow-ups
 
 Done in the v3 series (see CHANGELOG.md / PLAN.md / STATUS.md): proper
-pip-packaged `licsbas` package, 72 console entry points (dual `licsbas-*`/
-`licbas-*` naming), `main()` wrapping, single-source versioning, cleaned
+pip-packaged `licsbas` package, 59 console entry points (all `licsbas-*` naming), `main()` wrapping, single-source versioning, cleaned
 repo/ignore files, CI + 29 smoke tests, PEP 639 license, optional extras
 (`unwrap`/`plot`/`ml`/`viewer`; `usgs-libcomcat` deliberately not an extra —
 openquake/GDAL-source dep chain), lazy SNAPHU check, two tutorial

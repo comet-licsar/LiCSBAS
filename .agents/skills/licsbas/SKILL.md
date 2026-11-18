@@ -29,8 +29,8 @@ description: Work with the LiCSBAS InSAR time-series package (v3, pip package `l
 3. **SNAPHU** is a system binary, checked lazily in `_02to05_unwrap` only.
 4. **GDAL** (`osgeo`) is a hard dependency (13+ files) — `gdal-wheel` is a pip dep
    on x86_64/aarch64; elsewhere it must come from the system/conda.
-5. Entry points live only in `pyproject.toml` `[project.scripts]`, dual-named
-   `licsbas-*` (preferred) and `licbas-*` (legacy). Every target must be an
+5. Entry points live only in `pyproject.toml` `[project.scripts]`, all named
+   `licsbas-*`. Every target must be an
    existing `licsbas.steps.<stem>` with a callable `main()`.
 6. License is PEP 639: `license = "GPL-3.0-or-later"` (no `License ::` classifier).
 

@@ -14,6 +14,16 @@
 - New `examples/`: `example_1_standard.py`, `example_2_reunw_02to05.py`,
   `example_3_sbovl.py` — three ready-to-adapt chains, each also writing a
   PNG flowchart of the performed steps.
+
+### Naming fix & tutorial
+- The `licbas-*` console aliases (a "licbas" typo in the v3 name set) are now
+  unified under `licsbas-*` (e.g. `licsbas-unwrap`, `licsbas-get-geotiff`);
+  duplicate aliases dropped → 59 entry points, all `licsbas.*`; smoke test and
+  skills/TODO docs updated accordingly.
+- New `tutorial/tutorial_batch.ipynb`: walkthrough of **both** batch workflows —
+  the python batch (`licsbas.batch.BatchConfig` / `run_batch` / `save_flowchart`)
+  and the shell batch (`./batch_LiCSBAS.sh` / `licsbas-batch`), incl. the three
+  example chains and PNG flowcharts.
 ## [3.0.0] — 2026-11-26 (branch `towards-v3`)
 
 **First stable v3 release**: `pip install licsbas` (or from this repo) now works
@@ -22,7 +32,8 @@ end-to-end on Python 3.10–3.13. Changes on top of 3.0.0rc1:
 ### Packaging finalisation
 - `LiCSBAS_lib/` shim layer **removed**: legacy *imports* (`import LiCSBAS_meta`)
   are no longer emulated — use `licsbas.meta` etc. Legacy *commands* keep working:
-  `bin/` wrappers + `licsbas-*` / `licbas-*` console entry points + `python -m licsbas.steps.*`.
+  `bin/` wrappers + `licsbas-*` console entry points (incl. short aliases like
+  `licsbas-unwrap`, `licsbas-filt-ts`) + `python -m licsbas.steps.*`.
   `bashrc_LiCSBAS.sh` / `start` now only put `bin/` on `PATH`.
 - Dependency audit (AST-based) finalised the hard-dependency list:
   added `beautifulsoup4`, `psutil`, `cmcrameri`, `python-dateutil`, `utm`;
