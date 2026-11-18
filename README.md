@@ -98,6 +98,9 @@ If you have found an issue or bug using the main branch, please report it on the
 We assume users are familiar with the standard installation procedure of Github repositories, therefore we do not adapt the original [**wiki**](https://github.com/yumorishita/LiCSBAS/wiki) pages that document well all the originally implemented procedures by Dr. Yu Morishita, 
 including the installation procedure (if you follow this procedure, please be aware of the different repository URL, this version of LiCSBAS resides at [github.com/comet-licsar/licsbas](https://github.com/comet-licsar/licsbas) while the original wiki refers to the discontinued [github.com/yumorishita/licsbas](https://github.com/yumorishita/licsbas)).
 
+For v3, the main wiki pages have been ported to local markdown under [docs/](docs/01_installation.md):
+[installation](docs/01_installation.md) · [workflow & quick start](docs/02_workflow.md) · [visualization](docs/03_visualization.md) · [other tools](docs/04_other_tools.md) · [file structure](docs/file_structure.md) · [links](docs/links.md).
+
 Similarly, the original [quick start](https://github.com/yumorishita/LiCSBAS/wiki/2_0_workflow#quick-start) describes processing philosophy that we keep in our version and only further maintain and develop.  
 
 ## Development strategy
