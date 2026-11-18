@@ -424,7 +424,7 @@ def main():
 
     print('\nOutput noise png images...', flush=True)
     for i in range(len(names)):
-        file = os.path.join(resultsdir, '{}{}}'.format(names[i], labels[0]))
+        file = os.path.join(resultsdir, '{}{}'.format(names[i], labels[0]))
         data = io_lib.read_img(file, length, width)
         pngfile = file + '.png'
         ## Get color range if None
@@ -434,7 +434,7 @@ def main():
             cmaxs[i] = np.nanpercentile(data, 99)
         if cmins[i] == cmaxs[i]: cmins[i] = cmaxs[i]-1
         # print(pngfile)
-        plot_lib.make_im_png(data, pngfile, cmaps[i], '{}'.format(titles[i], labels[1]), cmins[i], cmaxs[i])
+        plot_lib.make_im_png(data, pngfile, cmaps[i], '{}{}'.format(titles[i], labels[1]), cmins[i], cmaxs[i])
 
     ### New unw pngs
     if n_para > 1 and n_ifg > 20:

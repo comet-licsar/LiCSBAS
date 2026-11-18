@@ -39,9 +39,17 @@ from licsbas import io_lib
 from licsbas.meta import *
 try:
     from libcomcat.search import search
-except:
-    print('ERROR, libcomcat not installed - cannot continue. Please install libcomcat, e.g. using mamba')
-    exit()
+except ImportError:
+    search = None
+
+def _require_libcomcat():
+    if search is not None:
+        return
+    print("ERROR, usgs-libcomcat is not installed - this step cannot run without it.")
+    print("Install it (note: it pulls in openquake and needs a working GDAL), e.g.:")
+    print("    conda install -c conda-forge libcomcat")
+    print("    pip install usgs-libcomcat   # only on systems where GDAL is already available")
+    sys.exit(1)
 
 class Usage(Exception):
     """Usage context manager"""
@@ -51,6 +59,7 @@ class Usage(Exception):
 
 #%% Main
 def main(argv=None):
+    _require_libcomcat()
 
     #%% Check argv
     if argv == None:

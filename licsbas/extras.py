@@ -15,11 +15,19 @@ Changelog
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from PIL import Image
+try:
+    from PIL import Image
+    import pygmt
+    from pygmt.clib import Session
+    from pygmt.helpers import GMTTempFile
+except Exception as _e:
+    raise ImportError(
+        "licsbas.extras (the pygmt viewer) requires the optional 'viewer' extras and a "
+        "system GMT install. Install with: pip install 'licsbas[viewer]'  "
+        "(and e.g. 'sudo apt-get install gmt'). "
+        f"Underlying error: {_e}"
+    ) from _e
 import matplotlib.image as mpimg
-import pygmt
-from pygmt.clib import Session
-from pygmt.helpers import GMTTempFile
 
 try:
     import contextily as ctx

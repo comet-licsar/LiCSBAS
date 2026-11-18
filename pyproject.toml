@@ -1,280 +1,172 @@
 [build-system]
-requires = ["setuptools>=64"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "LiCSBAS"
-version = "3.0.0rc1"
-description = "InSAR time series analysis based on LiCSAR products (COMET LiCSBAS)"
+name = "licsbas"
+version = "3.0.0"
+description = "InSAR time series analysis using LiCSAR products (COMET-LiCSBAS)"
 readme = "README.md"
-requires-python = ">=3.10"
-license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.8"
+license = "GPL-3.0-or-later"
 authors = [
-    { name = "Milan Lazecky" },
-    { name = "Muhammet Nergizci" },
-    { name = "Yu Morishita" },
-    { name = "COMET Team" },
+    {name = "Milan Lazecky", email = "milan.lazecky@leeds.ac.uk"},
 ]
-maintainers = [
-    { name = "COMET Team", email = "M.Lazecky@leeds.ac.uk" },
-]
-keywords = ["InSAR", "LiCSAR", "time series", "displacement", "geodesy"]
 classifiers = [
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Atmospheric Science",
-    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
-    "astropy",
-    "beautifulsoup4",
-    "h5py",
-    "matplotlib",
-    "networkx",
-    "numpy>=1.24",
-    "pandas",
-    "Pillow",
-    "psutil",
-    "requests",
-    "rioxarray",
-    "scikit-learn",
-    "seaborn",
+    "numpy",
     "scipy",
-    "shapely",
     "statsmodels",
-    "utm",
+    "rasterio",
     "xarray",
+    "rioxarray",
+    "gdal-wheel>=3.4; platform_machine == 'x86_64' or platform_machine == 'aarch64' or platform_machine == 'arm64' or platform_machine == 'amd64'",
+    "matplotlib",
+    "astropy",
+    "shapely",
+    "geopandas",
+    "pandas",
+    "pyproj>=3.4",
+    "requests",
+    "h5py",
     "cmcrameri",
-    "ipympl",
-    "pygmt"
+    "psutil",
+    "beautifulsoup4",
+    "python-dateutil",
+    "utm",
 ]
 
 [project.optional-dependencies]
-# licsar_extra: required for GPU unwrapping (step 02to05), corrections (step 131)
-# and the azimuth-offset steps (LiCSBAS131_boi_absolute / LiCSBAS131_bovl2abs)
+# Interferogram unwrapping tools (SNAPHU binary pulled in via licsar_extra)
 unwrap = [
-    "licsar_extra @ git+https://github.com/comet-licsar/licsar_extra",
+    "licsar-extra @ git+https://github.com/comet-licsar/licsar_extra.git@v1.6",
 ]
-# usgs-libcomcat: only for LiCSBAS_get_eqoffsets.py
-comcat = [
-    "usgs-libcomcat",
+# Network / auxiliary plotting helpers (LiCSBAS120 networks, ERA5 plots, tools_lib)
+plot = [
+    "networkx",
+    "seaborn",
+]
+# Machine-learning based corrections (RANSAC in LiCSBAS131_boi_absolute / bovl2abs)
+ml = [
+    "scikit-learn",
+]
+# Interactive viewers (pygmt map viewer + ipympl notebook widgets + contextily basemaps)
+viewer = [
+    "pygmt",
+    "ipympl",
+    "contextily",
+    "Pillow",
 ]
 all = [
-    "licsar_extra @ git+https://github.com/comet-licsar/licsar_extra",
-    "usgs-libcomcat",
+    "licsbas[unwrap,plot,ml,viewer]",
 ]
 
 [project.urls]
 Homepage = "https://github.com/comet-licsar/LiCSBAS"
-Documentation = "https://github.com/yumorishita/LiCSBAS/wiki"
-Issues = "https://github.com/comet-licsar/LiCSBAS/issues"
+Documentation = "https://comet-licsar.github.io/LiCSBAS/"
+Changelog = "https://github.com/comet-licsar/LiCSBAS/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/comet-licsar/LiCSBAS/issues"
 
 [project.scripts]
-    "licsbas-batch" = "licsbas.batch:main"
-    "licsbas-01-get-geotiff" = "licsbas.steps._01_get_geotiff:main"
-    "licsbas-01-get-geotiff-alos" = "licsbas.steps._01_get_geotiff_alos:main"
-    "licsbas-02-ml-prep" = "licsbas.steps._02_ml_prep:main"
-    "licsbas-02to05-unwrap" = "licsbas.steps._02to05_unwrap:main"
-    "licsbas-03op-era5" = "licsbas.steps._03op_era5:main"
-    "licsbas-03op-gacos" = "licsbas.steps._03op_gacos:main"
-    "licsbas-04op-mask-unw" = "licsbas.steps._04op_mask_unw:main"
-    "licsbas-05op-clip-unw" = "licsbas.steps._05op_clip_unw:main"
-    "licsbas-11-check-unw" = "licsbas.steps._11_check_unw:main"
-    "licsbas-120-choose-reference" = "licsbas.steps._120_choose_reference:main"
-    "licsbas-12-loop-closure" = "licsbas.steps._12_loop_closure:main"
-    "licsbas-130-remove-noloops" = "licsbas.steps._130_remove_noloops:main"
-    "licsbas-130-sb-inv" = "licsbas.steps._130_sb_inv:main"
-    "licsbas-131-boi-absolute" = "licsbas.steps._131_boi_absolute:main"
-    "licsbas-131-bovl2abs" = "licsbas.steps._131_bovl2abs:main"
-    "licsbas-131-corrections" = "licsbas.steps._131_corrections:main"
-    "licsbas-131-residual-threshold" = "licsbas.steps._131_residual_threshold:main"
-    "licsbas-132-unwrapping-correction" = "licsbas.steps._132_unwrapping_correction:main"
-    "licsbas-133-write-h5" = "licsbas.steps._133_write_h5:main"
-    "licsbas-13-sb-inv" = "licsbas.steps._13_sb_inv:main"
-    "licsbas-14-vel-std" = "licsbas.steps._14_vel_std:main"
-    "licsbas-15-mask-ts" = "licsbas.steps._15_mask_ts:main"
-    "licsbas-16-filt-ts" = "licsbas.steps._16_filt_ts:main"
-    "licsbas-17-plot-corrections" = "licsbas.steps._17_plot_corrections:main"
-    "licsbas-check-install" = "licsbas.steps._check_install:main"
-    "licsbas-color-geotiff" = "licsbas.steps._color_geotiff:main"
-    "licsbas-color-geotiff2tiles" = "licsbas.steps._color_geotiff2tiles:main"
-    "licsbas-contour" = "licsbas.steps._contour:main"
-    "licsbas-cum2flt" = "licsbas.steps._cum2flt:main"
-    "licsbas-cum2tif" = "licsbas.steps._cum2tif:main"
-    "licsbas-cum2tstxt" = "licsbas.steps._cum2tstxt:main"
-    "licsbas-cum2vel" = "licsbas.steps._cum2vel:main"
-    "licsbas-cum2vel-weighted" = "licsbas.steps._cum2vel_weighted:main"
-    "licsbas-cum-clip" = "licsbas.steps._cum_clip:main"
-    "licsbas-cum-interpolate" = "licsbas.steps._cum_interpolate:main"
-    "licsbas-cum-plate-motion" = "licsbas.steps._cum_plate_motion:main"
-    "licsbas-decomposelos" = "licsbas.steps._decomposelos:main"
-    "licsbas-densify-ifgs" = "licsbas.steps._densify_ifgs:main"
-    "licsbas-detect-coreg-error" = "licsbas.steps._detect_coreg_error:main"
-    "licsbas-disp-img" = "licsbas.steps._disp_img:main"
-    "licsbas-epochs2cum" = "licsbas.steps._epochs2cum:main"
-    "licsbas-flt2geotiff" = "licsbas.steps._flt2geotiff:main"
-    "licsbas-get-eqoffsets" = "licsbas.steps._get_eqoffsets:main"
-    "licsbas-get-value-geo" = "licsbas.steps._get_value_geo:main"
-    "licsbas-mask-flt" = "licsbas.steps._mask_flt:main"
-    "licsbas-out2nc" = "licsbas.steps._out2nc:main"
-    "licsbas-plot-network" = "licsbas.steps._plot_network:main"
-    "licsbas-plot-ts" = "licsbas.steps._plot_ts:main"
-    "licsbas-profile" = "licsbas.steps._profile:main"
-    "licsbas-remove-reference-effect-from-vstd" = "licsbas.steps._remove_reference_effect_from_vstd:main"
-    "licsbas-reset-nulls" = "licsbas.steps._reset_nulls:main"
-    "licsbas-resid-check" = "licsbas.steps._resid_check:main"
-    "licsbas-vel-plate-motion" = "licsbas.steps._vel_plate_motion:main"
+licsbas-batch = "licsbas.batch:main"
+# Main pipeline steps (legacy names)
+licsbas-01-get-geotiff = "licsbas.steps._01_get_geotiff:main"
+licsbas-02-ml-prep = "licsbas.steps._02_ml_prep:main"
+licsbas-02to05-unwrap = "licsbas.steps._02to05_unwrap:main"
+licsbas-03op-era5 = "licsbas.steps._03op_era5:main"
+licsbas-03op-gacos = "licsbas.steps._03op_gacos:main"
+licsbas-04op-mask-unw = "licsbas.steps._04op_mask_unw:main"
+licsbas-05op-clip-unw = "licsbas.steps._05op_clip_unw:main"
+licsbas-11-check-unw = "licsbas.steps._11_check_unw:main"
+licsbas-120-choose-reference = "licsbas.steps._120_choose_reference:main"
+licsbas-12-loop-closure = "licsbas.steps._12_loop_closure:main"
+licsbas-130-sb-inv = "licsbas.steps._130_sb_inv:main"
+licsbas-131-boi-absolute = "licsbas.steps._131_boi_absolute:main"
+licsbas-131-bovl2abs = "licsbas.steps._131_bovl2abs:main"
+licsbas-131-corrections = "licsbas.steps._131_corrections:main"
+licsbas-131-residual-threshold = "licsbas.steps._131_residual_threshold:main"
+licsbas-132-unwrapping-correction = "licsbas.steps._132_unwrapping_correction:main"
+licsbas-133-write-h5 = "licsbas.steps._133_write_h5:main"
+licsbas-14-vel-std = "licsbas.steps._14_vel_std:main"
+licsbas-15-mask-ts = "licsbas.steps._15_mask_ts:main"
+licsbas-16-filt-ts = "licsbas.steps._16_filt_ts:main"
+licsbas-17-plot-corrections = "licsbas.steps._17_plot_corrections:main"
+# Auxiliary / utility tools
+licsbas-cum2vel = "licsbas.steps._cum2vel:main"
+licsbas-cum2vel-weighted = "licsbas.steps._cum2vel_weighted:main"
+licsbas-plot-ts = "licsbas.steps._plot_ts:main"
+licsbas-color-geotiff = "licsbas.steps._color_geotiff:main"
+licsbas-color-geotiff2tiles = "licsbas.steps._color_geotiff2tiles:main"
+licsbas-disp-img = "licsbas.steps._disp_img:main"
+licsbas-contour = "licsbas.steps._contour:main"
+licsbas-cum2tstxt = "licsbas.steps._cum2tstxt:main"
+licsbas-get-value-geo = "licsbas.steps._get_value_geo:main"
+licsbas-epochs2cum = "licsbas.steps._epochs2cum:main"
+licsbas-get-geotiff-alos = "licsbas.steps._01_get_geotiff_alos:main"
+licsbas-plot-network = "licsbas.steps._plot_network:main"
+licsbas-densify-ifgs = "licsbas.steps._densify_ifgs:main"
+licsbas-flt2geotiff = "licsbas.steps._flt2geotiff:main"
+licsbas-get-eqoffsets = "licsbas.steps._get_eqoffsets:main"
+licsbas-out2nc = "licsbas.steps._out2nc:main"
+# v3 names (recommended)
+licbas-get-geotiff = "licsbas.steps._01_get_geotiff:main"
+licbas-ml-prep = "licsbas.steps._02_ml_prep:main"
+licbas-unwrap = "licsbas.steps._02to05_unwrap:main"
+licbas-era5 = "licsbas.steps._03op_era5:main"
+licbas-gacos = "licsbas.steps._03op_gacos:main"
+licbas-mask-unw = "licsbas.steps._04op_mask_unw:main"
+licbas-clip-unw = "licsbas.steps._05op_clip_unw:main"
+licbas-check-unw = "licsbas.steps._11_check_unw:main"
+licbas-choose-reference = "licsbas.steps._120_choose_reference:main"
+licbas-loop-closure = "licsbas.steps._12_loop_closure:main"
+licbas-sb-inv = "licsbas.steps._130_sb_inv:main"
+licbas-boi-absolute = "licsbas.steps._131_boi_absolute:main"
+licbas-bovl2abs = "licsbas.steps._131_bovl2abs:main"
+licbas-corrections = "licsbas.steps._131_corrections:main"
+licbas-residual-threshold = "licsbas.steps._131_residual_threshold:main"
+licbas-unwrapping-correction = "licsbas.steps._132_unwrapping_correction:main"
+licbas-write-h5 = "licsbas.steps._133_write_h5:main"
+licbas-vel-std = "licsbas.steps._14_vel_std:main"
+licbas-mask-ts = "licsbas.steps._15_mask_ts:main"
+licbas-filt-ts = "licsbas.steps._16_filt_ts:main"
+licbas-plot-corrections = "licsbas.steps._17_plot_corrections:main"
+licbas-cum2vel = "licsbas.steps._cum2vel:main"
+licbas-cum2vel-weighted = "licsbas.steps._cum2vel_weighted:main"
+licbas-plot-ts = "licsbas.steps._plot_ts:main"
+licbas-color-geotiff = "licsbas.steps._color_geotiff:main"
+licbas-color-geotiff2tiles = "licsbas.steps._color_geotiff2tiles:main"
+licbas-disp-img = "licsbas.steps._disp_img:main"
+licbas-contour = "licsbas.steps._contour:main"
+licbas-cum2tstxt = "licsbas.steps._cum2tstxt:main"
+licbas-get-value-geo = "licsbas.steps._get_value_geo:main"
+licbas-epochs2cum = "licsbas.steps._epochs2cum:main"
+licbas-get-geotiff-alos = "licsbas.steps._01_get_geotiff_alos:main"
+licbas-plot-network = "licsbas.steps._plot_network:main"
+licbas-densify-ifgs = "licsbas.steps._densify_ifgs:main"
+licbas-flt2geotiff = "licsbas.steps._flt2geotiff:main"
+licbas-get-eqoffsets = "licsbas.steps._get_eqoffsets:main"
+licbas-out2nc = "licsbas.steps._out2nc:main"
 
 [tool.setuptools]
-# licsbas = the real package (library, steps, bundled colormaps)
-# LiCSBAS_* = backwards-compatibility shims (legacy top-level module names),
-#             so `import LiCSBAS_meta` / `from LiCSBAS_out2nc import ...` keep working
-packages = [
-    "licsbas",
-    "licsbas.colormaps",
-    "licsbas.steps",
-    "licsbas.colormaps.cmocean",
-    "licsbas.colormaps.SCM",
-    "licsbas.colormaps.GMT",
-    "licsbas.colormaps.backup_colorcet",
-    "LiCSBAS01_get_geotiff",
-    "LiCSBAS01_get_geotiff_ALOS",
-    "LiCSBAS02_ml_prep",
-    "LiCSBAS02to05_unwrap",
-    "LiCSBAS03op_ERA5",
-    "LiCSBAS03op_GACOS",
-    "LiCSBAS04op_mask_unw",
-    "LiCSBAS05op_clip_unw",
-    "LiCSBAS11_check_unw",
-    "LiCSBAS120_choose_reference",
-    "LiCSBAS12_loop_closure",
-    "LiCSBAS130_remove_noloops",
-    "LiCSBAS130_sb_inv",
-    "LiCSBAS131_boi_absolute",
-    "LiCSBAS131_bovl2abs",
-    "LiCSBAS131_corrections",
-    "LiCSBAS131_residual_threshold",
-    "LiCSBAS132_unwrapping_correction",
-    "LiCSBAS133_write_h5",
-    "LiCSBAS13_sb_inv",
-    "LiCSBAS14_vel_std",
-    "LiCSBAS15_mask_ts",
-    "LiCSBAS16_filt_ts",
-    "LiCSBAS17_plot_corrections",
-    "LiCSBAS_check_install",
-    "LiCSBAS_color_geotiff",
-    "LiCSBAS_color_geotiff2tiles",
-    "LiCSBAS_contour",
-    "LiCSBAS_cum2flt",
-    "LiCSBAS_cum2tif",
-    "LiCSBAS_cum2tstxt",
-    "LiCSBAS_cum2vel",
-    "LiCSBAS_cum2vel_weighted",
-    "LiCSBAS_cum_clip",
-    "LiCSBAS_cum_interpolate",
-    "LiCSBAS_cum_plate_motion",
-    "LiCSBAS_decomposeLOS",
-    "LiCSBAS_densify_ifgs",
-    "LiCSBAS_detect_coreg_error",
-    "LiCSBAS_disp_img",
-    "LiCSBAS_epochs2cum",
-    "LiCSBAS_extras",
-    "LiCSBAS_extras_light",
-    "LiCSBAS_flt2geotiff",
-    "LiCSBAS_get_eqoffsets",
-    "LiCSBAS_get_value_geo",
-    "LiCSBAS_inv_lib",
-    "LiCSBAS_io_lib",
-    "LiCSBAS_loop_lib",
-    "LiCSBAS_mask_flt",
-    "LiCSBAS_meta",
-    "LiCSBAS_out2nc",
-    "LiCSBAS_plot_lib",
-    "LiCSBAS_plot_network",
-    "LiCSBAS_plot_ts",
-    "LiCSBAS_profile",
-    "LiCSBAS_remove_reference_effect_from_vstd",
-    "LiCSBAS_reset_nulls",
-    "LiCSBAS_resid_check",
-    "LiCSBAS_tools_lib",
-    "LiCSBAS_vel_plate_motion"
-]
-[tool.setuptools.package-dir]
-    "LiCSBAS01_get_geotiff" = "LiCSBAS_lib/_shims/LiCSBAS01_get_geotiff"
-    "LiCSBAS01_get_geotiff_ALOS" = "LiCSBAS_lib/_shims/LiCSBAS01_get_geotiff_ALOS"
-    "LiCSBAS02_ml_prep" = "LiCSBAS_lib/_shims/LiCSBAS02_ml_prep"
-    "LiCSBAS02to05_unwrap" = "LiCSBAS_lib/_shims/LiCSBAS02to05_unwrap"
-    "LiCSBAS03op_ERA5" = "LiCSBAS_lib/_shims/LiCSBAS03op_ERA5"
-    "LiCSBAS03op_GACOS" = "LiCSBAS_lib/_shims/LiCSBAS03op_GACOS"
-    "LiCSBAS04op_mask_unw" = "LiCSBAS_lib/_shims/LiCSBAS04op_mask_unw"
-    "LiCSBAS05op_clip_unw" = "LiCSBAS_lib/_shims/LiCSBAS05op_clip_unw"
-    "LiCSBAS11_check_unw" = "LiCSBAS_lib/_shims/LiCSBAS11_check_unw"
-    "LiCSBAS120_choose_reference" = "LiCSBAS_lib/_shims/LiCSBAS120_choose_reference"
-    "LiCSBAS12_loop_closure" = "LiCSBAS_lib/_shims/LiCSBAS12_loop_closure"
-    "LiCSBAS130_remove_noloops" = "LiCSBAS_lib/_shims/LiCSBAS130_remove_noloops"
-    "LiCSBAS130_sb_inv" = "LiCSBAS_lib/_shims/LiCSBAS130_sb_inv"
-    "LiCSBAS131_boi_absolute" = "LiCSBAS_lib/_shims/LiCSBAS131_boi_absolute"
-    "LiCSBAS131_bovl2abs" = "LiCSBAS_lib/_shims/LiCSBAS131_bovl2abs"
-    "LiCSBAS131_corrections" = "LiCSBAS_lib/_shims/LiCSBAS131_corrections"
-    "LiCSBAS131_residual_threshold" = "LiCSBAS_lib/_shims/LiCSBAS131_residual_threshold"
-    "LiCSBAS132_unwrapping_correction" = "LiCSBAS_lib/_shims/LiCSBAS132_unwrapping_correction"
-    "LiCSBAS133_write_h5" = "LiCSBAS_lib/_shims/LiCSBAS133_write_h5"
-    "LiCSBAS13_sb_inv" = "LiCSBAS_lib/_shims/LiCSBAS13_sb_inv"
-    "LiCSBAS14_vel_std" = "LiCSBAS_lib/_shims/LiCSBAS14_vel_std"
-    "LiCSBAS15_mask_ts" = "LiCSBAS_lib/_shims/LiCSBAS15_mask_ts"
-    "LiCSBAS16_filt_ts" = "LiCSBAS_lib/_shims/LiCSBAS16_filt_ts"
-    "LiCSBAS17_plot_corrections" = "LiCSBAS_lib/_shims/LiCSBAS17_plot_corrections"
-    "LiCSBAS_check_install" = "LiCSBAS_lib/_shims/LiCSBAS_check_install"
-    "LiCSBAS_color_geotiff" = "LiCSBAS_lib/_shims/LiCSBAS_color_geotiff"
-    "LiCSBAS_color_geotiff2tiles" = "LiCSBAS_lib/_shims/LiCSBAS_color_geotiff2tiles"
-    "LiCSBAS_contour" = "LiCSBAS_lib/_shims/LiCSBAS_contour"
-    "LiCSBAS_cum2flt" = "LiCSBAS_lib/_shims/LiCSBAS_cum2flt"
-    "LiCSBAS_cum2tif" = "LiCSBAS_lib/_shims/LiCSBAS_cum2tif"
-    "LiCSBAS_cum2tstxt" = "LiCSBAS_lib/_shims/LiCSBAS_cum2tstxt"
-    "LiCSBAS_cum2vel" = "LiCSBAS_lib/_shims/LiCSBAS_cum2vel"
-    "LiCSBAS_cum2vel_weighted" = "LiCSBAS_lib/_shims/LiCSBAS_cum2vel_weighted"
-    "LiCSBAS_cum_clip" = "LiCSBAS_lib/_shims/LiCSBAS_cum_clip"
-    "LiCSBAS_cum_interpolate" = "LiCSBAS_lib/_shims/LiCSBAS_cum_interpolate"
-    "LiCSBAS_cum_plate_motion" = "LiCSBAS_lib/_shims/LiCSBAS_cum_plate_motion"
-    "LiCSBAS_decomposeLOS" = "LiCSBAS_lib/_shims/LiCSBAS_decomposeLOS"
-    "LiCSBAS_densify_ifgs" = "LiCSBAS_lib/_shims/LiCSBAS_densify_ifgs"
-    "LiCSBAS_detect_coreg_error" = "LiCSBAS_lib/_shims/LiCSBAS_detect_coreg_error"
-    "LiCSBAS_disp_img" = "LiCSBAS_lib/_shims/LiCSBAS_disp_img"
-    "LiCSBAS_epochs2cum" = "LiCSBAS_lib/_shims/LiCSBAS_epochs2cum"
-    "LiCSBAS_extras" = "LiCSBAS_lib/_shims/LiCSBAS_extras"
-    "LiCSBAS_extras_light" = "LiCSBAS_lib/_shims/LiCSBAS_extras_light"
-    "LiCSBAS_flt2geotiff" = "LiCSBAS_lib/_shims/LiCSBAS_flt2geotiff"
-    "LiCSBAS_get_eqoffsets" = "LiCSBAS_lib/_shims/LiCSBAS_get_eqoffsets"
-    "LiCSBAS_get_value_geo" = "LiCSBAS_lib/_shims/LiCSBAS_get_value_geo"
-    "LiCSBAS_inv_lib" = "LiCSBAS_lib/_shims/LiCSBAS_inv_lib"
-    "LiCSBAS_io_lib" = "LiCSBAS_lib/_shims/LiCSBAS_io_lib"
-    "LiCSBAS_loop_lib" = "LiCSBAS_lib/_shims/LiCSBAS_loop_lib"
-    "LiCSBAS_mask_flt" = "LiCSBAS_lib/_shims/LiCSBAS_mask_flt"
-    "LiCSBAS_meta" = "LiCSBAS_lib/_shims/LiCSBAS_meta"
-    "LiCSBAS_out2nc" = "LiCSBAS_lib/_shims/LiCSBAS_out2nc"
-    "LiCSBAS_plot_lib" = "LiCSBAS_lib/_shims/LiCSBAS_plot_lib"
-    "LiCSBAS_plot_network" = "LiCSBAS_lib/_shims/LiCSBAS_plot_network"
-    "LiCSBAS_plot_ts" = "LiCSBAS_lib/_shims/LiCSBAS_plot_ts"
-    "LiCSBAS_profile" = "LiCSBAS_lib/_shims/LiCSBAS_profile"
-    "LiCSBAS_remove_reference_effect_from_vstd" = "LiCSBAS_lib/_shims/LiCSBAS_remove_reference_effect_from_vstd"
-    "LiCSBAS_reset_nulls" = "LiCSBAS_lib/_shims/LiCSBAS_reset_nulls"
-    "LiCSBAS_resid_check" = "LiCSBAS_lib/_shims/LiCSBAS_resid_check"
-    "LiCSBAS_tools_lib" = "LiCSBAS_lib/_shims/LiCSBAS_tools_lib"
-    "LiCSBAS_vel_plate_motion" = "LiCSBAS_lib/_shims/LiCSBAS_vel_plate_motion"
+include-package-data = true
 
-# bundled colormap data + extraction scripts
-[tool.setuptools.package-data]
-"licsbas" = ["colormaps/*.sh"]
-"licsbas.colormaps.cmocean" = ["**/*.txt", "*.pdf"]
-"licsbas.colormaps.SCM" = ["**/*.txt", "*.pdf"]
-"licsbas.colormaps.GMT" = ["**/*.txt", "*.pdf"]
-"licsbas.colormaps.backup_colorcet" = ["*.csv"]
+[tool.setuptools.packages.find]
+include = ["licsbas*"]
 
-[tool.setuptools.exclude-package-data]
-"*" = ["*.pyc"]
+[tool.mypy]
+# Baseline: the package must type-check clean with these settings.
+# (Full --strict / check_untyped_defs is tracked as a v3.1+ goal; see TODONEXT.md.)
+ignore_missing_imports = true

@@ -1,9 +1,5 @@
 #!/bin/bash
-
-export LICSBAS_PATH=/home/$USER
-# "$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)"
+# Add bin/ wrappers to PATH (licsbas package itself is pip-installed by the binder env)
+LICSBAS_PATH="$(cd "$(dirname "$0")" && pwd)"
 export PATH="$LICSBAS_PATH/bin:$PATH"
-export PYTHONPATH="$LICSBAS_PATH/LiCSBAS_lib:$PYTHONPATH"
-
-exec "$@" 
-
+exec "$@"
