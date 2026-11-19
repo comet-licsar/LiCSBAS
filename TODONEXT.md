@@ -37,7 +37,7 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 - [x] ~~Docs: wiki pages still reference the old flat layout~~ — done in v3.0.0 final:
       main wiki pages ported to local `docs/` (01_installation, 02_workflow,
       03_visualization, 04_other_tools, file_structure, links) with
-      old-name → `licbas-*` mappings; README documentation section links to them.
+      old-name → `licsbas-*` mappings; README documentation section links to them.
 - [ ] PyPI: publish `licsbas` (and consider a PyPI release of `licsar_extra`).
 
 ## Housekeeping

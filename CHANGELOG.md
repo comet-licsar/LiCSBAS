@@ -2,6 +2,25 @@
 
 ## [unreleased] — branch `towards-v3`
 
+### 2026-07-24 (batch usability, docs, typo fixes)
+- **Workflow templates**: `licsbas.batch` now ships named `BatchConfig` factories
+  (`standard`, `reunw_5`, `reunw_10`, `reunw_20`, `sbovl`, `sbovl_abs`) via
+  `make_config()` / `list_workflows()`, extensible with `@register_workflow()`;
+  CLI: `licsbas-batch --workflow reunw_5 [--nlook ...]` and `--list-workflows`.
+- **ERA5 step** (`licsbas/steps/_03op_era5.py`): the STD before/after panel of
+  `ERA5_info2.png` no longer requires `seaborn` — new `plot_lib.plot_gacos_info2`
+  (matplotlib-native hexbin correlation diagram, shared with the GACOS step).
+- `tutorial/tutorial_batch.ipynb` restructured around the workflow templates
+  (all chains, incl. `reunw_5`, generated via `make_config`, with PNG flowcharts
+  and the template registry).
+- README: new **Tutorials** section with Binder (logo-badge) + Google Colab
+  links for every tutorial notebook; **Documentation** section presents the
+  `docs/` pages as a table; `licbas-*` → `licsbas-*` typo fixed in
+  `docs/*.md` and `TODONEXT.md`.
+- `tests`: entry-point smoke test now reads the repo `pyproject.toml` (single
+  source of truth, robust to stale dev installs); tide/iono tests now verify the
+  standard `LiCSBAS131_corrections.py` step receives `--tide`/`--iono`.
+
 ### Python batch processor (replaces batch_LiCSBAS.sh)
 - New `licsbas/batch.py` (CLI: `licsbas-batch`): all settings/flags of
   `batch_LiCSBAS.sh` (standard chain, 02to05 re-unwrapping, sbovl/sbovl_abs,

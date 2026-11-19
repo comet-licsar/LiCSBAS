@@ -3,7 +3,7 @@
 > v3 note: LiCSBAS now ships as the Python package **`licsbas`**, installable with `pip`
 >(see the [README](../README.md#installation) for the full extras table).
 > The `LiCSBAS*.py` commands from the original wiki keep working via the installed `bin/`
-> wrappers; the recommended invocations are the `licbas-*` console entry points.
+> wrappers; the recommended invocations are the `licsbas-*` console entry points.
 > All steps import optional packages **lazily** — the core pipeline works without any extras.
 
 ## Option A — pip (recommended)
@@ -13,7 +13,7 @@ git clone https://github.com/comet-licsar/LiCSBAS.git
 cd LiCSBAS
 pip install .                # or: pip install .[all] for every optional extra
 python -c "import licsbas; print(licsbas.__version__)"   # sanity check
-licbas-plot-ts -h            # sanity check one entry point
+licsbas-plot-ts -h            # sanity check one entry point
 ```
 
 **GDAL** is a hard system dependency (imported by ~14 step modules):
@@ -56,6 +56,6 @@ The original wiki installation instructions (conda-forge environment built from
 `environment.yml` + manual `pip install`) still work for a pre-v3-style checkout, but
 new installs should prefer `pip install .` as above. The only practical difference:
 pre-v3 you had to clone the repository and add `bin/` to your `PATH` manually;
-v3 installs the same `bin/` wrappers and all `licbas-*` entry points automatically.
+v3 installs the same `bin/` wrappers and all `licsbas-*` entry points automatically.
 
 **Back to the [workflow](02_workflow.md).**

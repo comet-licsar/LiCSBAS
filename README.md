@@ -92,17 +92,26 @@ python3 examples/example_2_reunw_02to05.py --execute  # 02to05 re-unwrapping
 python3 examples/example_3_sbovl.py --execute         # SBOI (--sbovl) chain
 ```
 
-## Documentation and Bug Reports
+## Documentation
+
+The main wiki pages have been ported to local markdown under [docs/](docs/) and updated for v3 (console entry points, `licsbas.batch`, tutorial paths):
+
+| Page | What it covers |
+|---|---|
+| [**01 — Installation**](docs/01_installation.md) | Conda environment, `pip install .`, entry points, batch wrapper, sanity checks |
+| [**02 — Workflow & quick start**](docs/02_workflow.md) | End-to-end chain (01 → 02-05 → 11–16), step-by-step command reference, `02to05` re-unwrapping, SBOI notes |
+| [**03 — Visualization**](docs/03_visualization.md) | `licsbas-disp-img`, `licsbas-plot-ts`, `licsbas-plot-network`, tiles, NetCDF export |
+| [**04 — Other tools**](docs/04_other_tools.md) | `cum2vel`, dense network, contours, COMET extras, misc. utilities |
+| [File structure](docs/file_structure.md) | Output products and per-step naming conventions (`GEOC → TS_* → results_*`) |
+| [Links](docs/links.md) | Data sources (ALOS/F3), tools (SNAPHU, GMT, ...), references, community |
+
+Similarly, the original [quick start](https://github.com/yumorishita/LiCSBAS/wiki/2_0_workflow#quick-start) describes the processing philosophy that we keep in our version and only further maintain and develop.
+
+If you are following the original (v1/v2) installation steps, please be aware of the different repository URL: this version of LiCSBAS resides at [github.com/comet-licsar/licsbas](https://github.com/comet-licsar/licsbas) while the discontinued [github.com/yumorishita/LiCSBAS](https://github.com/yumorishita/LiCSBAS) wiki refers to the old layout.
+
+### Bug reports
 
 If you have found an issue or bug using the main branch, please report it on the [issues page](https://github.com/comet-licsar/LiCSBAS/issues).
-
-We assume users are familiar with the standard installation procedure of Github repositories, therefore we do not adapt the original [**wiki**](https://github.com/yumorishita/LiCSBAS/wiki) pages that document well all the originally implemented procedures by Dr. Yu Morishita, 
-including the installation procedure (if you follow this procedure, please be aware of the different repository URL, this version of LiCSBAS resides at [github.com/comet-licsar/licsbas](https://github.com/comet-licsar/licsbas) while the original wiki refers to the discontinued [github.com/yumorishita/licsbas](https://github.com/yumorishita/licsbas)).
-
-For v3, the main wiki pages have been ported to local markdown under [docs/](docs/01_installation.md):
-[installation](docs/01_installation.md) · [workflow & quick start](docs/02_workflow.md) · [visualization](docs/03_visualization.md) · [other tools](docs/04_other_tools.md) · [file structure](docs/file_structure.md) · [links](docs/links.md).
-
-Similarly, the original [quick start](https://github.com/yumorishita/LiCSBAS/wiki/2_0_workflow#quick-start) describes processing philosophy that we keep in our version and only further maintain and develop.  
 
 ## Development strategy
 
@@ -117,14 +126,19 @@ these can include original approaches not present or documented here (yet).
 For example, Dr. Qi Ou prepared optional steps as LiCSBAS1xx scripts and [provided documentation](https://github.com/qi-ou/LiCSBAS/blob/main/README.md) on their use,
 as she worked her way to her [article on Tian Shan](https://www.researchsquare.com/article/rs-7529996/v1).
 
-## Sample Products and Tutorial
+## Tutorials
 
-The latest tutorial is available as a [Jupyter Notebook](https://github.com/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial.ipynb) that you can directly
-[run using Binder](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD?labpath=tutorial/tutorial.ipynb), or you can test the [dev branch version](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/dev?labpath=tutorial/tutorial.ipynb) that contains latest updates.
-A [bash-compatible version](https://github.com/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial_bash-compatible.ipynb) (using `licsbas-*` console commands and the pygmt-free `pylight_plot_interactive` viewer) is also provided for environments without GMT.
+The tutorials are Jupyter notebooks that you can directly [run using Binder](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD) (no local install needed), or open in the [repository](https://github.com/comet-licsar/LiCSBAS/tree/main/tutorial):
 
-Furthermore, if you have Google account, you can use Google Colab:  
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial.ipynb)  
+| Tutorial | Binder | Google Colab |
+|---|---|---|
+| [LiCSBAS tutorial](https://github.com/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial.ipynb) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD?labpath=tutorial/tutorial.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial.ipynb) |
+| [Bash-compatible tutorial](https://github.com/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial_bash-compatible.ipynb) (`licsbas-*` console commands, GMT-free `pylight_plot_interactive` viewer) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD?labpath=tutorial/tutorial_bash-compatible.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial_bash-compatible.ipynb) |
+| [Batch processing (python & shell)](https://github.com/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial_batch.ipynb) — `licsbas.batch` workflows incl. `reunw_5`, PNG flowcharts | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD?labpath=tutorial/tutorial_batch.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/tutorial/tutorial_batch.ipynb) |
+
+You can also test the `dev` branch version of the main tutorial: [![Binder (dev)](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/dev?labpath=tutorial/tutorial.ipynb)
+
+### Sample products
 
 The tutorial still uses the original LiCSBAS tutorial data that can be downloaded separately if needed, including the sample scripts for learning outside of the notebook, that is:
 

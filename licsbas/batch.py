@@ -29,7 +29,8 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 __all__ = ["BatchConfig", "BatchStep", "build_pipeline", "run_batch",
-           "save_flowchart", "main"]
+           "save_flowchart", "make_config", "list_workflows",
+           "register_workflow", "main"]
 
 # ---------------------------------------------------------------------------
 # Step / pipeline data structures
@@ -260,6 +261,88 @@ class BatchConfig:
         # historical behaviour: sbovl forces use of step 120
         if self.sbovl and not self.p120_use:
             self.p120_use = True
+
+
+# ---------------------------------------------------------------------------
+# Predefined workflow templates
+# ---------------------------------------------------------------------------
+# A workflow is a named factory producing a BatchConfig: a stable, reusable
+# starting point (e.g. "reunw_5" = re-unwrapping with multilook 5).
+# New templates can be registered at runtime or in project-local scripts:
+#
+#     from licsbas.batch import register_workflow, BatchConfig
+#
+#     @register_workflow("my_study", "study-specific chain")
+#     def _():
+#         return BatchConfig(sbovl=True, nlook=10, p01_start_date="20141001")
+
+_WORKFLOWS: dict = {}
+
+
+def register_workflow(name: str, description: str = ""):
+    """Register a factory (name -> BatchConfig) under ``name``."""
+    def deco(fn):
+        _WORKFLOWS[name] = (description, fn)
+        return fn
+    return deco
+
+
+def list_workflows() -> dict:
+    """``{name: description}`` of all registered workflows."""
+    return {n: d for n, (d, _) in _WORKFLOWS.items()}
+
+
+def make_config(workflow: str = "standard", **overrides) -> BatchConfig:
+    """Create a :class:`BatchConfig` from a named workflow template.
+
+    Any ``BatchConfig`` field may be overridden, e.g.
+    ``make_config("reunw_5", nlook=10, start_date...)``.
+    """
+    if workflow not in _WORKFLOWS:
+        raise ValueError(f"unknown workflow '{workflow}'; "
+                         f"known: {', '.join(sorted(_WORKFLOWS))}")
+    cfg = _WORKFLOWS[workflow][1]()
+    for k, v in overrides.items():
+        if not hasattr(cfg, k):
+            raise ValueError(f"'BatchConfig' has no field '{k}'")
+        setattr(cfg, k, v)
+    return cfg
+
+
+@register_workflow("standard",
+                   "standard chain 01->16 (historical batch_LiCSBAS.sh defaults)")
+def _wf_standard():
+    return BatchConfig()
+
+
+@register_workflow("reunw_5",
+                   "re-unwrapping via LiCSBAS02to05_unwrap.py, multilook 5")
+def _wf_reunw_5():
+    return BatchConfig(run_reunw=True, nlook=5)
+
+
+@register_workflow("reunw_10",
+                   "re-unwrapping via LiCSBAS02to05_unwrap.py, multilook 10")
+def _wf_reunw_10():
+    return BatchConfig(run_reunw=True, nlook=10)
+
+
+@register_workflow("reunw_20",
+                   "re-unwrapping via LiCSBAS02to05_unwrap.py, multilook 20")
+def _wf_reunw_20():
+    return BatchConfig(run_reunw=True, nlook=20)
+
+
+@register_workflow("sbovl",
+                   "SBOI chain (--sbovl options)")
+def _wf_sbovl():
+    return BatchConfig(sbovl=True)
+
+
+@register_workflow("sbovl_abs",
+                   "SBOI absolute chain (sbovl + sbovl_abs)")
+def _wf_sbovl_abs():
+    return BatchConfig(sbovl=True, sbovl_abs=True)
 
 
 # ---------------------------------------------------------------------------
@@ -514,7 +597,7 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
                 argv.append("--model")
             add("131abs", argv, note="ICCP+ESD offset, absolute SET/Iono correction (SBOI)")
         else:
-            corr = [f"--{c}" for c, on in (("--tide", cfg.p131_tide),
+            corr = [c for c, on in (("--tide", cfg.p131_tide),
                                            ("--iono", cfg.p131_iono),
                                            ("--gacos", cfg.p131_gacos)) if on]
             if corr:
@@ -703,10 +786,17 @@ def main(argv=None):
     ap = argparse.ArgumentParser(
         prog="licsbas-batch",
         description="Run the LiCSBAS processing chain in python (v3 batch). "
-                    "See licsbas.batch.BatchConfig / examples/ for the full set of options.")
-    ap.add_argument("--start", type=int, default=1, help="first step, 1-16 (default 1)")
-    ap.add_argument("--end", type=int, default=16, help="last step, 1-16 (default 16)")
-    ap.add_argument("--nlook", type=int, default=1, help="multilook factor (default 1)")
+                    "A predefined workflow template (see --list-workflows) can be "
+                    "selected with --workflow, e.g. 'reunw_5'; licsbas.batch.BatchConfig "
+                    "/ examples/ hold the full set of options.")
+    ap.add_argument("--list-workflows", action="store_true",
+                    help="show the predefined workflow templates and exit")
+    ap.add_argument("--workflow", default="standard",
+                    help="workflow template to start from "
+                         "(default: standard; choices via --list-workflows)")
+    ap.add_argument("--start", type=int, default=None, help="first step, 1-16 (overrides workflow)")
+    ap.add_argument("--end", type=int, default=None, help="last step, 1-16 (overrides workflow)")
+    ap.add_argument("--nlook", type=int, default=None, help="multilook factor (overrides workflow)")
     ap.add_argument("--n-para", type=int, default=None, help="parallel workers (default: usable CPUs)")
     ap.add_argument("--gpu", action="store_true", help="use GPU where supported")
     ap.add_argument("--check-only", action="store_true", help="print commands only")
@@ -727,15 +817,51 @@ def main(argv=None):
     ap.add_argument("--flowchart", default="", help="also write a PNG flowchart to this path")
     a = ap.parse_args(argv)
 
-    cfg = BatchConfig(
-        start_step=a.start, end_step=a.end, nlook=a.nlook,
-        n_para=a.n_para, gpu=a.gpu, check_only=a.check_only,
-        sbovl=a.sbovl, sbovl_abs=a.sbovl_abs, run_reunw=a.reunw,
-        do03op_GACOS=a.gacos or a.gacos_corr, do04op_mask=a.mask,
-        do05op_clip=a.clip, do06op_ERA5=a.era5,
-        p12_multi_prime=a.multi_prime, p12_nullify=a.nullify,
-        p131_tide=a.tide, p131_iono=a.iono,
-    )
+    if a.list_workflows:
+        print("Predefined workflow templates (pick with --workflow NAME):")
+        for name in sorted(list_workflows()):
+            print(f"  {name:<12} {list_workflows()[name]}")
+        return 0
+
+    config = make_config(a.workflow)
+    overrides = {}
+    if a.start is not None:
+        overrides["start_step"] = a.start
+    if a.end is not None:
+        overrides["end_step"] = a.end
+    if a.nlook is not None:
+        overrides["nlook"] = a.nlook
+    if a.n_para is not None:
+        overrides["n_para"] = a.n_para
+    if a.gpu:
+        overrides["gpu"] = True
+    if a.sbovl:
+        overrides["sbovl"] = True
+    if a.sbovl_abs:
+        overrides["sbovl_abs"] = True
+    if a.reunw:
+        overrides["run_reunw"] = True
+    if a.gacos or a.gacos_corr:
+        overrides["do03op_GACOS"] = True
+    if a.mask:
+        overrides["do04op_mask"] = True
+    if a.clip:
+        overrides["do05op_clip"] = True
+    if a.era5:
+        overrides["do06op_ERA5"] = True
+    if not a.multi_prime:
+        overrides["p12_multi_prime"] = False
+    if a.nullify:
+        overrides["p12_nullify"] = True
+    if a.tide:
+        overrides["p131_tide"] = True
+    if a.iono:
+        overrides["p131_iono"] = True
+    if a.gacos_corr:
+        overrides["p131_gacos"] = True
+    cfg = make_config(a.workflow, **overrides)
+    cfg.check_only = a.check_only
+
     if a.flowchart:
         save_flowchart(cfg, a.flowchart)
         print(f"[batch] flowchart written to: {a.flowchart}")

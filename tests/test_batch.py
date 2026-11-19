@@ -123,3 +123,33 @@ def test_flowchart_png(tmp_path):
     p = save_flowchart(cfg, str(out))
     assert os.path.exists(p)
     assert os.path.getsize(p) > 1000
+
+
+def test_tide_iono_corrections_call_standard_step():
+    """Tide/iono corrections must go through LiCSBAS131_corrections (the standard step),
+    not through inline `python -c` calls, and sbovl mode must add --sbovl."""
+    cfg = BatchConfig(p131_tide=True, p131_iono=True, p01_start_date="20141001")
+    steps = build_pipeline(cfg)
+    c = [s for s in steps if s.key == "131corr"]
+    assert c, "expected a 131corr step when tide/iono corrections are enabled"
+    s = c[0]
+    assert s.name == "LiCSBAS131_corrections.py"
+    assert "--tide" in s.argv and "--iono" in s.argv
+    assert "--sbovl" not in s.argv
+    assert "python" not in " ".join(s.argv) and not any(":" in a for a in s.argv[:0])
+
+    cfg_s = BatchConfig(sbovl=True, p131_tide=True, p131_iono=True)
+    s2 = [s for s in build_pipeline(cfg_s) if s.key == "131corr"][0]
+    assert "--sbovl" in s2.argv
+
+
+def test_131_corrections_step_is_importable_and_accepts_flags():
+    """Smoke check that the standard corrections step exists with the expected flags."""
+    try:
+        import licsbas.steps._131_corrections as m  # noqa: F401
+    except ModuleNotFoundError as e:
+        pytest.skip(f"optional runtime dep missing: {e}")
+    assert callable(m.main)
+    src = open(m.__file__).read()
+    for flag in ("--tide", "--iono", "--gacos", "--sbovl", "correct_cum_from_tifs"):
+        assert flag in src, f"expected {flag} in _131_corrections"
