@@ -36,7 +36,7 @@ __all__ = ["BatchConfig", "BatchStep", "build_pipeline", "run_batch",
 # Step / pipeline data structures
 # ---------------------------------------------------------------------------
 
-# legacy step id -> (module inside licsbas.steps, legacy script name for logs)
+# legacy step id -> (module inside licsbas.steps or licsbas.scripts, legacy script name for logs)
 _STEP_MODULES = {
     "01":         ("licsbas.steps._01_get_geotiff",            "LiCSBAS01_get_geotiff.py"),
     "02":         ("licsbas.steps._02_ml_prep",                "LiCSBAS02_ml_prep.py"),
@@ -54,8 +54,8 @@ _STEP_MODULES = {
     "14":         ("licsbas.steps._14_vel_std",                "LiCSBAS14_vel_std.py"),
     "15":         ("licsbas.steps._15_mask_ts",                "LiCSBAS15_mask_ts.py"),
     "16":         ("licsbas.steps._16_filt_ts",                "LiCSBAS16_filt_ts.py"),
-    "eqoffs":     ("licsbas.steps._get_eqoffsets",             "LiCSBAS_get_eqoffsets.py"),
-    "residcheck": ("licsbas.steps._resid_check",               "LiCSBAS_resid_check.py"),
+    "eqoffs":     ("licsbas.scripts._get_eqoffsets",         "LiCSBAS_get_eqoffsets.py"),
+    "residcheck": ("licsbas.scripts._resid_check",           "LiCSBAS_resid_check.py"),
 }
 
 _PHASES = {
@@ -85,7 +85,7 @@ class BatchStep:
     """One executable step of the chain."""
     key: str                 # internal key, e.g. "13" or "02to05"
     name: str                # legacy script name used for logging/flowchart
-    module: str              # licsbas.steps._XX
+    module: str              # licsbas.steps._XX or licsbas.scripts._XX
     argv: List[str]          # command line arguments (without the name)
     optional: bool = False   # True = optional step (shown grey in flowchart if off)
     note: str = ""           # extra annotation for the flowchart

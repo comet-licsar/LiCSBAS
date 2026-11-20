@@ -5,6 +5,11 @@ workflow pages. Commands are now `licsbas-*` console entry points (the legacy `L
 names still work via the installed `bin/` wrappers). Use `-h`/`--help` for the full
 option list of any command.
 
+**Package layout (v3):** numbered pipeline steps live in `licsbas/steps/`,
+and the unnumbered utility scripts in `licsbas/scripts/` (e.g. `cum2vel`,
+`disp_img`, `plot_ts`, `out2nc`, `profile`). All are exposed as `licsbas-*`
+console entry points, or run as e.g. `python -m licsbas.scripts._cum2vel`.
+
 **Name mapping (legacy → v3):**
 
 | Original (v1.x) | v3 entry point |

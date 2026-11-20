@@ -82,7 +82,7 @@ right-dragging.
 
 [<img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/LiCSBAS_plot_ts.py_demo_small.gif" alt="Demonstration Video"/>](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/LiCSBAS_plot_ts.py_demo.mp4)
 
-## `LiCSBAS_profile.py` (bin wrapper; no console entry point — run `python -m licsbas.steps._profile`)
+## `licsbas-profile` (`LiCSBAS_profile.py`)
 
 ```
 LiCSBAS_profile.py -i infile -p dempar [-r x1,y1/x2,y2] [-g lon1,lat1/lon2,lat2]

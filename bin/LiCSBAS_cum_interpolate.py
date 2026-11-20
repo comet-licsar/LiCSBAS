@@ -2,10 +2,10 @@
 """DEPRECATED wrapper for the console entry point ``licsbas-cum-interpolate``.
 
 Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
-Prefer the entry point, or ``python -m licsbas.steps._cum_interpolate``.
+Prefer the entry point, or ``python -m licsbas.scripts._cum_interpolate``.
 """
 import sys
 
-from licsbas.steps._cum_interpolate import main
+from licsbas.scripts._cum_interpolate import main
 
 sys.exit(main() or 0)

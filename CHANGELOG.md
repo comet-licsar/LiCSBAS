@@ -2,6 +2,19 @@
 
 ## [unreleased] — branch `towards-v3`
 
+### 2026-07-24 (steps/scripts split + entry points)
+- **Package layout**: unnumbered utility scripts (cum2vel, disp_img, plot_ts, out2nc,
+  profile, contour, ...) moved from `licsbas/steps/` to a new `licsbas/scripts/`
+  sub-package; `licsbas/steps/` now holds only the numbered pipeline steps (01-17).
+  `bin/` wrappers, `licsbas.batch`, `tests/`, `docs/` and `pyproject.toml` updated.
+- **Entry points completed**: previously missing `licsbas-*` console commands added
+  (`licsbas-cum2tif`, `licsbas-cum2flt`, `licsbas-cum-clip`, `licsbas-cum-interpolate`,
+  `licsbas-cum-plate-motion`, `licsbas-decompose-los`, `licsbas-detect-coreg-error`,
+  `licsbas-mask-flt`, `licsbas-profile`, `licsbas-remove-reffx-vstd`, `licsbas-reset-nulls`,
+  `licsbas-resid-check`, `licsbas-vel-plate-motion`, `licsbas-check-install`,
+  `licsbas-13-sb-inv`, `licsbas-130-remove-noloops`, `licsbas-remove-noloops`).
+  Total console entry points: 76.
+
 ### 2026-07-24 (batch usability, docs, typo fixes)
 - **Workflow templates**: `licsbas.batch` now ships named `BatchConfig` factories
   (`standard`, `reunw_5`, `reunw_10`, `reunw_20`, `sbovl`, `sbovl_abs`) via

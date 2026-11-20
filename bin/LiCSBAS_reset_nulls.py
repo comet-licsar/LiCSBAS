@@ -2,10 +2,10 @@
 """DEPRECATED wrapper for the console entry point ``licsbas-reset-nulls``.
 
 Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
-Prefer the entry point, or ``python -m licsbas.steps._reset_nulls``.
+Prefer the entry point, or ``python -m licsbas.scripts._reset_nulls``.
 """
 import sys
 
-from licsbas.steps._reset_nulls import main
+from licsbas.scripts._reset_nulls import main
 
 sys.exit(main() or 0)

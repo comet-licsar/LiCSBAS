@@ -20,7 +20,7 @@ REPO = os.path.dirname(HERE)
 # tool (licsar_extra / usgs-libcomcat) is not installed
 OK_EXIT = {
     "licsbas.steps._02to05_unwrap",
-    "licsbas.steps._get_eqoffsets",
+    "licsbas.scripts._get_eqoffsets",
     "licsbas.steps._17_plot_corrections",
 }
 
