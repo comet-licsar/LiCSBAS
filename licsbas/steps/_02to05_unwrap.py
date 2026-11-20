@@ -31,12 +31,14 @@ Outputs in GEOCmlX[GACOS][clip]:
    - yyyymmdd_yyyymmdd.unw[.png] (float32)
    - yyyymmdd_yyyymmdd.cc (uint8)
    - yyyymmdd_yyyymmdd.conncomp (uint8)
+   - [yyyymmdd_yyyymmdd.gacos.png] (if --gacos: before/after GACOS correction QC plot, 03op_GACOS style)
  - baselines (may be dummy)
  - EQA.dem_par
  - slc.mli.par
  - slc.mli[.png] (if input exists)
  - hgt[.png] (if input exists)
  - [E|N|U].geo (if input exists)
+ - [GACOS_info2.png / GACOS_info2.txt] (if --gacos: per-pair STD before/after GACOS correction)
 
 =====
 Usage
@@ -112,6 +114,110 @@ class Usage(Exception):
     """Usage context manager"""
     def __init__(self, msg):
         self.msg = msg
+
+
+#%% GACOS correction plots (standard LiCSBAS style, generated post-hoc)
+def _find_gacos_tif(gacosdir, date):
+    """Locate the sltd geo-tif for ``date`` inside a GACOS dir (a few common layouts)."""
+    cands = [
+        os.path.join(gacosdir, date + '.sltd.geo.tif'),
+        os.path.join(gacosdir, date, date + '.sltd.geo.tif'),
+        os.path.join(gacosdir, date, date + '.geo.sltd.tif'),
+    ]
+    for c in cands:
+        if os.path.exists(c):
+            return c
+    return None
+
+
+def plot_gacos_corrections(outdir, gacosdir, ml, cliparea_geo=None):
+    """Generate the standard LiCSBAS-style per-ifg GACOS correction plots
+    (``pair.gacos.png`` 3-panel before/after/difference, plus a per-ifg STD
+    before/after ``GACOS_info2.png`` / ``.txt``).
+
+    The 02to05 chain applies GACOS *during* unwrapping (inside
+    ``licsar_extra.lics_unwrap``, which exports only the corrected
+    ``pair.unw``), so the correction plots normally produced by
+    ``LiCSBAS03op_GACOS.py`` are built here post-hoc - using the exported
+    products and the same lics_unwrap helpers for multilook/clip (same grid
+    as ``pair.unw``), i.e. without modifying licsar_extra.
+    All failures are non-fatal: these are QC plots only.
+    """
+    import re
+    if unw is None:
+        print('skip GACOS correction plots: licsar_extra (lics_unwrap) not available')
+        return
+    try:
+        from licsbas import plot_lib, io_lib
+        import cmcrameri.cm as cmc
+    except ImportError as e:
+        print('skip GACOS correction plots (missing dependency: {})'.format(e))
+        return
+    parfile = os.path.join(outdir, 'slc.mli.par')
+    if not os.path.exists(parfile):
+        print('skip GACOS correction plots: '+parfile+' not found')
+        return
+    try:
+        nx = int(io_lib.get_param_par(parfile, 'range_samples'))
+        ny = int(io_lib.get_param_par(parfile, 'azimuth_lines'))
+    except Exception as e:
+        print('skip GACOS correction plots: cannot read slc.mli.par ({})'.format(e))
+        return
+
+    cycle = 3
+    cmap_wrap = cmc.romaO
+    info_rows = []
+    pairs = [d for d in sorted(os.listdir(outdir))
+             if re.fullmatch(r'\d{8}_\d{8}', d)
+             and os.path.exists(os.path.join(outdir, d, d + '.unw'))]
+    for pair in pairs:
+        e1, e2 = pair.split('_')
+        t1 = _find_gacos_tif(gacosdir, e1)
+        t2 = _find_gacos_tif(gacosdir, e2)
+        if t1 is None or t2 is None:
+            continue
+        try:
+            unwf = np.fromfile(os.path.join(outdir, pair, pair + '.unw'),
+                               dtype=np.float32).reshape(ny, nx)
+            unw_after = np.where(unwf == 0, np.nan, unwf)
+            # sltd pair-difference, multilooked (+clipped) with the *same*
+            # lics_unwrap helpers that were used internally -> same grid as pair.unw
+            dsltd = unw.load_tif2xr(t2, cliparea_geo=cliparea_geo) \
+                    - unw.load_tif2xr(t1, cliparea_geo=cliparea_geo)
+            dsltd = unw.multilook_xrda(dsltd, ml=ml, coords=('lon', 'lat')).where(dsltd != 0)
+            dsltd = dsltd.values
+            if tuple(dsltd.shape) != (ny, nx):
+                print('WARNING: pair {}: dsltd shape {} != unw {} - skipping plot'.format(
+                    pair, dsltd.shape, (ny, nx)))
+                continue
+            # 03op convention: unw_after = unw_before - dsltd  ->  before = after + dsltd
+            unw_before = unw_after + dsltd
+            std_bef = float(np.nanstd(unw_before))
+            std_aft = float(np.nanstd(unw_after))
+            rate = (std_bef - std_aft) / std_bef * 100.0 if std_bef > 0 else 0.0
+            data3 = [np.angle(np.exp(1j * (data / cycle)) * cycle)
+                     for data in (unw_before, unw_after, dsltd)]
+            title3 = ['unw_org (STD: {:.1f} rad)'.format(std_bef),
+                      'unw_cor (STD: {:.1f} rad)'.format(std_aft),
+                      'dsltd ({:.1f}% reduced)'.format(rate)]
+            pngfile = os.path.join(outdir, pair, pair + '.gacos.png')
+            plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3,
+                                 vmin=-np.pi, vmax=np.pi, cbar=False)
+            info_rows.append([pair, std_bef, std_aft, rate])
+        except Exception as ex:
+            print('WARNING: GACOS correction plot for pair {} failed: {}'.format(pair, ex))
+    if info_rows:
+        infofile = os.path.join(outdir, 'GACOS_info2.txt')
+        with open(infofile, 'w') as f:
+            f.write('pair\tstd_before_rad\tstd_after_rad\treduction_pct\n')
+            for pair, sb, sa, rt in info_rows:
+                f.write('{}\t{:.3f}\t{:.3f}\t{:.1f}\n'.format(pair, sb, sa, rt))
+        try:
+            plot_lib.plot_gacos_info2(infofile, os.path.join(outdir, 'GACOS_info2.png'),
+                                      label='GACOS correction (02to05 re-unwrapping)')
+        except Exception as ex:
+            print('WARNING: GACOS_info2.png plot failed: {}'.format(ex))
+    print('GACOS correction plots written for {}/{} pairs'.format(len(info_rows), len(pairs)))
 
 
 #%% Main
@@ -245,6 +351,15 @@ def main(argv=None):
                 lowpass = False, defomax = 0.3, dolocal = True, frame = 'dummy', specmag = True,
                 pairsetfile = None, subtract_gacos = True, export_to_tif = False,
                 keep_coh_debug = True, use_amp_coh = False, use_coh_stab = False, use_amp_stab = False, gacosdir = '../GACOS', do_landmask = do_landmask)
+    
+    #%% Generate the standard LiCSBAS-style GACOS correction plots (post-hoc,
+    #%% same style as LiCSBAS03op_GACOS), because lics_unwrap applies the
+    #%% correction internally and does not export the plots itself.
+    if gacoscorr:
+        try:
+            plot_gacos_corrections(outdir, os.path.join(workdir, 'GACOS'), ml, cliparea_geo)
+        except Exception as ex:
+            print('WARNING: GACOS correction plotting failed: {}'.format(ex))
     
     os.chdir(workdir)
     #%% Finish

@@ -10,6 +10,12 @@
 - **ERA5 step** (`licsbas/steps/_03op_era5.py`): the STD before/after panel of
   `ERA5_info2.png` no longer requires `seaborn` — new `plot_lib.plot_gacos_info2`
   (matplotlib-native hexbin correlation diagram, shared with the GACOS step).
+- **02to05 GACOS correction plots** (`licsbas/steps/_02to05_unwrap.py`): with `--gacos`, the
+  chain now also writes the standard LiCSBAS-style per-ifg correction plots
+  (`pair.gacos.png` before/after/difference, same `make_3im_png` style as
+  `LiCSBAS03op_GACOS.py`) plus `GACOS_info2.png` (STD before/after), built
+  post-hoc from the exported `pair.unw` using the same `lics_unwrap` helpers —
+  no change to licsar_extra needed. Covered by `tests/test_02to05_plots.py`.
 - `tutorial/tutorial_batch.ipynb` restructured around the workflow templates
   (all chains, incl. `reunw_5`, generated via `make_config`, with PNG flowcharts
   and the template registry).
