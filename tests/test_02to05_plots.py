@@ -9,52 +9,86 @@ import os
 import sys
 import types
 import tempfile
+import importlib.util as _iu
 
 import numpy as np
 import pytest
+
+# every sys.modules key we create ourselves, so we can remove it on teardown.
+# We must NEVER leak a fake `pandas`/`statsmodels`/... into the interpreter:
+# other test modules (and xarray, io_lib, ...) import those for real.
+_STUBBED = set()
+
+
+def _reg(name, obj):
+    sys.modules[name] = obj
+    _STUBBED.add(name)
+    return obj
 
 
 def _stub_module(name, **attrs):
     mod = types.ModuleType(name)
     for k, v in attrs.items():
         setattr(mod, k, v)
-    sys.modules[name] = mod
-    return mod
+    return _reg(name, mod)
 
 
 def _stub_package(name, submods=()):
     """Create a package stub plus optional submodules, wired together."""
-    pkg = _stub_module(name)
+    pkg = types.ModuleType(name)
     pkg.__path__ = []  # mark as package
+    _reg(name, pkg)
     for s in submods:
         full = name + "." + s
         sm = _stub_module(full, bootstrap=lambda *a, **k: None,
                           NumpyRNGContext=object, romaO="inferno", batlow="viridis")
         setattr(pkg, s, sm)
-        sys.modules[full] = sm
     return pkg
+
+
+def _installed(name):
+    try:
+        return _iu.find_spec(name) is not None
+    except Exception:
+        return False
 
 
 @pytest.fixture(scope="module")
 def _deps():
-    """Provide minimal stubs for optional deps missing in a bare environment."""
-    if "h5py" not in sys.modules:
-        _stub_module("h5py", File=object, FileID=object)
-    if "pandas" not in sys.modules:
-        _stub_module("pandas")
-    if "statsmodels" not in sys.modules:
-        _stub_package("statsmodels", submods=["api"])
-        sys.modules["statsmodels"].__version__ = "0-stub"
-    if "astropy" not in sys.modules:
-        _stub_package("astropy", submods=["stats", "utils"])
-    if "cmcrameri" not in sys.modules:
-        pkg = _stub_module("cmcrameri")
+    """Provide minimal stubs ONLY for optional deps that are genuinely absent,
+    leave real (installed) packages alone, and remove any stub we inject when
+    this module's tests are done so it never leaks into other test modules."""
+    def ensure(name, maker):
+        if name in sys.modules:
+            return  # already present (imported earlier) -> keep it
+        if _installed(name):
+            return  # installed -> use the REAL package, don't stub over it
+        maker()
+    ensure("h5py", lambda: _stub_module("h5py", File=object, FileID=object))
+    ensure("pandas", lambda: _stub_module("pandas"))
+
+    def _statsmodels():
+        p = _stub_package("statsmodels", submods=["api"])
+        p.__version__ = "0-stub"
+    ensure("statsmodels", _statsmodels)
+
+    ensure("astropy", lambda: _stub_package("astropy", submods=["stats", "utils"]))
+
+    def _cmcrameri():
+        pkg = types.ModuleType("cmcrameri")
+        _reg("cmcrameri", pkg)
         cm = _stub_module("cmcrameri.cm", romaO="inferno", batlow="viridis")
         pkg.cm = cm
+    ensure("cmcrameri", _cmcrameri)
+
     # matplotlib backend offscreen safety
     import matplotlib as mpl
     mpl.use("Agg")
     yield
+    # teardown: remove only the stubs we injected this module
+    for k in list(_STUBBED):
+        sys.modules.pop(k, None)
+    _STUBBED.clear()
 
 
 @pytest.fixture

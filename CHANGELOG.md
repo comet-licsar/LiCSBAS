@@ -2,6 +2,61 @@
 
 ## [unreleased] — branch `towards-v3`
 
+### 2026-11-12 (NISAR data access — new, optional)
+- **Fix `licsar_extra` imports** (so NISAR modules actually load): removed the
+  unused `from LiCSAR_misc import *` from `python/nisar_data.py` and made the
+  `lics_proc_tools` import fall back to the `licsar_extra` package; added the
+  NISAR-only deps (`asf_search, geopandas, shapely, pyproj, h5py, dask, rasterio,
+  requests`) to `requirements.txt` and a `licsar_extra[nisar]` extra in `setup.py`.
+- **New step `licsbas-01-get-nisar-data`** (`licsbas/steps/_01_get_nisar_data.py`):
+  search ASF for NISAR GUNW/GSLC in a LiCSBAS bbox (`-g lon1/lon2/lat1/lat2`) and
+  download the `.h5` into per-frame subfolders (via `get_frameid`). Uses the
+  `asf_search` session for the download (streamed HTTP, optional ASF
+  credentials) — **no shell `wget`**. Supports `--dry_run`; existing files are
+  skipped. The classic LiCSAR step `licsbas-get-geotiff` is untouched. Covered by
+  `tests/test_nisar_step.py` (stubbed, no network).
+- **New tool `licsbas-asf2geoc`** (`licsbas/scripts/_asf2geoc.py`): ported from
+  LiCSBAS2 — converts ASF/NIISAR pre-processed GeoTIFF product dirs into a LiCSBAS
+  `GEOC/` layout. Only the `LiCSBAS_tools_lib` import was re-targeted to
+  `licsbas.tools_lib` (graceful fallback preserved); now exposed as an entry point.
+- **New tool `licsbas-nisar2geoc`** (`licsbas/scripts/_nisar2geoc.py`): the NISAR
+  analog of `asf2geoc` but for raw NISAR GUNW `.h5`. Applies the
+  `earthquake_responder.py` corrections (removes the smooth ionospheric +
+  range-offset ramps, a 2-D quadratic ramp unless range-offsets were used, then a
+  coherence mask). Uses the **rasterio (`rio`)** WGS-84 conversion of
+  `licsar_data.py` (`rio.write_crs` → `rio.to_raster` → `gdalwarp -t_srs EPSG:4326`
+  with `COMPRESS=DEFLATE -co PREDICTOR=2 -co TILED=YES`) — not the pure-GDAL warp of
+  `asf2geoc`. **All** exported GeoTIFFs (unw/cc of every IFG + top-level E/N/U,
+  hgt, mli) are written onto a **single shared WGS-84 grid** (first product defines
+  it). Writes a LiCSBAS-standard `baselines` file (per-pair `bperp`, read by
+  `io_lib.read_bperp_file`) plus `metadata.txt` (center_time, radar_freq) in the
+  `asf2geoc` style. `-E <GSLC.h5>` for E/N/U + mli, `-D` for a DEM; `bin/LiCSBAS_nisar2geoc.py`
+  wrapper. Covered by `tests/test_nisar2geoc.py` (stubbed, no HDF5).
+- Docs: new `docs/05_nisar.md`; NISAR note + doc-table row in `README.md`.
+- Entry points: 79 (added `licsbas-01-get-nisar-data`, `licsbas-asf2geoc`, `licsbas-nisar2geoc`).
+
+### 2026-11-21 (test-suite health + matplotlib 3.10 fix)
+- **`tools_lib.get_cmap`**: the legacy `plt.cm.register_cmap('cmocean.ice', ...)`
+  rejects dotted names on matplotlib ≥ 3.5 (silently), so `plt.get_cmap()` then
+  raised. Now registers via the modern `matplotlib.colormaps.register(..., force=True)`
+  (with a legacy fallback) — cmocean / SCM / GMT / colorcet cmaps work again on
+  modern matplotlib (fixes `test_colomaps_bundled`).
+- **Test-isolation fix** (`tests/test_02to05_plots.py`): the `_deps` fixture
+  injected fake `pandas`/`statsmodels`/... into `sys.modules` and never removed them,
+  which poisoned xarray (`from pandas.errors import ...`) for every later test. It now
+  stubs only genuinely-missing deps and cleans up on teardown.
+- **Test-logic fix** (`tests/test_imports.py`): `test_entry_points_exist_and_resolve`
+  now guards `returncode != 0` before expecting a “missing optional tool” message
+  (so modules that import fine — `EP_OK` — pass even when `licsar_extra` is present).
+- Fixed a duplicate-file bug in `lisar2geoc`/download dedup (iterating over the list
+  it was just cleared) so product discovery actually works.
+- **`tutorial/tutorial.ipynb` first cell**: made it a self-contained, idempotent
+  setup cell that detects a missing **GDAL binary stack (`osgeo`, not on PyPI)** and
+  installs it from conda-forge (Colab/Binder), then `pip install licsbas[viewer]`,
+  and prompts a kernel restart if anything was installed. Previously it only
+  `import licsbas` and raised a “please pip install” message, so it failed on
+  Google Colab (the Binder equivalent was the `gdal`/`gdal-wheel` environment.yml fix).
+
 ### 2026-07-24 (steps/scripts split + entry points)
 - **Package layout**: unnumbered utility scripts (cum2vel, disp_img, plot_ts, out2nc,
   profile, contour, ...) moved from `licsbas/steps/` to a new `licsbas/scripts/`

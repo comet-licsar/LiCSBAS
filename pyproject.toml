@@ -81,6 +81,7 @@ Changelog = "https://github.com/comet-licsar/LiCSBAS/blob/main/CHANGELOG.md"
 licsbas-batch = "licsbas.batch:main"
 # Main pipeline steps (legacy names)
 licsbas-01-get-geotiff = "licsbas.steps._01_get_geotiff:main"
+licsbas-01-get-nisar-data = "licsbas.steps._01_get_nisar_data:main"   # NISAR (optional; needs licsar_extra[nisar])
 licsbas-02-ml-prep = "licsbas.steps._02_ml_prep:main"
 licsbas-02to05-unwrap = "licsbas.steps._02to05_unwrap:main"
 licsbas-03op-era5 = "licsbas.steps._03op_era5:main"
@@ -108,6 +109,8 @@ licsbas-plot-ts = "licsbas.scripts._plot_ts:main"
 licsbas-color-geotiff = "licsbas.scripts._color_geotiff:main"
 licsbas-color-geotiff2tiles = "licsbas.scripts._color_geotiff2tiles:main"
 licsbas-disp-img = "licsbas.scripts._disp_img:main"
+licsbas-asf2geoc = "licsbas.scripts._asf2geoc:cli_main"   # ASF/NISAR pre-processed tifs -> GEOC layout
+licsbas-nisar2geoc = "licsbas.scripts._nisar2geoc:cli_main"   # NISAR GUNW .h5 -> GEOC (ion/offset corr, rasterio, baselines)
 licsbas-contour = "licsbas.scripts._contour:main"
 licsbas-cum2tstxt = "licsbas.scripts._cum2tstxt:main"
 licsbas-get-value-geo = "licsbas.scripts._get_value_geo:main"

@@ -504,10 +504,17 @@ def get_cmap(cmap_name, cmapN=256):
         if cmap_name.endswith('_r'):
             _cmap = _cmap.reversed()
         try:
-            plt.cm.register_cmap(name = cmap_name, cmap = _cmap)
-        except:
-            pass
-            # print('WARNING, the colourmap was already registered - not overwriting')
+            # matplotlib >= 3.5: modern registry (accepts dotted names such as
+            # 'cmocean.ice' / 'SCM.roma'); the legacy plt.cm.register_cmap
+            # rejects dotted names and fails silently on newer matplotlib.
+            import matplotlib as _mpl
+            _mpl.colormaps.register(name=cmap_name, cmap=_cmap, force=True)
+        except Exception:
+            try:
+                plt.cm.register_cmap(name=cmap_name, cmap=_cmap)
+            except Exception:
+                pass
+                # print('WARNING, the colourmap was already registered - not overwriting')
 
     cmap = plt.get_cmap(cmap_name, cmapN)
 

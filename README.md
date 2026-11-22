@@ -15,8 +15,6 @@ LiCSBAS also contains visualization tools to interactively display the time seri
 
 [<img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/comet-lics-web.png"  height="220">](https://comet.nerc.ac.uk/COMET-LiCS-portal/) <img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/sample_vel.png"  height="220">  <img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/sample_ts.png"  height="220">
 
-<img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/LiCSBAS_plot_ts.py_demo_small.gif" alt="Demonstration Video"/>
-
 THIS IS RESEARCH CODE PROVIDED TO YOU "AS IS" WITH NO WARRANTIES OF CORRECTNESS. USE AT YOUR OWN RISK.
 
 **v3 note (2026):** LiCSBAS now ships as a proper Python package (`licsbas`) installable with `pip`
@@ -70,6 +68,10 @@ All extras are **optional** — the core pipeline works without any of them (eac
 
 `LiCSBAS_get_eqoffsets.py` (earthquake-lookup offsets) needs `usgs-libcomcat`, which we deliberately do **not** ship as an extra because its dependency chain pulls in `openquake` and a source GDAL build; install it manually only if you use that step (e.g. `mamba install -c conda-forge libcomcat` or `pip install usgs-libcomcat` on a system with GDAL already installed).
 
+**NISAR / ASF data (optional, experimental).** Optional steps ingest NISAR / ASF L2 products (see [docs/05_nisar.md](docs/05_nisar.md)):
+`licsbas-01-get-nisar-data` (search a bbox on ASF + download GUNW/GSLC `.h5` into per-frame subfolders),
+`licsbas-nisar2geoc` (convert NISAR GUNW `.h5` → LiCSBAS `GEOC/` layout: iono + range-offset corrections, rasterio WGS-84 export with a shared grid, `baselines` + `metadata.txt`), and `licsbas-asf2geoc` (convert ASF pre-processed GeoTIFF products into a `GEOC/` layout). They need the [licsar_extra](https://github.com/comet-licsar/licsar_extra) NISAR extras (`pip install licsar_extra[nisar]`) and optional ASF credentials in `~/.asf_credentials`. The classic LiCSAR download step `licsbas-get-geotiff` is unchanged.
+
 ### Running the steps
 
 Both invocation styles work and are equivalent (the legacy names run the same `main()` code as the new ones):
@@ -102,6 +104,7 @@ The main wiki pages have been ported to local markdown under [docs/](docs/) and 
 | [**02 — Workflow & quick start**](docs/02_workflow.md) | End-to-end chain (01 → 02-05 → 11–16), step-by-step command reference, `02to05` re-unwrapping, SBOI notes |
 | [**03 — Visualization**](docs/03_visualization.md) | `licsbas-disp-img`, `licsbas-plot-ts`, `licsbas-plot-network`, tiles, NetCDF export |
 | [**04 — Other tools**](docs/04_other_tools.md) | `cum2vel`, dense network, contours, COMET extras, misc. utilities |
+| [**05 — NISAR data**](docs/05_nisar.md) *(experimental)* | `licsbas-01-get-nisar-data` (search + download GUNW/GSLC), `licsbas-nisar2geoc` (NISAR GUNW → `GEOC/` + `baselines`), `licsbas-asf2geoc` (ASF GeoTIFF → `GEOC/`) |
 | [File structure](docs/file_structure.md) | Output products and per-step naming conventions (`GEOC → TS_* → results_*`) |
 | [Links](docs/links.md) | Data sources (ALOS/F3), tools (SNAPHU, GMT, ...), references, community |
 
