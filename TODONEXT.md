@@ -32,15 +32,16 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
       + `nisar_data.py` / `lics_proc_tools.py` (pushed separately in that repo).
 - [ ] End-to-end NISAR run on real GUNW `.h5` (CI tests are stubbed / no network yet).
 
-### Deferred: LiCSBAS2 bug-fix backports (standard step-02/03 route **only**)
-> These 4 (PLANS_NISAR.md Task 2) fix `_02_ml_prep` (step 02) and `_03op_gacos` (step 03) —
-> the **standard** pipeline route, *not* the `02to05` substitution route (which replaces
-> steps 02–05 and does not need them). Deferred until the NISAR work above is verified.
-> Each will add an inline comment citing the LiCSBAS2 commit/PR + a CHANGELOG line.
-- [ ] `2627e50` — `_02_ml_prep` `cc.astype(np.uint8)` on NaN → `np.clip(np.nan_to_num(cc),0,255).astype(np.uint8)` (1 line; avoids undefined cast).
-- [ ] `98cd3a8` (#174) — `_02_ml_prep` EQA.dem_par corner shifted ½ *original* pixel then spacing scaled → off by (n−1)/2 px for `-n>1` (4 sites).
-- [ ] `fcd0b6d` (#178) — `_03op_gacos` `gdal.Warp(outputBounds=centers)` off 0.5 px → pass outer edges (center ± ½ px); record grid in `sltd/sltd_grid.txt`.
-- [ ] `51f09b6` (#173) — `_02_ml_prep` radar_freq precedence `--freq` > `metadata.txt` > default (v3 ignores `metadata.txt`).
+### DONE: LiCSBAS2 bug-fix backports (standard step-02/03 route) — applied 2026-12-19
+> The 4 fixes (PLANS_NISAR.md Task 2) are now in v3, each with an inline comment
+> citing the LiCSBAS2 commit/PR + a CHANGELOG line (see 2026-12-19 changelog). The
+> **02to05 substitution route was audited and needs none of them** (no uint8 `cc`
+> cast, no par-file corner write, no `gdal.Warp` GACOS resampling, no `--freq`
+> overwrite bug). Full suite green (87 passed, 2 skipped).
+- [x] `2627e50` — `_02_ml_prep` `cc.astype(np.uint8)` on NaN → `np.clip(np.nan_to_num(cc),0,255).astype(np.uint8)` (1 line; avoids undefined cast).
+- [x] `98cd3a8` (#174) — `_02_ml_prep` EQA.dem_par corner now computed **after** `dlon/dlat` are scaled by `-n` (was off by (n−1)/2 px for `-n>1`, 4 sites).
+- [x] `fcd0b6d` (#178) — `_03op_gacos` `gdal.Warp(outputBounds=...)` now outer edges (center ± ½ px); grid recorded in `sltd/sltd_grid.txt` and mismatched existing outputs detected.
+- [x] `51f09b6` (#173) — `_02_ml_prep` radar_freq precedence `--freq` > `metadata.txt` > default + Hz sanity check + stale-par update.
 
 ## v3.1+
 - [ ] **Do NOT remove `bin/` wrappers or `bashrc_LiCSBAS.sh`** — user requirement,

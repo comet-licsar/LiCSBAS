@@ -2,6 +2,47 @@
 
 ## [unreleased] — branch `towards-v3`
 
+### 2026-12-19 (backport of 4 LiCSBAS2 bug fixes into the v3 step-02/03 route)
+Backported four concrete, low-risk fixes from the `LiCSBAS2` repo (each cited
+inline in the code). The 02to05 reunw route was audited and needs **none** of
+them (see below). Full suite still green (87 passed, 2 skipped).
+- **`_02_ml_prep.py`: uint8 cast of coherence (`2627e50` #169)** — `cc.astype(
+  np.uint8)` cast a residual NaN to an integer (undefined behaviour; a
+  `RuntimeWarning` on numpy≥1.24). Now `np.clip(np.nan_to_num(cc), 0, 255)
+  .astype(np.uint8)`.
+- **`_02_ml_prep.py`: `EQA.dem_par` corner (`98cd3a8` #174)** — the grid corner
+  `lon_w_g = lon_w_p + dlon/2` used the **unscaled** pixel and got scaled only
+  `dlon` afterwards, so for `nlook>1` the corner was off by `(nlook−1)/2`
+  original pixels (a `GEOCml{n*}` grid that didn't tile under it). The corner is
+  now computed **after** `dlon/dlat` are scaled by `nlook`, at all four sites
+  (ifg / sbovl / else / fallback). `EQA.dem_par` is only written when missing,
+  so existing `GEOCml*` should be regenerated.
+- **`_02_ml_prep.py`: radar frequency (`51f09b6` #173)** — precedence is now
+  `--freq` > `radar_freq` in `GEOC/metadata.txt` > Sentinel-1 default, with a
+  warning on `--freq`/metadata mismatch and an Hz-range sanity check; an
+  existing `slc.mli.par` with a stale `radar_frequency` is updated when `--freq`
+  is given. (For Sentinel-1 `5.405e9` the behaviour is unchanged; for L-band
+  datasets the frequency is no longer silently wrong.)
+- **`_03op_gacos.py`: GACOS resampled grid (`fcd0b6d` #178)** — `gdal.Warp(
+  outputBounds=...)` was given the pixel **corners** instead of the **outer
+  edges**, shrinking the output grid by one pixel (delays ±0.5 px off at the
+  edges, and `no_gacos_ifg.txt` could drop the first image in one pass). Now
+  expands by half a pixel. `licsbas-03op-ERA5`'s `gdal.Warp` call already
+  passes outer edges and was left unchanged. A `sltd_grid.txt` grid record is
+  written so that outputs made on a different grid (by a build with the shrunk
+  grid, or before `EQA.dem_par` was fixed) are caught and the user is told to
+  remove them, since existing outputs are not re-created — this matters because
+  `03op` and `04` leave existing `unw`/`corr` files in place.
+- **Audited `_02to05_unwrap.py`**: it needs **none** of the four fixes — it has no
+  uint8 `cc` cast, writes no `slc.mli.par`/`EQA.dem_par` corner (those come from
+  step 02, now fixed), does no `gdal.Warp` GACOS resampling, and its `--freq` is
+  only ever set by the flag (no overwrite bug, unlike step 02). No changes made there.
+
+> **LiCSBAS2 backport status:** the four concrete bug fixes above are now in v3.
+> Deferred (features, not bug fixes, to be taken on their own merits): `--keep_ifg_list`,
+> optional `04 vstd`/`vstd`/`vel`, 04 LP linear-fit, NISAR sign flip, `sweets2geoc`
+> / `align_geoc`.
+
 ### 2026-11-12 (NISAR data access — new, optional)
 - **Fix `licsar_extra` imports** (so NISAR modules actually load): removed the
   unused `from LiCSAR_misc import *` from `python/nisar_data.py` and made the
