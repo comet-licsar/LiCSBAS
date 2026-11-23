@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the console entry point ``licsbas-cum2tif``.
+"""Legacy wrapper for the console entry point ``licsbas-cum2tif``.
 
 Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
 Prefer the entry point, or ``python -m licsbas.scripts._cum2tif``.

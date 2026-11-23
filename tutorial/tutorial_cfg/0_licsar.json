@@ -1,0 +1,42 @@
+{
+  "title": "LiCSBAS Module 0 (LiCSAR data): dataset preparation, steps 0-1 \u2192 0-5 (with 02to05 alternative)",
+  "clusters": [
+    {
+      "label": "Step 0-1: download LiCSAR data",
+      "steps": [
+        {"name": "LiCSBAS01_get_geotiff.py",
+         "details": "-f <frame> [-s/-e dates] [--get_gacos] [--get_pha --get_mli for 02to05]",
+         "note": "in the tutorial: already done (the tutorial data are pre-downloaded)"}
+      ]
+    },
+    {
+      "label": "Steps 0-2 \u2192 0-5: standard route (data already unwrapped)",
+      "steps": [
+        {"name": "LiCSBAS02_ml_prep.py",
+         "details": "-i GEOC -o GEOCml<n> -n <n>",
+         "note": "convert to LiCSBAS formats + multilook; writes slc.mli.par / EQA.dem_par"},
+        {"name": "LiCSBAS03op_GACOS.py",
+         "details": "-i GEOCml<n> -o GEOCml<n>GACOS -g GACOS --fillhole",
+         "active": false,
+         "note": "optional - GACOS tropospheric correction (needs 0-1 with --get_gacos)"},
+        {"name": "LiCSBAS04op_mask_unw.py",
+         "details": "-i ... -o ...mask [-c thre_avg -s thre_ifg -r range]",
+         "active": false,
+         "note": "optional - mask low-coherence / unwrapping-error areas"},
+        {"name": "LiCSBAS05op_clip_unw.py",
+         "details": "-i ... -o ...clip -g lon1/lon2/lat1/lat2",
+         "active": false,
+         "note": "optional - spatial clipping around the AOI"}
+      ]
+    },
+    {
+      "label": "Alternative route (substitutes steps 0-2 \u2192 0-5)",
+      "steps": [
+        {"name": "LiCSBAS02to05_unwrap.py",
+         "details": "-i WORKdir -M <n> [--gacos] [--hgtcorr] [--cascade] [--filter gold|gauss|adf] [-g lon1/lon2/lat1/lat2]",
+         "alt": true,
+         "note": "re-unwrapping: starts from the WRAPPED phase (0-1 with --get_pha) and performs 0-2..0-5 in one go"}
+      ]
+    }
+  ]
+}

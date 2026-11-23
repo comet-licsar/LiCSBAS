@@ -2,6 +2,20 @@
 
 ## [unreleased] — branch `towards-v3`
 
+### 2026-12-19 (tutorial & documentation restructure; flowcharts; NISAR batch template)
+**Tutorial** — the monolithic `tutorial/tutorial.ipynb` is kept as the *master single-file template*, and four composed tutorials are published from it (`tutorial/build_notebooks.py` re-generates them):
+- `tutorial_0.ipynb` — **Module 0, LiCSAR data** (steps `0-1` → `0-5`), **plus a new ``02to05_unwrap`` alternative-route cell** that explains the *re-unwrapping* option (starts from the **wrapped** phase, does the unwrapping itself, and **substitutes steps `0-2` → `0-5`**).
+- `tutorial_0_nisar.ipynb` — **Module 0, NISAR data** (experimental): `licsbas-01-get-nisar-data` (ASF search + GUNW/GSLC download) → `licsbas-nisar2geoc` (→ `GEOC/`, shared WGS-84 grid, `baselines`, `metadata.txt`; `--no_iono`/`--no_offsets`/`-D`) → the *same* steps `0-2` → `0-5`. The `licsbas-asf2geoc` (GeoTIFF) alternative is called out.
+- `tutorial_0_sbovl.ipynb` — **SBOVNL (SBOI)** chain: steps `0-1` → `1-6` all with `--sbovl` (and the `--sbovl_abs` flavour), incl. the forced `120_choose_reference` and the skipped classic loop-closure `12`.
+- `tutorial_1.ipynb` — **Module 1: time series**, steps `11` → `16` + viewers/exports (data-source agnostic; works on any Module-0 output). All four are cross-linked so a Binder session can jump between them in the same session, and each has fresh Binder + Colab badges.
+- All four are `nbformat` 4.5 valid and their shared setup cell was smoke-tested on `nbconvert --execute` (idempotent, no hard GDAL/pip install on a ready env).
+
+**Flowcharts** — new **PNG flowcharts**, rendered with Graphviz `dot` (landscape `LR` by default, portrait `TB` for the long SBOVNL chain), shown **just before the first script** of each notebook: `tutorial/0_licsar.png`, `0_nisar.png`, `0_sbovl.png`, `1_ts.png`. Configs live in `tutorial/tutorial_cfg/*.json`; regenerate with `python3 tutorial/make_flowchart.py` (no new Python dep — shells out to `dot`). `licsbas/flowchart.py` gained a `rankdir` argument, **alternative-route styling** (amber node + dashed edge from the divergence point + “(alternative route)” tag) and a `--flowchart-landscape` flag on `licsbas-batch`.
+
+**Batch / docs** — added `examples/example_4_nisar.py`, a ready-to-adapt **NISAR GUNW** batch template (dry-run by default; `--execute` to run; `--gslc`, `--bbox`, `--no-iono/--no-offsets`, `--dem`, `--cc-thre`, …), completing the `standard` / `reunw_02to05` / `sbovl` / `nisar` template set. `README.md` is now minimal (installation detail moved to `docs/01_installation.md`) with a tutorials table (Binder + Colab per notebook); Badge/links point at the `towards-v3` branch until v3 lands on `main`.
+
+**`bin/` wrappers** — the `"DEPRECATED wrapper …"` banner was removed from all 55 `bin/*.py` legacy wrappers (reworded to `"Legacy wrapper for the console entry point …"`); they remain the supported traditional PATH-based CLI.
+
 ### 2026-12-19 (backport of 4 LiCSBAS2 bug fixes into the v3 step-02/03 route)
 Backported four concrete, low-risk fixes from the `LiCSBAS2` repo (each cited
 inline in the code). The 02to05 reunw route was audited and needs **none** of

@@ -1,0 +1,118 @@
+{
+  "title": "LiCSBAS SBOVNL (SBOI) chain: steps 0-1 → 1-6 processed with --sbovl",
+  "clusters": [
+    {
+      "label": "Step 0-1: download SBOVNL data",
+      "steps": [
+        {
+          "name": "LiCSBAS01_get_geotiff.py",
+          "details": "-f <frame> --sbovl [--get_iono] [--get_tides]",
+          "note": "downloads (s)bovl data (and azi iono/tides if selected)"
+        }
+      ]
+    },
+    {
+      "label": "Step 0-2: multilook the SBOVNL data",
+      "steps": [
+        {
+          "name": "LiCSBAS02_ml_prep.py",
+          "details": "-i GEOC -o GEOC_BOVL_ml<n> -n <n> --sbovl",
+          "note": "multilooking on (s)bovl data; recommend -o GEOC_BOVL_ml<n>"
+        }
+      ]
+    },
+    {
+      "label": "Optional steps 0-3 → 0-5",
+      "steps": [
+        {
+          "name": "LiCSBAS03op_GACOS.py",
+          "details": "--fillhole",
+          "active": false,
+          "note": "optional"
+        },
+        {
+          "name": "LiCSBAS04op_mask_unw.py",
+          "details": "mask low-coherence areas",
+          "active": false,
+          "note": "optional"
+        },
+        {
+          "name": "LiCSBAS05op_clip_unw.py",
+          "details": "-g lon1/lon2/lat1/lat2",
+          "active": false,
+          "note": "optional"
+        }
+      ]
+    },
+    {
+      "label": "Time series: steps 1-1 → 1-6 with --sbovl",
+      "steps": [
+        {
+          "name": "LiCSBAS11_check_unw.py",
+          "details": "-d GEOC_BOVL_ml<n> -t TS_... --sbovl"
+        },
+        {
+          "name": "LiCSBAS120_choose_reference.py",
+          "details": "--sbovl",
+          "note": "used automatically in the sbovl chain (different re-referencing)"
+        },
+        {
+          "name": "LiCSBAS12_loop_closure.py",
+          "details": "-d ... -t ...",
+          "active": false,
+          "note": "skipped when sbovl is active"
+        },
+        {
+          "name": "LiCSBAS13_sb_inv.py",
+          "details": "-d ... -t ... --sbovl [--sbovl_abs]",
+          "note": "sbovl inversion (mm + coherence values)"
+        }
+      ]
+    },
+    {
+      "label": "Optional: SBOI absolute & corrections",
+      "steps": [
+        {
+          "name": "LiCSBAS131_boi_absolute.py",
+          "details": "ICC+ESD offset, absolute SET/Iono correction",
+          "active": false,
+          "note": "only when --sbovl-abs (close referencing)"
+        },
+        {
+          "name": "LiCSBAS131_corrections.py",
+          "details": "-t TS_... [--tide] [--iono] [--gacos] --sbovl",
+          "active": false,
+          "note": "optional post-13 tide/iono/gacos corrections"
+        }
+      ]
+    },
+    {
+      "label": "Steps 1-4 → 1-6 (with --sbovl)",
+      "steps": [
+        {
+          "name": "LiCSBAS14_vel_std.py",
+          "details": "-t TS_... --sbovl"
+        },
+        {
+          "name": "LiCSBAS15_mask_ts.py",
+          "details": "-t TS_... --sbovl [-c -u -v -T -g -s -i -l]"
+        },
+        {
+          "name": "LiCSBAS16_filt_ts.py",
+          "details": "-t TS_... --sbovl [-r <n>] [--hgt_linear]"
+        }
+      ]
+    },
+    {
+      "label": "Viewer & export (final)",
+      "steps": [
+        {
+          "name": "licsbas-plot-ts / licsbas-out2nc",
+          "details": "interactive plot-ts; NetCDF datacube; pygmt / pylight viewers",
+          "note": "see also licsbas-flt2geotiff for a GeoTIFF velocity map"
+        }
+      ]
+    }
+  ],
+  "rankdir": "TB"
+}

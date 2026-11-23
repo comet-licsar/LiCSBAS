@@ -43,6 +43,17 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 - [x] `fcd0b6d` (#178) — `_03op_gacos` `gdal.Warp(outputBounds=...)` now outer edges (center ± ½ px); grid recorded in `sltd/sltd_grid.txt` and mismatched existing outputs detected.
 - [x] `51f09b6` (#173) — `_02_ml_prep` radar_freq precedence `--freq` > `metadata.txt` > default + Hz sanity check + stale-par update.
 
+### DONE: tutorial & documentation restructure — 2026-12-19
+- [x] `tutorial.ipynb` kept as **master single-file template** (marked as such in its title cell); the published tutorials are now composed from it:
+      - [x] `tutorial/tutorial_0.ipynb` — Module 0, LiCSAR data (steps `0-1` → `0-5`) **+ the `02to05_unwrap` alternative-route cell** (starts from the *wrapped* phase and substitutes steps `0-2` → `0-5`).
+      - [x] `tutorial/tutorial_0_nisar.ipynb` — Module 0, NISAR data (`licsbas-01-get-nisar-data` → `licsbas-nisar2geoc` (+ `licsbas-asf2geoc` alternative) → steps `0-2` → `0-5`).
+      - [x] `tutorial/tutorial_0_sbovl.ipynb` — SBOVNL (SBOI) chain, steps `0-1` → `1-6` all with `--sbovl`.
+      - [x] `tutorial/tutorial_1.ipynb` — Module 1: time series, steps `11` → `16` + viewers/exports (works from Binder *and* Colab; cross-linked with the Module-0 notebooks in the same session).
+- [x] **PNG flowcharts** (landscape, Graphviz `dot`; the long SBOVNL chain is portrait): `tutorial/0_licsar.png`, `0_nisar.png`, `0_sbovl.png`, `1_ts.png`, shown just before the first script of each notebook. Regenerate with `python3 tutorial/make_flowchart.py` (configs in `tutorial/tutorial_cfg/*.json`).
+- [x] `licsbas/flowchart.py`: `rankdir` parameter (TB/LR) + **alt-route styling** (amber nodes, dashed edge from the divergence point, "(alternative route)" tag) + `--flowchart-landscape` in `licsbas-batch`.
+- [x] `examples/example_4_nisar.py` — NISAR GUNW batch template (dry-run by default; `--execute` to run), completing the standard / reunw / sbovl / nisar template set (`licsbas-batch --list-workflows` already had `nisar`).- [x] README: slimmed (installation detail → `docs/01_installation.md`), tutorials table with Binder + Colab badges for all four split notebooks (+ bash-compatible + batch tutorials); badge/links point at the `towards-v3` branch until v3 lands on `main`.
+- [x] `bin/` wrappers: removed the `"DEPRECATED"` banner from **all 55** `bin/*.py` (docstring now reads `"Legacy wrapper for the console entry point \u0060\u0060…\u0060\u0060"`). They remain the supported traditional PATH-based CLI (user requirement).
+
 ## v3.1+
 - [ ] **Do NOT remove `bin/` wrappers or `bashrc_LiCSBAS.sh`** — user requirement,
       they keep the traditional PATH-based workflow (already decided, kept in 3.0.0).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the console entry point ``licsbas-vel-plate-motion``.
+"""Legacy wrapper for the console entry point ``licsbas-vel-plate-motion``.
 
 Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
 Prefer the entry point, or ``python -m licsbas.scripts._vel_plate_motion``.

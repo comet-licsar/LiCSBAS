@@ -56,6 +56,10 @@ _STEP_MODULES = {
     "16":         ("licsbas.steps._16_filt_ts",                "LiCSBAS16_filt_ts.py"),
     "eqoffs":     ("licsbas.scripts._get_eqoffsets",         "LiCSBAS_get_eqoffsets.py"),
     "residcheck": ("licsbas.scripts._resid_check",           "LiCSBAS_resid_check.py"),
+    # NISAR data-access route (alternative to the LiCSAR step-01 download)
+    "01nisar":    ("licsbas.steps._01_get_nisar_data",        "LiCSBAS01_get_NISAR_data.py"),
+    "nisar2geoc": ("licsbas.scripts._nisar2geoc",             "LiCSBAS_nisar2geoc.py"),
+    "asf2geoc":   ("licsbas.scripts._asf2geoc",               "LiCSBAS_asf2geoc.py"),
 }
 
 _PHASES = {
@@ -77,6 +81,9 @@ _PHASES = {
     "14": "Velocity, masking & filtering (steps 14-16)",
     "15": "Velocity, masking & filtering (steps 14-16)",
     "16": "Velocity, masking & filtering (steps 14-16)",
+    "01nisar": "NISAR data access (01-nisar)",
+    "nisar2geoc": "GEOC conversion (nisar2geoc)",
+    "asf2geoc": "GEOC conversion (asf2geoc)",
 }
 
 
@@ -133,6 +140,27 @@ class BatchConfig:
     p02to05_thres: str = ""              # default 0.35
     p02to05_cliparea_geo: str = ""       # e.g. 130.11/131.12/34.34/34.6
     p02to05_op_GEOCdir: str = ""         # default: GEOC
+
+    # --- NISAR data access (alternative to the LiCSAR step-01 download) ---
+    # When enabled, LiCSAR step 01 is replaced by:
+    #   01nisar  = licsbas-01-get-nisar-data (ASF search + download of GUNW/GSLC .h5)
+    #   nisar2geoc = licsbas-nisar2geoc (.h5 -> LiCSBAS GEOC/ layout, iono+offsets
+    #                corrected, shared WGS-84 grid, baselines + metadata.txt)
+    # Steps 02-16 then run exactly as for LiCSAR data.
+    use_nisar: bool = False
+    pNISAR_bbox: str = ""                # -g  lon1/lon2/lat1/lat2 (needed if use_nisar)
+    pNISAR_type: str = "GUNW"            # -t  GUNW (ifgs) or GSLC
+    pNISAR_start_date: str = ""          # -s  yyyymmdd (default 20250101)
+    pNISAR_end_date: str = ""            # -e  yyyymmdd (default today)
+    pNISAR_outdir: str = ""              # -o  (default ./NISAR_<type>)
+    pNISAR_max: str = ""                 # --max scenes (default 500)
+    pNISAR_gslc: str = ""                # GSLC .h5 for nisar2geoc -E (E/N/U + mli)
+    nisar2geoc_freq: str = ""            # nisar2geoc -f A|B (empty = keep scene's band)
+    nisar2geoc_cc_thre: str = "0.5"      # nisar2geoc -t coherence mask threshold
+    nisar2geoc_no_iono: bool = False     # --no_iono
+    nisar2geoc_no_offsets: bool = False  # --no_offsets
+    nisar2geoc_no_deramp_quad: bool = False  # --no_deramp_quad
+    nisar2geoc_download_dem: bool = False    # -D (try to fetch a NISAR DEM)
 
     # --- optional steps 03-06 ---------------------------------------------
     order_op03_05: List[int] = field(default_factory=lambda: [3, 4, 5, 6])
@@ -345,6 +373,17 @@ def _wf_sbovl_abs():
     return BatchConfig(sbovl=True, sbovl_abs=True)
 
 
+@register_workflow("nisar",
+                   "NISAR chain: 01-get-nisar-data + nisar2geoc -> 02-05 -> 11-16 "
+                   "(set pNISAR_bbox!)")
+def _wf_nisar():
+    return BatchConfig(
+        use_nisar=True,
+        nlook=10,
+        # pNISAR_bbox="14.00/14.25/40.75/40.95",   # e.g. Campi Flegrei - set to your AOI
+    )
+
+
 # ---------------------------------------------------------------------------
 # Pipeline construction
 # ---------------------------------------------------------------------------
@@ -373,7 +412,7 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
                                phase=_PHASES[key]))
 
     # ---------------- step 01 ----------------
-    if start <= 1 <= end:
+    if start <= 1 <= end and not cfg.use_nisar:
         argv: List[str] = []
         _add(argv, "-f", cfg.p01_frame)
         _add(argv, "-s", cfg.p01_start_date)
@@ -401,6 +440,37 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
         if cfg.p01_skip_unw:
             argv.append("--skip_unw")
         add("01", argv, note="reunw: also downloads pha & mli" if cfg.run_reunw else "")
+
+    # ---------------- NISAR data access (alternative to step 01) ------------
+    if cfg.use_nisar and start <= 1 <= end:
+        if not cfg.pNISAR_bbox:
+            print("WARNING: use_nisar is set but pNISAR_bbox (-g lon1/lon2/lat1/lat2) "
+                  "is empty; the search will have no search area.", flush=True)
+        argv: List[str] = []
+        if cfg.pNISAR_bbox:
+            argv += ["-g", cfg.pNISAR_bbox]
+        _add(argv, "-t", cfg.pNISAR_type)
+        _add(argv, "-s", cfg.pNISAR_start_date)
+        _add(argv, "-e", cfg.pNISAR_end_date)
+        _add(argv, "-o", cfg.pNISAR_outdir)
+        _add(argv, "--max", cfg.pNISAR_max)
+        add("01nisar", argv, note="ASF search + NISAR GUNW/GSLC .h5 download")
+
+        argv = []
+        _add(argv, "-f", cfg.nisar2geoc_freq)
+        _add(argv, "-t", cfg.nisar2geoc_cc_thre)
+        if cfg.pNISAR_gslc:
+            argv += ["-E", cfg.pNISAR_gslc]
+        if cfg.nisar2geoc_download_dem:
+            argv.append("-D")
+        if cfg.nisar2geoc_no_iono:
+            argv.append("--no_iono")
+        if cfg.nisar2geoc_no_offsets:
+            argv.append("--no_offsets")
+        if cfg.nisar2geoc_no_deramp_quad:
+            argv.append("--no_deramp_quad")
+        add("nisar2geoc", argv,
+            note="NISAR .h5 -> GEOC (iono+range-offset corrected, shared grid, baselines)")
 
     # ---------------- step 02 / 02to05 ----------------
     if cfg.run_reunw:
@@ -759,10 +829,13 @@ def run_batch(cfg: BatchConfig, dry_run: Optional[bool] = None) -> int:
 # ---------------------------------------------------------------------------
 
 def save_flowchart(cfg: BatchConfig, out_png: str,
-                   title: str = "LiCSBAS processing chain (python batch)") -> str:
+                   title: str = "LiCSBAS processing chain (python batch)",
+                   rankdir: str = "TB") -> str:
     """Write a PNG flowchart of the chain to ``out_png``.
 
-    Uses :mod:`licsbas.flowchart`, which requires the Graphviz ``dot`` binary.
+    ``rankdir``: "TB" (default, vertical) or "LR" (landscape - better for
+    embedding in notebooks/documents). Uses :mod:`licsbas.flowchart`, which
+    requires the Graphviz ``dot`` binary.
     """
     from licsbas.flowchart import FlowStep, render_flowchart
 
@@ -774,7 +847,7 @@ def save_flowchart(cfg: BatchConfig, out_png: str,
             cmd = cmd[:77] + "..."
         fs.append(FlowStep(name=s.name, details=cmd, active=active,
                            phase=s.phase, note=s.note))
-    return render_flowchart(fs, out_png, title=title)
+    return render_flowchart(fs, out_png, title=title, rankdir=rankdir)
 
 
 # ---------------------------------------------------------------------------
@@ -802,6 +875,14 @@ def main(argv=None):
     ap.add_argument("--check-only", action="store_true", help="print commands only")
     ap.add_argument("--sbovl", action="store_true", help="SBOI/SBOVL chain (--sbovl options)")
     ap.add_argument("--sbovl-abs", action="store_true", help="SBOI absolute (close referencing, ICC+ESD, abs corr)")
+    ap.add_argument("--nisar", action="store_true",
+                    help="NISAR data access: 01-get-nisar-data + nisar2geoc instead of step 01")
+    ap.add_argument("--nisar-bbox", dest="nisar_bbox", default="",
+                    help="NISAR bbox lon1/lon2/lat1/lat2 (with --nisar)")
+    ap.add_argument("--nisar-type", dest="nisar_type", default="GUNW",
+                    choices=["GUNW", "GSLC"], help="NISAR product type (default GUNW)")
+    ap.add_argument("--nisar-gslc", dest="nisar_gslc", default="",
+                    help="GSLC .h5 passed to nisar2geoc -E (E/N/U + mli)")
     ap.add_argument("--reunw", action="store_true", help="use LiCSBAS02to05_unwrap.py (re-unwrapping workflow)")
     ap.add_argument("--gacos", action="store_true", help="enable optional GACOS step (03op)")
     ap.add_argument("--mask", action="store_true", help="enable optional unw masking step (04op)")
@@ -815,6 +896,8 @@ def main(argv=None):
     ap.add_argument("--gacos-corr", action="store_true", dest="gacos_corr",
                     help="post-13 gacos corrections")
     ap.add_argument("--flowchart", default="", help="also write a PNG flowchart to this path")
+    ap.add_argument("--flowchart-landscape", action="store_true",
+                    help="draw the flowchart left-to-right (landscape)")
     a = ap.parse_args(argv)
 
     if a.list_workflows:
@@ -839,6 +922,15 @@ def main(argv=None):
         overrides["sbovl"] = True
     if a.sbovl_abs:
         overrides["sbovl_abs"] = True
+    if a.nisar:
+        overrides["use_nisar"] = True
+    # NISAR search params apply with BOTH --nisar and --workflow nisar
+    if a.nisar_bbox:
+        overrides["pNISAR_bbox"] = a.nisar_bbox
+    if a.nisar_type and a.nisar_type.lower() != "gunw":
+        overrides["pNISAR_type"] = a.nisar_type
+    if a.nisar_gslc:
+        overrides["pNISAR_gslc"] = a.nisar_gslc
     if a.reunw:
         overrides["run_reunw"] = True
     if a.gacos or a.gacos_corr:
@@ -863,7 +955,7 @@ def main(argv=None):
     cfg.check_only = a.check_only
 
     if a.flowchart:
-        save_flowchart(cfg, a.flowchart)
+        save_flowchart(cfg, a.flowchart, rankdir="LR" if a.flowchart_landscape else "TB")
         print(f"[batch] flowchart written to: {a.flowchart}")
     return run_batch(cfg)
 

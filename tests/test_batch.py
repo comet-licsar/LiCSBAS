@@ -57,6 +57,35 @@ def test_sbovl_abs_chain():
     assert "--sbovl_abs" in s13.argv
 
 
+def test_nisar_chain():
+    cfg = BatchConfig(use_nisar=True, nlook=10,
+                      pNISAR_bbox="14.00/14.25/40.75/40.95")
+    steps = build_pipeline(cfg)
+    k = keys(steps)
+    # the LiCSAR step-01 download is replaced by the NISAR data-access pair
+    assert "01" not in k
+    assert "01nisar" in k
+    assert "nisar2geoc" in k
+    # steps 02-16 run exactly as for LiCSAR data
+    assert "02" in k
+    for sk in ("11", "12", "13", "14", "15", "16"):
+        assert sk in k
+    s01n = next(s for s in steps if s.key == "01nisar")
+    assert "-g" in s01n.argv and "14.00/14.25/40.75/40.95" in s01n.argv
+    assert "-t" in s01n.argv and "GUNW" in s01n.argv
+    sng = next(s for s in steps if s.key == "nisar2geoc")
+    assert "-t" in sng.argv  # coherence threshold (default 0.5)
+    assert "--sbovl" not in sng.argv
+
+    # GSLC / correction overrides flow through
+    cfg2 = BatchConfig(use_nisar=True, pNISAR_bbox="1/2/3/4", pNISAR_gslc="G/h5",
+                       nisar2geoc_no_iono=True, nisar2geoc_download_dem=True)
+    st2 = build_pipeline(cfg2)
+    sng2 = next(s for s in st2 if s.key == "nisar2geoc")
+    assert "-E" in sng2.argv and "G/h5" in sng2.argv
+    assert "-D" in sng2.argv and "--no_iono" in sng2.argv
+
+
 def test_reunw_chain():
     cfg = BatchConfig(run_reunw=True, nlook=20)
     steps = build_pipeline(cfg)
