@@ -115,8 +115,8 @@ def _dem_array(cube, dem_file=None):
                     continue
     if dem_file:
         try:
-            import xarray as xr
-            return xr.open_rasterio(dem_file).squeeze()  # needs rioxarray installed
+            import rioxarray
+            return rioxarray.open_rasterio(dem_file).squeeze()  # needs rioxarray installed
         except Exception:
             return None
     return None
@@ -417,7 +417,11 @@ def pylight_plot_interactive(
                 lo, hi = (-1, 1) if finite.size == 0 else (float(finite.min()), float(finite.max()))
         ax2.plot(t, y, color='#1f4e79', lw=1.4, zorder=3)
         ax2.set_title('%.3f, %.3f' % (lonc, latc), fontsize=11)
-        ax2.set_ylabel(label, fontsize=9)
+        if 'unit' in cube[dts].attrs.keys():
+            ylabel = cube[dts]['unit']
+        else:
+            ylabel = 'mm'
+        ax2.set_ylabel(ylabel, fontsize=9)
         ax2.set_xlabel('date', fontsize=9)
         ax2.set_ylim(lo, hi)
         ax2.grid(True, which='major', alpha=0.3)
