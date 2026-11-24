@@ -98,7 +98,7 @@ except:
         print('ERROR: lics_unwrap library not found.')
         print('please install from https://github.com/comet-licsar/licsar_extra')
         print('e.g.:')
-        print('pip install git+git://github.com/comet-licsar/licsar_extra.git#egg=licsar_extra')
+        print('pip install git+https://github.com/comet-licsar/licsar_extra')
         sys.exit()
 
 
