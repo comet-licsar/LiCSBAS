@@ -354,12 +354,10 @@ def _wf_reunw_5():
 def _wf_reunw_10():
     return BatchConfig(run_reunw=True, nlook=10)
 
-
-@register_workflow("reunw_20",
-                   "re-unwrapping via LiCSBAS02to05_unwrap.py, multilook 20")
-def _wf_reunw_20():
-    return BatchConfig(run_reunw=True, nlook=20)
-
+@register_workflow("reunw_cascade",
+                   "re-unwrapping via LiCSBAS02to05_unwrap.py, cascading towards multilook 1")
+def _wf_reunw_cascade():
+    return BatchConfig(run_reunw=True, nlook=1, p02to05_cascade=True)
 
 @register_workflow("sbovl",
                    "SBOI chain (--sbovl options)")
