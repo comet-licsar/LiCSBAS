@@ -17,21 +17,6 @@ LiCSBAS also contains visualization tools to interactively display the time seri
 
 THIS IS RESEARCH CODE PROVIDED TO YOU "AS IS" WITH NO WARRANTIES OF CORRECTNESS. USE AT YOUR OWN RISK.
 
-## Installation via pip
-
-LiCSBAS can be installed with `pip` (Python >= 3.10 required):
-
-```bash
-# directly from the repository
-pip install 'git+https://github.com/comet-licsar/LiCSBAS.git'
-
-# or from a checkout of the repository (or a release tarball)
-# pip install .
-```
-
-**GDAL** (Python bindings) is expected to be provided by your OS/distribution or conda and is *not* installed by pip,
-e.g. `conda install -c conda-forge gdal` or `sudo apt install python3-gdal` (see `apt.txt`).
-
 ## Recommended installation
 
 Our recommendation is to use Linux OS or UNIX in general, but MobaXterm should allow installation on Windows if really needed.
@@ -45,16 +30,32 @@ With [(micro)mamba](https://mamba.readthedocs.io/en/latest/installation/micromam
 # "${SHELL}" <(curl -L micro.mamba.pm)  # to install micromamba
 micromamba env create -f environment.yml
 micromamba activate licsbas
-# micromamba env update -n licsbas -f environment_optional.yml   # to add the optional extras
 # pip install git+https://github.com/comet-licsar/licsar_extra.git  # easiest way to install extra tools for reunwrapping and iono/tide corrections
+# micromamba env update -n licsbas -f environment_optional.yml   # to add other optional extras (see below)
 ```
 Afterwards, you need to set path prior to using LiCSBAS commands using:
 ```bash
 ./bashrc_LiCSBAS.sh
-# LiCSBAS_check_install.py # to check if installation ran ok 
+LiCSBAS_check_install.py # to check if installation ran ok 
 ```
 
-### Optional extras
+
+## Alternative installation via pip
+
+LiCSBAS can be directly installed with `pip` (Python >= 3.10 required):
+
+```bash
+# directly from the repository
+pip install 'git+https://github.com/comet-licsar/LiCSBAS.git'
+
+# or from a checkout of the repository (or a release tarball)
+# pip install .
+```
+
+However, **GDAL** (Python bindings) is expected to be provided by your OS/distribution or conda and is *not* installed by pip,
+e.g. `conda install -c conda-forge gdal` or `sudo apt install python3-gdal` (see `apt.txt`).
+
+Following extras can be installed using pip:
 
 | Extra | Installs | Needed for |
 | --- | --- | --- |
