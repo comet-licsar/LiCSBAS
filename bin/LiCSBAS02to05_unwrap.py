@@ -178,7 +178,7 @@ def main(argv=None):
                 nproc = int(a)
         
         if not workdir:
-            raise Usage('No WORK directory given, -d is not optional!')
+            raise Usage('No WORK directory given, -i is not optional!')
         elif not os.path.isdir(workdir):
             raise Usage('No {} dir exists!'.format(workdir))
         elif not os.path.isdir(os.path.join(workdir, 'GEOC')):
