@@ -86,7 +86,7 @@ gdal.UseExceptions()
 
 ver = "1.1.0"
 date = 20261121
-author = "E. Spiritozzi (based on asf2geoc, Y. Morishita, and licsar_extra/earthquake_responder)"
+author = "M. Lazecky (based on asf2geoc, Y. Morishita, and licsar_extra/earthquake_responder)"
 
 # NISAR L-band centre frequencies (mirrors licsar_extra/nisar_data.py)
 NISAR_FREQ_HZ = {"A": 1270000000.0, "B": 1221500000.0}
