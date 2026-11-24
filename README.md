@@ -15,55 +15,25 @@ LiCSBAS also contains visualization tools to interactively display the time seri
 
 [<img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/comet-lics-web.png"  height="220">](https://comet.nerc.ac.uk/COMET-LiCS-portal/) <img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/sample_vel.png"  height="220">  <img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/sample_ts.png"  height="220">
 
-<img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/LiCSBAS_plot_ts.py_demo_small.gif" alt="Demonstration Video"/>
-
 THIS IS RESEARCH CODE PROVIDED TO YOU "AS IS" WITH NO WARRANTIES OF CORRECTNESS. USE AT YOUR OWN RISK.
 
-## Installation
+## Installation via pip
 
-LiCSBAS can be installed with `pip` (Python >= 3.10 required). The library modules (from `LiCSBAS_lib/`) are installed so that the usual
-`import LiCSBAS_tools_lib`, `import LiCSBAS_meta`, `from LiCSBAS_extras import *` etc. work in any environment:
+LiCSBAS can be installed with `pip` (Python >= 3.10 required):
 
 ```bash
-# from a checkout of the repository (or a release tarball)
-pip install .
-
-# or directly from the repository
+# directly from the repository
 pip install 'git+https://github.com/comet-licsar/LiCSBAS.git'
+
+# or from a checkout of the repository (or a release tarball)
+# pip install .
 ```
 
 **GDAL** (Python bindings) is expected to be provided by your OS/distribution or conda and is *not* installed by pip,
-e.g. `conda install -c conda-forge gdal` or `sudo apt install python3-gdal` (see `apt.txt`).  A conda environment is recommended:
-see `environment.yml`.
+e.g. `conda install -c conda-forge gdal` or `sudo apt install python3-gdal` (see `apt.txt`).
 
-### Optional extras
+## Recommended installation
 
-| Extra | Installs | Needed for |
-| --- | --- | --- |
-| `unwrap` | [licsar_extra](https://github.com/comet-licsar/licsar_extra) | GPU unwrapping in `LiCSBAS02to05_unwrap.py` and corrections in `LiCSBAS131_corrections.py` |
-| `comcat` | usgs-libcomcat | `LiCSBAS_get_eqoffsets.py` only |
-| `all` | both of the above | e.g. `pip install .[all]` |
-
-`licsar_extra` is **optional** — all other steps work without it.
-
-### Running the steps
-
-The workflow steps are the scripts in `bin/`, normally launched from a checkout via `batch_LiCSBAS.sh`
-or by adding `bin/` to your `PATH` (see `bashrc_LiCSBAS.sh`). After a pip install the libraries these scripts
-import are already available, so the `PYTHONPATH` line in `bashrc_LiCSBAS.sh` is no longer needed (it remains harmless).
-
-## Documentation and Bug Reports
-
-If you have found an issue or bug using the main branch, please report it on the [issues page](https://github.com/comet-licsar/LiCSBAS/issues).
-
-We assume users are familiar with the standard installation procedure of Github repositories, therefore we do not adapt the original [**wiki**](https://github.com/yumorishita/LiCSBAS/wiki) pages that document well all the originally implemented procedures by Dr. Yu Morishita, 
-including the installation procedure (if you follow this procedure, please be aware of the different repository URL, this version of LiCSBAS resides at [github.com/comet-licsar/licsbas](https://github.com/comet-licsar/licsbas) while the original wiki refers to the discontinued [github.com/yumorishita/licsbas](https://github.com/yumorishita/licsbas)).
-
-Similarly, the original [quick start](https://github.com/yumorishita/LiCSBAS/wiki/2_0_workflow#quick-start) describes processing philosophy that we keep in our version and only further maintain and develop.  
-
-## Installation
-
-For detailed information, please see the original  [**wiki**](https://github.com/yumorishita/LiCSBAS/wiki).
 Our recommendation is to use Linux OS or UNIX in general, but MobaXterm should allow installation on Windows if really needed.
 After git clone this repository:
 ```bash
@@ -75,27 +45,23 @@ With [(micro)mamba](https://mamba.readthedocs.io/en/latest/installation/micromam
 # "${SHELL}" <(curl -L micro.mamba.pm)  # to install micromamba
 micromamba env create -f environment.yml
 micromamba activate licsbas
-# micromamba env update -n licsbas -f environment_optional.yml   # to add some optional extras
-# pip install git+https://github.com/comet-licsar/licsar_extra.git  # easiest way to install extra tools for reunwrapping and iono/tide corrections (requires SNAPHU)
+# micromamba env update -n licsbas -f environment_optional.yml   # to add the optional extras
+# pip install git+https://github.com/comet-licsar/licsar_extra.git  # easiest way to install extra tools for reunwrapping and iono/tide corrections
 ```
-Afterwards, you need only to set path prior to using LiCSBAS commands using:
+Afterwards, you need to set path prior to using LiCSBAS commands using:
 ```bash
 ./bashrc_LiCSBAS.sh
 # LiCSBAS_check_install.py # to check if installation ran ok 
 ```
 
-## Development strategy
+### Optional extras
 
-We keep regular release strategy of 1-2 releases per year.
-The 'main' branch is considered stable and relatively up-to-date (if the main branch contains bug, please report it to us).
-The 'dev' branch is considered testing and can contain routine bugs that are usually fast-resolved by our team.  
+| Extra | Installs | Needed for |
+| --- | --- | --- |
+| `unwrap` | [licsar_extra](https://github.com/comet-licsar/licsar_extra) | for unwrapping in `LiCSBAS02to05_unwrap.py` and iono/tide corrections in `LiCSBAS131_corrections.py` |
+| `comcat` | usgs-libcomcat | `LiCSBAS_get_eqoffsets.py` only |
+| `all` | both of the above | e.g. `pip install .[all]` |
 
-Besides those branches, there are several forks existing, maintained by current or previous COMET members.
-Although we incorporate most of their precious scripts, extending functionality of LiCSBAS,
-these can include original approaches not present or documented here (yet).  
-
-For example, Dr. Qi Ou prepared optional steps as LiCSBAS1xx scripts and [provided documentation](https://github.com/qi-ou/LiCSBAS/blob/main/README.md) on their use,
-as she worked her way to her [article on Tian Shan](https://www.researchsquare.com/article/rs-7529996/v1).
 
 ## Sample Products and Tutorial
 
@@ -105,7 +71,8 @@ The latest tutorial is available as a [Jupyter Notebook](https://github.com/come
 Furthermore, if you have Google account, you can use Google Colab:  
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/licsbas_tutorial.ipynb)  
 
-The tutorial still uses the original LiCSBAS tutorial data that can be downloaded separately if needed, including the sample scripts for learning outside of the notebook, that is:
+The tutorial still uses the original LiCSBAS tutorial data that can be downloaded separately if needed, 
+including the sample scripts for learning outside of the notebook, that is:
 
 - Frame ID: 124D_04854_171313 (Italy)
 - Time: 2016/09/09-2018/05/08 (~1.7 years, 67 epochs, ~217 interferograms)
@@ -123,7 +90,33 @@ Once understood, you can set own batch script simply by
 ```bash
 copy_batch_LiCSBAS.sh
 nano batch_LiCSBAS.sh # i.e. edit the file in your favourite editor
+./batch_LiCSBAS.sh  # to start the batch processing - or perform a useful dry run if 'check_only' is enabled
 ```
+
+
+## Documentation and Bug Reports
+
+If you have found an issue or bug using the main branch, please report it on the [issues page](https://github.com/comet-licsar/LiCSBAS/issues).
+
+We assume users are familiar with the standard installation procedure of Github repositories, therefore we do not adapt the original [**wiki**](https://github.com/yumorishita/LiCSBAS/wiki) pages that document well all the originally implemented procedures by Dr. Yu Morishita, 
+including the installation procedure (if you follow this procedure, please be aware of the different repository URL, this version of LiCSBAS resides at [github.com/comet-licsar/licsbas](https://github.com/comet-licsar/licsbas) while the original wiki refers to the discontinued [github.com/yumorishita/licsbas](https://github.com/yumorishita/licsbas)).
+
+Similarly, the original [quick start](https://github.com/yumorishita/LiCSBAS/wiki/2_0_workflow#quick-start) describes processing philosophy that we keep in our version and only further maintain and develop.  
+
+
+## Development strategy
+
+We keep regular release strategy of 1-2 releases per year.
+The 'main' branch is considered stable and relatively up-to-date (if the main branch contains bug, please report it to us).
+The 'dev' branch is considered testing and can contain routine bugs that are usually fast-resolved by our team.  
+
+Besides those branches, there are several forks existing, maintained by current or previous COMET members.
+Although we incorporate most of their precious scripts, extending functionality of LiCSBAS,
+these can include original approaches not present or documented here (yet).  
+
+For example, Dr. Qi Ou prepared optional steps as LiCSBAS1xx scripts and [provided documentation](https://github.com/qi-ou/LiCSBAS/blob/main/README.md) on their use,
+as she worked her way to her [article on Tian Shan](https://www.researchsquare.com/article/rs-7529996/v1).
+
 
 ## Citations
 

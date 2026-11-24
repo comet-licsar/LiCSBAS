@@ -4,17 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "LiCSBAS"
-version = "1.15.1"
+version = "1.18"
 description = "InSAR time series analysis based on LiCSAR products (COMET LiCSBAS)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "GPL-3.0-or-later" }
 authors = [
-    { name = "Yu Morishita" },
     { name = "COMET Team" },
 ]
 maintainers = [
-    { name = "COMET Team", email = "espiritocz@gmail.com" },
+    { name = "COMET Team", email = "M.Lazecky@leeds.ac.uk" },
 ]
 keywords = ["InSAR", "LiCSAR", "time series", "displacement", "geodesy"]
 classifiers = [
@@ -25,8 +24,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Atmospheric Science",
     "Operating System :: POSIX :: Linux",
 ]
 dependencies = [
