@@ -103,6 +103,12 @@ def _dem_array(cube, dem_file=None):
     Returns an xarray.DataArray (or None). The caller checks that its shape
     matches the cube's (lat, lon) grid before using it.
     """
+    if dem_file:
+        try:
+            import rioxarray
+            return rioxarray.open_rasterio(dem_file).squeeze()  # needs rioxarray installed
+        except Exception:
+            return None
     if cube is not None:
         for name in ('dem', 'topo', 'topography', 'elevation', 'height', 'altitude', 'h', 'dem_h'):
             if name in cube:
@@ -113,12 +119,6 @@ def _dem_array(cube, dem_file=None):
                     return da
                 except Exception:
                     continue
-    if dem_file:
-        try:
-            import rioxarray
-            return rioxarray.open_rasterio(dem_file).squeeze()  # needs rioxarray installed
-        except Exception:
-            return None
     return None
 
 

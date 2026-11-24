@@ -42,6 +42,6 @@ with the legacy `LiCSBAS_*.py` names available via `bin/`. Run any command with 
 | `LiCSBAS_reset_nulls.py` | — (bin wrapper) | Reset null pixels in results |
 | `LiCSBAS_resid_check.py` | — (bin wrapper) | Check inversion residuals |
 | `LiCSBAS_vel_plate_motion.py` | — (bin wrapper) | Estimate plate motion from velocity |
-| `LiCSBAS13_sb_inv.py` / `LiCSBAS130_sb_inv.py` | `licsbas-sb-inv` | Small-baselines inversion (130 variant: iterative) |
+| `LiCSBAS130_sb_inv.py` | `licsbas-sb-inv` | Modified small-baselines inversion (130 variant: iterative) |
 
 **Back to [workflow](02_workflow.md) · [visualization](03_visualization.md) · [file structure](file_structure.md)**

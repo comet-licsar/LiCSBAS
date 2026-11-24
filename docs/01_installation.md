@@ -11,14 +11,11 @@
 | Original (v1/v2 wiki) | v3 (this repository) |
 | --- | --- |
 | clone + `source bashrc_LiCSBAS.sh` (manual `PATH`) | `pip install .` — installs `bin/` wrappers **and** `licsbas-*` entry points |
-| `import LiCSBAS_meta` (top-level script import) | `from licsbas import meta` |
 | `import LiCSBAS_tools_lib` | `from licsbas import tools_lib` |
 | `LiCSBAS14_vel_std.py` (PATH-based) | `licsbas-14-vel-std` — **same code**, legacy name still on `PATH` |
 | `batch_LiCSBAS.sh` | `licsbas-batch` / `python -m licsbas.batch` / `examples/*.py` |
 | repo at `github.com/yumorishita/LiCSBAS` (discontinued) | repo at `github.com/comet-licsar/LiCSBAS` |
 
-*Note:* legacy *imports* (`import LiCSBAS_meta`) are **not** emulated — use
-`licsbas.meta`. Entry-point names are all `licsbas-*`.
 
 ## Option A — pip (recommended)
 

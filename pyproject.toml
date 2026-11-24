@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = "GPL-3.0-or-later"
 authors = [
-    {name = "Milan Lazecky", email = "milan.lazecky@leeds.ac.uk"},
+    {name = "Milan Lazecky", email = "M.Lazecky@leeds.ac.uk"},
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

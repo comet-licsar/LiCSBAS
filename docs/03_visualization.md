@@ -165,8 +165,8 @@ licsbas-out2nc [-i infile] [-o outfile] [-m yyyymmdd]
  --xcube  Set basics for viewing via xcube
 ```
 
-Outputs a standard **NetCDF4** file using LiCSBAS results, which can be directly read
-by QGIS (requires `xarray` and `rioxarray`). A QGIS plugin "Temporal/Spectral Profile
+Outputs a standard **NetCDF4** file using LiCSBAS results. 
+A popular QGIS plugin "Temporal/Spectral Profile
 Tool" can plot the time series at a selected point.
 
 ![TSProfileTool](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/TSProfileTool1.png) ![TSProfileTool](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/TSProfileTool2.png)

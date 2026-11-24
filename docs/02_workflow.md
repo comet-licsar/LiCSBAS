@@ -25,7 +25,6 @@ console entry points, or run as e.g. `python -m licsbas.scripts._cum2vel`.
 | `LiCSBAS14_vel_std.py` | `licsbas-vel-std` |
 | `LiCSBAS15_mask_ts.py` | `licsbas-mask-ts` |
 | `LiCSBAS16_filt_ts.py` | `licsbas-filt-ts` |
-| `LiCSBAS17_plot_corrections.py` | `licsbas-plot-corrections` |
 | `LiCSBAS_plot_ts.py` | `licsbas-plot-ts` |
 
 ## Quick start
@@ -306,21 +305,12 @@ module load licsar_framebatch
 source /gws/smf/j04/nceo_geohazards/software/condalics/load_condalics.rc
 ```
 
-You can skip step 0-1 because the GeoTIFFs already exist in your framebatch processing
-directory (after `framebatch_06_geotiffs.sh`): run `update_bperp_file.sh` to refresh the
-baselines file, then **start from step 0-2** in your frame directory.
-
-On JASMIN you may run the whole LiCSBAS procedure with the LiCSAR command:
+Then (in a scratch directory) you may run the whole LiCSBAS procedure with the LiCSAR command:
 
 ```shell
-licsar2licsbas.sh $FRAME
+licsar2licsbas.sh
 ```
 
-with optional re-unwrapping of multilooked data (Lazecký et al., IGARSS 2021), e.g.
-towards 1×1 km resolution:
-
-```shell
-licsar2licsbas.sh -M 10 $FRAME
-```
+that would link existing geotiff files and optionally apply specific routines (see available parameters) 
 
 **Back to [quick start](#quick-start) · [workflow overview](#workflow-overview)**

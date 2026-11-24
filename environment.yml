@@ -4,8 +4,5 @@ channels:
 dependencies:
   - python>=3.10
   - gdal
-  # liCSBAS core (pip, from repo root) + interactive viewer (pygmt + ipympl).
-  # The GMT binary needed by pygmt is installed via apt.txt.
   - pip:
-    - ".[viewer]"
-    - contextily
+    - "."

@@ -65,7 +65,7 @@ import getopt
 
 ver = "1.0.0"
 date = 20261112
-author = "E. Spiritozzi (based on M. Lazecky's nisar_data)"
+author = "Milan Lazecky"
 
 
 class Usage(Exception):
