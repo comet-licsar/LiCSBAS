@@ -479,7 +479,7 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
       if [ ! -z $p12_TSdir ];then p12_op="$p12_op -t $p12_TSdir"; fi
       if [ ! -z $p12_loop_thre ];then p12_op="$p12_op -l $p12_loop_thre"; fi
       if [ $p12_multi_prime == "y" ];then p12_op="$p12_op --multi_prime"; fi
-      if [ $p12_nullify == "y" ];then p12_op="$p12_op --nullify"; fi
+      if [ "$p12_nullify" == "y" ];then p12_op="$p12_op --nullify"; fi
       if [ $p12_nullify_fix_ref == "y" ]; then p12_op="$p12_op --nullify_fix_ref"; fi
       if [ $p12_skippngs == "y" ];then p12_op="$p12_op --nopngs"; fi
       if [ ! -z $p12_rm_ifg_list ];then p12_op="$p12_op --rm_ifg_list $p12_rm_ifg_list"; fi
@@ -493,7 +493,7 @@ if [ $start_step -le 12 -a $end_step -ge 12 ];then
         if [ ${PIPESTATUS[0]} -ne 0 ];then exit 1; fi
       fi
       # 2024/11/13: updated nullification may cause extra all-nans-in-ref area. Rerunning step 120 if set to be used
-      if [ $p12_nullify == "y" ];then
+      if [ "$p12_nullify" == "y" ];then
       if [ $p120_use == "y" ]; then
         dirset="-c $GEOCmldir -d $GEOCmldir -t $TSdir "
         extra=""
