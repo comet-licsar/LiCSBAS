@@ -15,11 +15,19 @@ Changelog
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from PIL import Image
+try:
+    from PIL import Image
+    import pygmt
+    from pygmt.clib import Session
+    from pygmt.helpers import GMTTempFile
+except Exception as _e:
+    raise ImportError(
+        "licsbas.extras (the pygmt viewer) requires the optional 'viewer' extras and a "
+        "system GMT install. Install with: pip install 'licsbas[viewer]'  "
+        "(and e.g. 'sudo apt-get install gmt'). "
+        f"Underlying error: {_e}"
+    ) from _e
 import matplotlib.image as mpimg
-import pygmt
-from pygmt.clib import Session
-from pygmt.helpers import GMTTempFile
 
 try:
     import contextily as ctx
@@ -307,7 +315,7 @@ def pygmt_plot_interactive(cube, title, label='deformation rate [mm/year]', lims
     #    # determine image dimension
     img = Image.open(png_path)
     width, height = img.size  # canvas (width,height) tuple in pixels
-    DPI_horz, DPI_vert = img.info.get('dpi')
+    DPI_horz, DPI_vert = img.info.get('dpi', (100, 100))  # fall back to 100 dpi if missing
     #
     #time = pd.to_datetime(time_ds)
     #
@@ -336,38 +344,89 @@ def pygmt_plot_interactive(cube, title, label='deformation rate [mm/year]', lims
                 with GMTTempFile() as fout:
                     ses.call_module(module="mapproject", args=' '.join(args) + " ->" + fout.name)
                     out = fout.read().strip()
-        lon, lat = [float(i) for i in out.split(' ')]
+        parts = out.split()
+        if len(parts) < 2:
+            # GMT silently drops points outside the plotted map area (e.g. clicks
+            # in the margins, on the title or on the colorbar), returning no
+            # coordinates at all -> signal "no location" instead of failing
+            return None, None
+        lon, lat = float(parts[0]), float(parts[1])
         return lon, lat
     #
-    def onclick(event):
-        # pos.append([event.xdata, event.ydata])
-        lon, lat = pos_to_lonlat(event.xdata,
-                                 event.ydata)  # pos[-1][0], pos[-1][1]) # pos[-1] represents last click (list with x, y)
-        # lonlat.append([lon, lat]) # converts x y to lon lat and appends
-        # code below shows how gmt_png can be modified for an interactive time series plot
-        # alternatively retrive lon lat using coords_from_figure(ax1)
-        # ax1.set_title(f'Click {len(pos)}: {lon}, {lat}')
-        fig = plot_ts_simple(cube, lon, lat, label='defo towards sat [mm]', dvarname='cum', miny=ymin, maxy=ymax)
-        fig.savefig(spam_path, dpi=ddpi)
-        img = mpimg.imread(spam_path)
-        ax2.imshow(img, origin='upper')
-    #
-    # fig = plt.figure(figsize=(12, 5))
     fig = plt.figure(figsize=(10, 5))
     ax1 = fig.add_subplot(121)
     img = mpimg.imread(png_path)
     ax1.imshow(img, origin='upper')
     ax1.axis('off')
-    # ax1.set_title(frame+" vel.filt (mm/yr)")
     ax2 = fig.add_subplot(122)
     ax2.axis('off')
     plt.tight_layout()
     #
-    label = 'defo towards sat [mm]'
-    ffig = plot_ts_simple(cube, float(cube.lon.mean()), float(cube.lat.mean()), label=label, dvarname='cum', miny=ymin,
-                          maxy=ymax)
-    ffig.savefig(spam_path, dpi=ddpi)
-    img = mpimg.imread(spam_path)
-    ax2.imshow(img, origin='upper')
-    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+    def _show_ts_at(lon, lat):
+        """render the time series at the given point into the right panel"""
+        label = 'defo towards sat [mm]'
+        fig_ts = plot_ts_simple(cube, lon, lat, label=label, dvarname='cum',
+                                miny=ymin, maxy=ymax)
+        fig_ts.savefig(spam_path, dpi=ddpi)
+        ax2.clear()
+        ax2.imshow(mpimg.imread(spam_path), origin='upper')
+        ax2.axis('off')
+        fig.canvas.draw_idle()
+
+    # initial series at the centre of the region (mirrors the original behaviour)
+    _show_ts_at(float(np.mean(cube.lon)), float(np.mean(cube.lat)))
+    #
+    def _click_pixel_xy(event):
+        '''click position in ax1 data (image-pixel) coords, backend-agnostic.
+
+        Some widget backends deliver the mouse event with xdata/ydata already
+        filled, others only with canvas display coords (x, y) - handle both.
+        '''
+        xd, yd = getattr(event, 'xdata', None), getattr(event, 'ydata', None)
+        if xd is not None and yd is not None:
+            return float(xd), float(yd)
+        xd, yd = getattr(event, 'x', None), getattr(event, 'y', None)
+        if xd is None or yd is None:
+            return None
+        return [float(v) for v in ax1.transData.inverted().transform((float(xd), float(yd)))]
+    #
+    def onclick(event):
+        try:
+            xy = _click_pixel_xy(event)
+            if xy is None:
+                return
+            lon, lat = pos_to_lonlat(*xy)
+            if lon is None:
+                # click was outside the GMT map (margin / title / colorbar)
+                ax2.clear()
+                ax2.axis('off')
+                ax2.text(0.5, 0.5, 'Clicked outside the map -\nclick on the deformation map',
+                         ha='center', va='center', transform=ax2.transAxes)
+                fig.canvas.draw_idle()
+                return
+            _show_ts_at(lon, lat)
+            print('clicked: lon=%.4f, lat=%.4f' % (lon, lat))
+        except Exception:
+            # never fail silently: this used to be invisible in notebook widget
+            # backends, making it look like "clicking does nothing"
+            import traceback
+            msg = traceback.format_exc().strip().splitlines()[-1]
+            print('licsbas.extras.pygmt_plot_interactive: click failed: %s' % msg)
+            print(traceback.format_exc())
+            try:
+                ax2.clear()
+                ax2.axis('off')
+                ax2.text(0.5, 0.5, 'Click failed:\n%s' % msg, ha='center', va='center',
+                         color='red', transform=ax2.transAxes)
+                fig.canvas.draw_idle()
+            except Exception:
+                pass
+    #
+    try:
+        fig.canvas.mpl_connect('button_press_event', onclick)
+    except Exception as e:
+        raise RuntimeError(
+            "Cannot connect mouse-click events to this matplotlib backend (%s). "
+            "The interactive viewer needs the widget backend - use `%matplotlib widget` "
+            "(ipympl) before calling pygmt_plot_interactive." % e)
     return ax1
