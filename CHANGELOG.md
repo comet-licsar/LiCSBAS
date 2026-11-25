@@ -1,5 +1,31 @@
 # Changelog — LiCSBAS
 
+## [Unreleased]
+
+### New: phase bias correction operator
+- New optional step `LiCSBAS02op_phasebias` (`licsbas-02op-phasebias` /
+  `licbas-phasebias` entry points, `licsbas/steps/_02op_phasebias.py`,
+  `bin/LiCSBAS02op_phasebias.py` wrapper): runs the standalone `phasebias`
+  package (https://github.com/comet-licsar/InSAR_PhaseBias_Correction,
+  tag v1.1.0) — all 5 steps, sequential, with `--dry-run`, `--steps` resume,
+  and auto-generated `config.txt`. Clear install guidance when the package
+  is missing.
+- `batch_LiCSBAS.sh`: new `do02op_phasebias=y` option (with
+  `p02op_phasebias_out` / `p02op_phasebias_options`); when enabled, step 02
+  automatically reads the corrected stack (`$p02op_phasebias_out/GEOC`).
+
+### Related (companion repo comet-licsar/InSAR_PhaseBias_Correction, tag v1.1.0)
+- Restructured into pip-installable `phasebias` package (`phasebias-01..05`
+  console entry points); merged `updated_previous` into `main`
+  (old main preserved as `archive/chunk-based-main`).
+- Fixes: `np.VisibleDeprecationWarning` removed in numpy ≥ 1.25;
+  unsorted `os.walk` order misaligning coherence/phase lists (root cause of
+  step-03 `NoneType` crash); step-03 blocking `plt.show()` → saved PNGs;
+  step-05 no longer requires the `.geo.hgt.tif` DEM (falls back to any
+  metadata raster, e.g. the landmask, as georeferencing template).
+- Validated end-to-end on the 082D_05125_020000 test dataset (2017–2021,
+  12407 ifgs): 1190 corrected interferograms written, a1=0.537 a2=0.350.
+
 ## [3.0.0] — 2026-11-26 (branch `towards-v3`)
 
 **First stable v3 release**: `pip install licsbas` (or from this repo) now works

@@ -1,6 +1,22 @@
 # STATUS — LiCSBAS v3.0.0 finalisation
 
-_Last updated: 2026-11-26, branch `towards-v3`, HEAD/tag **`8ad74f7` = `v3.0.0`** (pushed)._
+_Last updated: 2026-11-25, branch `towards-v3`, tag **`v3.0.0`** at `8ad74f7` (pushed).
+Phase-bias 02op operator added since (see below)._
+
+## Since v3.0.0: phase bias correction operator (DONE)
+- `licsbas/steps/_02op_phasebias.py` + `bin/LiCSBAS02op_phasebias.py` +
+  entry points `licsbas-02op-phasebias` / `licbas-phasebias`.
+- Wraps the companion `phasebias` package
+  (comet-licsar/InSAR_PhaseBias_Correction, **tag v1.1.0**, pip-installable);
+  runs all 5 steps sequentially in subprocesses; `--dry-run`, `--steps` resume,
+  auto-generated `config.txt`; clean error + install hint when package missing.
+- `batch_LiCSBAS.sh`: `do02op_phasebias` option; step 02 auto-uses the
+  corrected stack. `bash -n` clean; mypy clean (69 files); 30 tests pass.
+- Companion repo: `updated_previous` merged to `main` (old main archived as
+  `archive/chunk-based-main`); package restructure + fixes (numpy≥1.25
+  warning, os.walk ordering crash in step 03, non-blocking plots, HGT-less
+  georef fallback in step 05). **Validated end-to-end** on 082D_05125_020000
+  (2017–2021, 12407 ifgs → 1190 corrected ifgs; a1=0.537, a2=0.350).
 
 ## Current state: **RELEASED TO GITHUB (tag pushed); GitHub release page + PyPI pending (need credentials)**
 

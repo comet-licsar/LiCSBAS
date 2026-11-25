@@ -3,6 +3,7 @@
 # LiCSBAS steps:
 #  01: LiCSBAS01_get_geotiff.py
 #  02to05: LiCSBAS02to05_unwrap.py   or   02: LiCSBAS02_ml_prep.py
+#          (optional, before 02) 02op: LiCSBAS02op_phasebias.py - phase bias correction
 #                                         03: LiCSBAS03op_GACOS.py (optional)
 #                                         04: LiCSBAS04op_mask_unw.py (optional)
 #                                         05: LiCSBAS05op_clip_unw.py (optional)
@@ -50,6 +51,11 @@ do03op_GACOS="n"	# y/n
 do04op_mask="n"	# y/n
 do05op_clip="n"	# y/n
 do06op_ERA5="n" #"y"	# ERA5 apply if icams files in LiCSAR
+
+### Optional phase bias correction (before step 02) ###
+do02op_phasebias="n" 	# y/n. Run the phase bias correction tool (requires the 'phasebias' package)
+p02op_phasebias_out="GEOC_phasebias" 	# output dir for the corrected interferograms
+p02op_phasebias_options="" 	# additional args, e.g. "--nlook 3 --estimate_an no --steps 4,5"
 p04_mask_coh_thre_avg=""	# e.g. 0.2
 p04_mask_coh_thre_ifg=""	# e.g. 0.2
 p04_mask_range=""	# e.g. 10:100/20:200 (ix start from 0)
@@ -277,7 +283,20 @@ if [ "$skipstep02" -eq 1 ]; then
 
 else
   # Run step 02 if not skipped
-  if [ "$start_step" -le 02 -a "$end_step" -ge 02 -a "$skipstep02" -eq 0 ]; then
+  ### Optional: phase bias correction (run before step 02, corrects the wrapped ifgs)
+if [ "$start_step" -le 02 -a "$end_step" -ge 02 -a "$do02op_phasebias" == "y" ]; then
+    p02op_phasebias_op="-i ${p02_GEOCdir:-GEOC} -o $p02op_phasebias_out $p02op_phasebias_options"
+    if [ "$1" == "y" ];then
+      echo "LiCSBAS02op_phasebias.py $p02op_phasebias_op"
+    else
+      LiCSBAS02op_phasebias.py $p02op_phasebias_op 2>&1 | tee -a "$log"
+      if [ ${PIPESTATUS[0]} -ne 0 ];then exit 1; fi
+    fi
+    # Point step 02 at the corrected interferogram stack
+    p02_GEOCdir="$p02op_phasebias_out/GEOC"
+fi
+
+if [ "$start_step" -le 02 -a "$end_step" -ge 02 -a "$skipstep02" -eq 0 ]; then
     p02_op=""
 
     # Set the GEOC directories
