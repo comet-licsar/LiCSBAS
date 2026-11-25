@@ -2,9 +2,10 @@
 mkdir 022D_04826_121209
 cd 022D_04826_121209
 wget https://gitlab.com/comet_licsar/licsbas/-/raw/50255b48440479c35f5ffe65bbbf93795af25f73/tutorial/022D_04826_121209_ml2gacosclip.7z
-wget https://gitlab.com/comet_licsar/licsbas/-/raw/50255b48440479c35f5ffe65bbbf93795af25f73/tutorial/022D_04826_121209_TS_result.7z
+# wget https://gitlab.com/comet_licsar/licsbas/-/raw/50255b48440479c35f5ffe65bbbf93795af25f73/tutorial/022D_04826_121209_TS_result.7z
 7za x 022D_04826_121209_ml2gacosclip.7z
-rm -rf TS*
-7za x 022D_04826_121209_TS_result.7z
+mv TS* tutorial_TS
+# rm -rf TS*
+# 7za x 022D_04826_121209_TS_result.7z
 rm *.7z
 cd ..; chmod -R 777 *
