@@ -418,7 +418,7 @@ def pylight_plot_interactive(
         ax2.plot(t, y, color='#1f4e79', lw=1.4, zorder=3)
         ax2.set_title('%.3f, %.3f' % (lonc, latc), fontsize=11)
         if 'unit' in cube[dts].attrs.keys():
-            ylabel = cube[dts]['unit']
+            ylabel = cube[dts].attrs['unit']
         else:
             ylabel = 'mm'
         ax2.set_ylabel(ylabel, fontsize=9)
