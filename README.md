@@ -66,19 +66,13 @@ Following extras can be installed using pip:
 
 ## Sample Products and Tutorial
 
-We offer tutorial jupyter notebooks used at annual [COMET InSAR Workshops](https://comet-licsar.github.io/ciw.html), launchable in both Binder and Google Colab.The latest tutorial is available as a [Jupyter Notebook](https://github.com/comet-licsar/LiCSBAS/blob/main/licsbas_tutorial.ipynb) that you can directly
-[run using Binder](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD?labpath=licsbas_tutorial.ipynb), or you can test the [dev branch version](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/dev?labpath=licsbas_tutorial.ipynb) that contains latest updates.  
-
-Furthermore, if you have Google account, you can use Google Colab:  
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/licsbas_tutorial.ipynb)  
-
+We offer tutorial jupyter notebooks used at annual [COMET InSAR Workshops](https://comet-licsar.github.io/ciw.html), launchable in both Binder and Google Colab:
 
 | Tutorial | Binder | Google Colab |
 |---|---|---|
 | [main](https://github.com/comet-licsar/LiCSBAS/blob/main/licsbas_tutorial.ipynb) (LiCSBAS <v3) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/HEAD?labpath=licsbas_tutorial.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/main/licsbas_tutorial.ipynb) |
 | [v3.0rc](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial.ipynb) (`licsbas-*` console commands) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial.ipynb) |
 | [v3 batch processing](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_batch.ipynb) (`licsbas.batch` workflows) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial_batch.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_batch.ipynb) |
-
 
 The tutorial uses pre-processed data that it downloads. You can also use the original LiCSBAS tutorial data (same AOI, different frame and time period):
 
@@ -123,7 +117,7 @@ as she worked her way to her [article on Tian Shan](https://www.researchsquare.c
 ## Related Tools
 
 [LiCSAR Extra](https://github.com/comet-licsar/licsar_extra)  
-[InSAR Phase Bias Correction](https://github.com/ymaghsoudi-InSAR/InSAR_PhaseBias_Correction)
+[InSAR Phase Bias Correction](https://github.com/ymaghsoudi-InSAR/InSAR_PhaseBias_Correction)  
 [ICASAR](https://github.com/matthew-gaddes/ICASAR)  
 [LiCS Atmo](https://github.com/matthew-gaddes/LiCSAtmo)  
 
