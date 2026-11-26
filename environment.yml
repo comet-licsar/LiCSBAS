@@ -3,9 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - python>=3.10
-  - jupyterlab
-  # liCSBAS core (pip, from repo root) + interactive viewer (pygmt + ipympl).
-  # The GMT binary needed by pygmt is installed via apt.txt.
+  - gdal
   - pip:
-    - ".[viewer]"
-    - contextily
+    - "."

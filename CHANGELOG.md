@@ -1,31 +1,200 @@
 # Changelog — LiCSBAS
 
-## [Unreleased]
+## [unreleased] — branch `towards-v3`
 
-### New: phase bias correction operator
-- New optional step `LiCSBAS02op_phasebias` (`licsbas-02op-phasebias` /
-  `licbas-phasebias` entry points, `licsbas/steps/_02op_phasebias.py`,
+### 2026-12-19 (phase bias correction operator — optional 02op step)
+- New optional step `LiCSBAS02op_phasebias` (entry point
+  `licsbas-02op-phasebias`, `licsbas/steps/_02op_phasebias.py`,
   `bin/LiCSBAS02op_phasebias.py` wrapper): runs the standalone `phasebias`
   package (https://github.com/comet-licsar/InSAR_PhaseBias_Correction,
   tag v1.1.0) — all 5 steps, sequential, with `--dry-run`, `--steps` resume,
   and auto-generated `config.txt`. Clear install guidance when the package
   is missing.
-- `batch_LiCSBAS.sh`: new `do02op_phasebias=y` option (with
-  `p02op_phasebias_out` / `p02op_phasebias_options`); when enabled, step 02
-  automatically reads the corrected stack (`$p02op_phasebias_out/GEOC`).
+- Python batch: `BatchConfig(do02op_phasebias=True)` (+ `p02op_phasebias_out`,
+  `p02op_phasebias_options`) / `licsbas-batch --phasebias`; step 02 then
+  reads the corrected stack (`$p02op_phasebias_out/GEOC`).
+- Companion repo work (tag v1.1.0): restructured into a pip-installable
+  `phasebias` package (`phasebias-01..05` console entry points);
+  `updated_previous` merged into `main` (old main preserved as
+  `archive/chunk-based-main`); fixes: `np.VisibleDeprecationWarning` removed
+  in numpy >= 1.25, unsorted `os.walk` order misaligning coherence/phase
+  lists (root cause of step-03 `NoneType` crash), step-03 blocking
+  `plt.show()` -> saved PNGs, step-05 no longer requires the
+  `.geo.hgt.tif` DEM (falls back to any metadata raster as georeferencing
+  template).
+- Validated end-to-end on the 082D_05125_020000 test dataset (2017-2021,
+  12407 ifgs): 1190 corrected interferograms written (a1=0.537, a2=0.350).
 
-### Related (companion repo comet-licsar/InSAR_PhaseBias_Correction, tag v1.1.0)
-- Restructured into pip-installable `phasebias` package (`phasebias-01..05`
-  console entry points); merged `updated_previous` into `main`
-  (old main preserved as `archive/chunk-based-main`).
-- Fixes: `np.VisibleDeprecationWarning` removed in numpy ≥ 1.25;
-  unsorted `os.walk` order misaligning coherence/phase lists (root cause of
-  step-03 `NoneType` crash); step-03 blocking `plt.show()` → saved PNGs;
-  step-05 no longer requires the `.geo.hgt.tif` DEM (falls back to any
-  metadata raster, e.g. the landmask, as georeferencing template).
-- Validated end-to-end on the 082D_05125_020000 test dataset (2017–2021,
-  12407 ifgs): 1190 corrected interferograms written, a1=0.537 a2=0.350.
+### 2026-12-19 (tutorial & documentation restructure; flowcharts; NISAR batch template)
+**Tutorial** — the monolithic `tutorial/tutorial.ipynb` is kept as the *master single-file template*, and four composed tutorials are published from it (`tutorial/build_notebooks.py` re-generates them):
+- `tutorial_0.ipynb` — **Module 0, LiCSAR data** (steps `0-1` → `0-5`), **plus a new ``02to05_unwrap`` alternative-route cell** that explains the *re-unwrapping* option (starts from the **wrapped** phase, does the unwrapping itself, and **substitutes steps `0-2` → `0-5`**).
+- `tutorial_0_nisar.ipynb` — **Module 0, NISAR data** (experimental): `licsbas-01-get-nisar-data` (ASF search + GUNW/GSLC download) → `licsbas-nisar2geoc` (→ `GEOC/`, shared WGS-84 grid, `baselines`, `metadata.txt`; `--no_iono`/`--no_offsets`/`-D`) → the *same* steps `0-2` → `0-5`. The `licsbas-asf2geoc` (GeoTIFF) alternative is called out.
+- `tutorial_0_sbovl.ipynb` — **SBOVNL (SBOI)** chain: steps `0-1` → `1-6` all with `--sbovl` (and the `--sbovl_abs` flavour), incl. the forced `120_choose_reference` and the skipped classic loop-closure `12`.
+- `tutorial_1.ipynb` — **Module 1: time series**, steps `11` → `16` + viewers/exports (data-source agnostic; works on any Module-0 output). All four are cross-linked so a Binder session can jump between them in the same session, and each has fresh Binder + Colab badges.
+- All four are `nbformat` 4.5 valid and their shared setup cell was smoke-tested on `nbconvert --execute` (idempotent, no hard GDAL/pip install on a ready env).
 
+**Flowcharts** — new **PNG flowcharts**, rendered with Graphviz `dot` (landscape `LR` by default, portrait `TB` for the long SBOVNL chain), shown **just before the first script** of each notebook: `tutorial/0_licsar.png`, `0_nisar.png`, `0_sbovl.png`, `1_ts.png`. Configs live in `tutorial/tutorial_cfg/*.json`; regenerate with `python3 tutorial/make_flowchart.py` (no new Python dep — shells out to `dot`). `licsbas/flowchart.py` gained a `rankdir` argument, **alternative-route styling** (amber node + dashed edge from the divergence point + “(alternative route)” tag) and a `--flowchart-landscape` flag on `licsbas-batch`.
+
+**Batch / docs** — added `examples/example_4_nisar.py`, a ready-to-adapt **NISAR GUNW** batch template (dry-run by default; `--execute` to run; `--gslc`, `--bbox`, `--no-iono/--no-offsets`, `--dem`, `--cc-thre`, …), completing the `standard` / `reunw_02to05` / `sbovl` / `nisar` template set. `README.md` is now minimal (installation detail moved to `docs/01_installation.md`) with a tutorials table (Binder + Colab per notebook); Badge/links point at the `towards-v3` branch until v3 lands on `main`.
+
+**`bin/` wrappers** — the `"DEPRECATED wrapper …"` banner was removed from all 55 `bin/*.py` legacy wrappers (reworded to `"Legacy wrapper for the console entry point …"`); they remain the supported traditional PATH-based CLI.
+
+### 2026-12-19 (backport of 4 LiCSBAS2 bug fixes into the v3 step-02/03 route)
+Backported four concrete, low-risk fixes from the `LiCSBAS2` repo (each cited
+inline in the code). The 02to05 reunw route was audited and needs **none** of
+them (see below). Full suite still green (87 passed, 2 skipped).
+- **`_02_ml_prep.py`: uint8 cast of coherence (`2627e50` #169)** — `cc.astype(
+  np.uint8)` cast a residual NaN to an integer (undefined behaviour; a
+  `RuntimeWarning` on numpy≥1.24). Now `np.clip(np.nan_to_num(cc), 0, 255)
+  .astype(np.uint8)`.
+- **`_02_ml_prep.py`: `EQA.dem_par` corner (`98cd3a8` #174)** — the grid corner
+  `lon_w_g = lon_w_p + dlon/2` used the **unscaled** pixel and got scaled only
+  `dlon` afterwards, so for `nlook>1` the corner was off by `(nlook−1)/2`
+  original pixels (a `GEOCml{n*}` grid that didn't tile under it). The corner is
+  now computed **after** `dlon/dlat` are scaled by `nlook`, at all four sites
+  (ifg / sbovl / else / fallback). `EQA.dem_par` is only written when missing,
+  so existing `GEOCml*` should be regenerated.
+- **`_02_ml_prep.py`: radar frequency (`51f09b6` #173)** — precedence is now
+  `--freq` > `radar_freq` in `GEOC/metadata.txt` > Sentinel-1 default, with a
+  warning on `--freq`/metadata mismatch and an Hz-range sanity check; an
+  existing `slc.mli.par` with a stale `radar_frequency` is updated when `--freq`
+  is given. (For Sentinel-1 `5.405e9` the behaviour is unchanged; for L-band
+  datasets the frequency is no longer silently wrong.)
+- **`_03op_gacos.py`: GACOS resampled grid (`fcd0b6d` #178)** — `gdal.Warp(
+  outputBounds=...)` was given the pixel **corners** instead of the **outer
+  edges**, shrinking the output grid by one pixel (delays ±0.5 px off at the
+  edges, and `no_gacos_ifg.txt` could drop the first image in one pass). Now
+  expands by half a pixel. `licsbas-03op-ERA5`'s `gdal.Warp` call already
+  passes outer edges and was left unchanged. A `sltd_grid.txt` grid record is
+  written so that outputs made on a different grid (by a build with the shrunk
+  grid, or before `EQA.dem_par` was fixed) are caught and the user is told to
+  remove them, since existing outputs are not re-created — this matters because
+  `03op` and `04` leave existing `unw`/`corr` files in place.
+- **Audited `_02to05_unwrap.py`**: it needs **none** of the four fixes — it has no
+  uint8 `cc` cast, writes no `slc.mli.par`/`EQA.dem_par` corner (those come from
+  step 02, now fixed), does no `gdal.Warp` GACOS resampling, and its `--freq` is
+  only ever set by the flag (no overwrite bug, unlike step 02). No changes made there.
+
+> **LiCSBAS2 backport status:** the four concrete bug fixes above are now in v3.
+> Deferred (features, not bug fixes, to be taken on their own merits): `--keep_ifg_list`,
+> optional `04 vstd`/`vstd`/`vel`, 04 LP linear-fit, NISAR sign flip, `sweets2geoc`
+> / `align_geoc`.
+
+### 2026-11-12 (NISAR data access — new, optional)
+- **Fix `licsar_extra` imports** (so NISAR modules actually load): removed the
+  unused `from LiCSAR_misc import *` from `python/nisar_data.py` and made the
+  `lics_proc_tools` import fall back to the `licsar_extra` package; added the
+  NISAR-only deps (`asf_search, geopandas, shapely, pyproj, h5py, dask, rasterio,
+  requests`) to `requirements.txt` and a `licsar_extra[nisar]` extra in `setup.py`.
+- **New step `licsbas-01-get-nisar-data`** (`licsbas/steps/_01_get_nisar_data.py`):
+  search ASF for NISAR GUNW/GSLC in a LiCSBAS bbox (`-g lon1/lon2/lat1/lat2`) and
+  download the `.h5` into per-frame subfolders (via `get_frameid`). Uses the
+  `asf_search` session for the download (streamed HTTP, optional ASF
+  credentials) — **no shell `wget`**. Supports `--dry_run`; existing files are
+  skipped. The classic LiCSAR step `licsbas-get-geotiff` is untouched. Covered by
+  `tests/test_nisar_step.py` (stubbed, no network).
+- **New tool `licsbas-asf2geoc`** (`licsbas/scripts/_asf2geoc.py`): ported from
+  LiCSBAS2 — converts ASF/NIISAR pre-processed GeoTIFF product dirs into a LiCSBAS
+  `GEOC/` layout. Only the `LiCSBAS_tools_lib` import was re-targeted to
+  `licsbas.tools_lib` (graceful fallback preserved); now exposed as an entry point.
+- **New tool `licsbas-nisar2geoc`** (`licsbas/scripts/_nisar2geoc.py`): the NISAR
+  analog of `asf2geoc` but for raw NISAR GUNW `.h5`. Applies the
+  `earthquake_responder.py` corrections (removes the smooth ionospheric +
+  range-offset ramps, a 2-D quadratic ramp unless range-offsets were used, then a
+  coherence mask). Uses the **rasterio (`rio`)** WGS-84 conversion of
+  `licsar_data.py` (`rio.write_crs` → `rio.to_raster` → `gdalwarp -t_srs EPSG:4326`
+  with `COMPRESS=DEFLATE -co PREDICTOR=2 -co TILED=YES`) — not the pure-GDAL warp of
+  `asf2geoc`. **All** exported GeoTIFFs (unw/cc of every IFG + top-level E/N/U,
+  hgt, mli) are written onto a **single shared WGS-84 grid** (first product defines
+  it). Writes a LiCSBAS-standard `baselines` file (per-pair `bperp`, read by
+  `io_lib.read_bperp_file`) plus `metadata.txt` (center_time, radar_freq) in the
+  `asf2geoc` style. `-E <GSLC.h5>` for E/N/U + mli, `-D` for a DEM; `bin/LiCSBAS_nisar2geoc.py`
+  wrapper. Covered by `tests/test_nisar2geoc.py` (stubbed, no HDF5).
+- Docs: new `docs/05_nisar.md`; NISAR note + doc-table row in `README.md`.
+- Entry points: 79 (added `licsbas-01-get-nisar-data`, `licsbas-asf2geoc`, `licsbas-nisar2geoc`).
+
+### 2026-11-21 (test-suite health + matplotlib 3.10 fix)
+- **`tools_lib.get_cmap`**: the legacy `plt.cm.register_cmap('cmocean.ice', ...)`
+  rejects dotted names on matplotlib ≥ 3.5 (silently), so `plt.get_cmap()` then
+  raised. Now registers via the modern `matplotlib.colormaps.register(..., force=True)`
+  (with a legacy fallback) — cmocean / SCM / GMT / colorcet cmaps work again on
+  modern matplotlib (fixes `test_colomaps_bundled`).
+- **Test-isolation fix** (`tests/test_02to05_plots.py`): the `_deps` fixture
+  injected fake `pandas`/`statsmodels`/... into `sys.modules` and never removed them,
+  which poisoned xarray (`from pandas.errors import ...`) for every later test. It now
+  stubs only genuinely-missing deps and cleans up on teardown.
+- **Test-logic fix** (`tests/test_imports.py`): `test_entry_points_exist_and_resolve`
+  now guards `returncode != 0` before expecting a “missing optional tool” message
+  (so modules that import fine — `EP_OK` — pass even when `licsar_extra` is present).
+- Fixed a duplicate-file bug in `lisar2geoc`/download dedup (iterating over the list
+  it was just cleared) so product discovery actually works.
+- **`tutorial/tutorial.ipynb` first cell**: made it a self-contained, idempotent
+  setup cell that detects a missing **GDAL binary stack (`osgeo`, not on PyPI)** and
+  installs it from conda-forge (Colab/Binder), then `pip install licsbas[viewer]`,
+  and prompts a kernel restart if anything was installed. Previously it only
+  `import licsbas` and raised a “please pip install” message, so it failed on
+  Google Colab (the Binder equivalent was the `gdal`/`gdal-wheel` environment.yml fix).
+
+### 2026-07-24 (steps/scripts split + entry points)
+- **Package layout**: unnumbered utility scripts (cum2vel, disp_img, plot_ts, out2nc,
+  profile, contour, ...) moved from `licsbas/steps/` to a new `licsbas/scripts/`
+  sub-package; `licsbas/steps/` now holds only the numbered pipeline steps (01-17).
+  `bin/` wrappers, `licsbas.batch`, `tests/`, `docs/` and `pyproject.toml` updated.
+- **Entry points completed**: previously missing `licsbas-*` console commands added
+  (`licsbas-cum2tif`, `licsbas-cum2flt`, `licsbas-cum-clip`, `licsbas-cum-interpolate`,
+  `licsbas-cum-plate-motion`, `licsbas-decompose-los`, `licsbas-detect-coreg-error`,
+  `licsbas-mask-flt`, `licsbas-profile`, `licsbas-remove-reffx-vstd`, `licsbas-reset-nulls`,
+  `licsbas-resid-check`, `licsbas-vel-plate-motion`, `licsbas-check-install`,
+  `licsbas-13-sb-inv`, `licsbas-130-remove-noloops`, `licsbas-remove-noloops`).
+  Total console entry points: 76.
+
+### 2026-07-24 (batch usability, docs, typo fixes)
+- **Workflow templates**: `licsbas.batch` now ships named `BatchConfig` factories
+  (`standard`, `reunw_5`, `reunw_10`, `reunw_20`, `sbovl`, `sbovl_abs`) via
+  `make_config()` / `list_workflows()`, extensible with `@register_workflow()`;
+  CLI: `licsbas-batch --workflow reunw_5 [--nlook ...]` and `--list-workflows`.
+- **ERA5 step** (`licsbas/steps/_03op_era5.py`): the STD before/after panel of
+  `ERA5_info2.png` no longer requires `seaborn` — new `plot_lib.plot_gacos_info2`
+  (matplotlib-native hexbin correlation diagram, shared with the GACOS step).
+- **02to05 GACOS correction plots** (`licsbas/steps/_02to05_unwrap.py`): with `--gacos`, the
+  chain now also writes the standard LiCSBAS-style per-ifg correction plots
+  (`pair.gacos.png` before/after/difference, same `make_3im_png` style as
+  `LiCSBAS03op_GACOS.py`) plus `GACOS_info2.png` (STD before/after), built
+  post-hoc from the exported `pair.unw` using the same `lics_unwrap` helpers —
+  no change to licsar_extra needed. Covered by `tests/test_02to05_plots.py`.
+- `tutorial/tutorial_batch.ipynb` restructured around the workflow templates
+  (all chains, incl. `reunw_5`, generated via `make_config`, with PNG flowcharts
+  and the template registry).
+- README: new **Tutorials** section with Binder (logo-badge) + Google Colab
+  links for every tutorial notebook; **Documentation** section presents the
+  `docs/` pages as a table; `licbas-*` → `licsbas-*` typo fixed in
+  `docs/*.md` and `TODONEXT.md`.
+- `tests`: entry-point smoke test now reads the repo `pyproject.toml` (single
+  source of truth, robust to stale dev installs); tide/iono tests now verify the
+  standard `LiCSBAS131_corrections.py` step receives `--tide`/`--iono`.
+
+### Python batch processor (replaces batch_LiCSBAS.sh)
+- New `licsbas/batch.py` (CLI: `licsbas-batch`): all settings/flags of
+  `batch_LiCSBAS.sh` (standard chain, 02to05 re-unwrapping, sbovl/sbovl_abs,
+  optional steps 03-06, eqoffsets, tide/iono/gacos corrections, 120 re-run
+  after nullification, ...) are now a python `BatchConfig`;
+  steps are executed **in-process** through `licsbas.steps.*` (v3 layout).
+- New `licsbas/flowchart.py`: renders any processing chain to a PNG via the
+  Graphviz `dot` binary (no new python dependency).
+- `batch_LiCSBAS.sh` is now a thin wrapper around `python -m licsbas.batch`.
+- New `examples/`: `example_1_standard.py`, `example_2_reunw_02to05.py`,
+  `example_3_sbovl.py` — three ready-to-adapt chains, each also writing a
+  PNG flowchart of the performed steps.
+
+### Naming fix & tutorial
+- The `licbas-*` console aliases (a "licbas" typo in the v3 name set) are now
+  unified under `licsbas-*` (e.g. `licsbas-unwrap`, `licsbas-get-geotiff`);
+  duplicate aliases dropped → 59 entry points, all `licsbas.*`; smoke test and
+  skills/TODO docs updated accordingly.
+- New `tutorial/tutorial_batch.ipynb`: walkthrough of **both** batch workflows —
+  the python batch (`licsbas.batch.BatchConfig` / `run_batch` / `save_flowchart`)
+  and the shell batch (`./batch_LiCSBAS.sh` / `licsbas-batch`), incl. the three
+  example chains and PNG flowcharts.
 ## [3.0.0] — 2026-11-26 (branch `towards-v3`)
 
 **First stable v3 release**: `pip install licsbas` (or from this repo) now works
@@ -34,7 +203,8 @@ end-to-end on Python 3.10–3.13. Changes on top of 3.0.0rc1:
 ### Packaging finalisation
 - `LiCSBAS_lib/` shim layer **removed**: legacy *imports* (`import LiCSBAS_meta`)
   are no longer emulated — use `licsbas.meta` etc. Legacy *commands* keep working:
-  `bin/` wrappers + `licsbas-*` / `licbas-*` console entry points + `python -m licsbas.steps.*`.
+  `bin/` wrappers + `licsbas-*` console entry points (incl. short aliases like
+  `licsbas-unwrap`, `licsbas-filt-ts`) + `python -m licsbas.steps.*`.
   `bashrc_LiCSBAS.sh` / `start` now only put `bin/` on `PATH`.
 - Dependency audit (AST-based) finalised the hard-dependency list:
   added `beautifulsoup4`, `psutil`, `cmcrameri`, `python-dateutil`, `utm`;

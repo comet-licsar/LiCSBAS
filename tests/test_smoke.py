@@ -12,8 +12,12 @@ REPO = Path(__file__).resolve().parent.parent
 
 
 def _all_eps():
-    from importlib.metadata import entry_points
-    return list(entry_points().select(group="console_scripts"))
+    """Console entry points declared in the repository `pyproject.toml`
+    (single source of truth; avoids dependence on a possibly stale install)."""
+    import tomllib
+    with open(REPO / "pyproject.toml", "rb") as f:
+        scripts = tomllib.load(f)["project"]["scripts"]
+    return [type("EP", (), {"name": n, "value": v}) for n, v in scripts.items()]
 
 
 def test_version():
@@ -53,7 +57,7 @@ def test_entry_points_registered():
                      "licsbas-16-filt-ts", "licsbas-17-plot-corrections",
                      "licsbas-plot-network", "licsbas-plot-ts",
                      "licsbas-flt2geotiff", "licsbas-out2nc",
-                     "licbas-get-geotiff", "licbas-unwrap"):
+                     "licsbas-get-geotiff", "licsbas-unwrap"):
         assert expected in names, f"missing entry point: {expected}"
 
 

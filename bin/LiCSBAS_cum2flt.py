@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the console entry point ``licsbas-cum2flt``.
+"""Legacy wrapper for the console entry point ``licsbas-cum2flt``.
 
 Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
-Prefer the entry point, or ``python -m licsbas.steps._cum2flt``.
+Prefer the entry point, or ``python -m licsbas.scripts._cum2flt``.
 """
 import sys
 
-from licsbas.steps._cum2flt import main
+from licsbas.scripts._cum2flt import main
 
 sys.exit(main() or 0)

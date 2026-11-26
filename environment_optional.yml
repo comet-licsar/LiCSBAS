@@ -8,3 +8,8 @@ dependencies:
   - pygmt
   - ipympl
   - usgs-libcomcat
+  # liCSBAS core (pip, from repo root) + interactive viewer (pygmt + ipympl).
+  # The GMT binary needed by pygmt is installed via apt.txt.
+  - pip:
+    - ".[unwrap,viewer]"
+    - contextily

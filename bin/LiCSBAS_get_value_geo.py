@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""DEPRECATED wrapper for the console entry point ``licsbas-get-value-geo``.
+"""Legacy wrapper for the console entry point ``licsbas-get-value-geo``.
 
 Kept for the traditional PATH-based workflow (see bashrc_LiCSBAS.sh).
-Prefer the entry point, or ``python -m licsbas.steps._get_value_geo``.
+Prefer the entry point, or ``python -m licsbas.scripts._get_value_geo``.
 """
 import sys
 
-from licsbas.steps._get_value_geo import main
+from licsbas.scripts._get_value_geo import main
 
 sys.exit(main() or 0)

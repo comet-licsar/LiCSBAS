@@ -1,0 +1,40 @@
+{
+  "title": "LiCSBAS Module 0 (NISAR data, experimental): ASF search \u2192 NISAR .h5 \u2192 GEOC \u2192 steps 0-2 \u2192 0-5",
+  "clusters": [
+    {
+      "label": "Step 0-1 (NISAR): search ASF + download",
+      "steps": [
+        {"name": "LiCSBAS01_get_NISAR_data.py",
+         "details": "-g lon1/lon2/lat1/lat2 -t GUNW [-s 20250101 -e <date>] [-o NISAR_GUNW]",
+         "note": "search ASF for NISAR CSL2 GUNW/GSLC .h5 and stream them to per-frame subfolders (needs licsar_extra[nisar])"}
+      ]
+    },
+    {
+      "label": "GEOC conversion (NISAR-specific)",
+      "steps": [
+        {"name": "LiCSBAS_nisar2geoc.py",
+         "details": "-i NISAR_GUNW -o GEOC [-E <GSLC.h5>] [-D] [-t 0.5] [-f A|B]",
+         "note": "removes smooth iono + range-offset ramps, coherence mask; shared WGS-84 grid; baselines + metadata.txt. Alt. for pre-exported ASF GeoTIFFs: LiCSBAS_asf2geoc"}
+      ]
+    },
+    {
+      "label": "Steps 0-2 \u2192 0-5 (same as for LiCSAR data)",
+      "steps": [
+        {"name": "LiCSBAS02_ml_prep.py",
+         "details": "-i GEOC -o GEOCml<n> -n <n>"},
+        {"name": "LiCSBAS03op_GACOS.py",
+         "details": "-i GEOCml<n> -o GEOCml<n>GACOS --fillhole",
+         "active": false,
+         "note": "optional - GACOS correction (if GACOS data exist for the area)"},
+        {"name": "LiCSBAS04op_mask_unw.py",
+         "details": "-i ... -o ...mask",
+         "active": false,
+         "note": "optional"},
+        {"name": "LiCSBAS05op_clip_unw.py",
+         "details": "-i ... -o ...clip -g lon1/lon2/lat1/lat2",
+         "active": false,
+         "note": "optional"}
+      ]
+    }
+  ]
+}

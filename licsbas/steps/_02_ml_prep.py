@@ -95,6 +95,7 @@ print('Starting')
 from licsbas.meta import *
 import getopt
 import os
+import re
 import sys
 import time
 import shutil
@@ -136,7 +137,7 @@ def main(argv=None):
     plot_cc = False
     sbovl = False
     rngoff = False
-    radar_freq = 5.405e9
+    radar_freq = None  ## --freq > radar_freq in metadata.txt > default (51f09b6 #173)
     try:
         n_para = len(os.sched_getaffinity(0))
     except:
@@ -168,7 +169,10 @@ def main(argv=None):
             elif o == '-n':
                 nlook = int(a)
             elif o == '--freq':
-                radar_freq = float(a)
+                try:
+                    radar_freq = float(a)
+                except ValueError:
+                    raise Usage('--freq must be a number in Hz, not {}'.format(a))
             elif o == '--coh_thre':
                 coh_thre = float(a)
             elif o == '--n_para':
@@ -217,10 +221,32 @@ def main(argv=None):
     bperp_file_out = os.path.join(outdir, 'baselines')
 
     metadata_file = os.path.join(geocdir, 'metadata.txt')
+    center_time = None
+    radar_freq_meta = None
     if os.path.exists(metadata_file):
-        center_time = subp.check_output(['grep', 'center_time', metadata_file]).decode().split('=')[1].strip()
-    else:
-        center_time = None
+        try:
+            center_time = subp.check_output(['grep', 'center_time', metadata_file]).decode().split('=')[1].strip()
+        except subp.CalledProcessError:
+            center_time = None
+        try:
+            radar_freq_meta = subp.check_output(['grep', 'radar_freq', metadata_file]).decode().split('=')[1].strip()
+        except subp.CalledProcessError:
+            radar_freq_meta = None
+
+    ## Radar frequency precedence: --freq > radar_freq in metadata.txt > default (Sentinel-1)
+    ## (LiCSBAS2 51f09b6 #173: a --freq value must not be silently overwritten by metadata)
+    radar_freq_given = (radar_freq is not None)
+    if radar_freq_given and radar_freq_meta is not None and \
+       not np.isclose(float(radar_freq_meta), radar_freq):
+        print('WARNING: --freq overrides radar_freq in metadata.txt ({} Hz)!'
+              .format(radar_freq_meta), file=sys.stderr, flush=True)
+    if not radar_freq_given and radar_freq_meta is not None:
+        radar_freq = float(radar_freq_meta)
+    if radar_freq is None:
+        radar_freq = 5.405e9  ## default for Sentinel-1
+    if not 1e8 <= float(radar_freq) <= 1e11:  ## 0.1-100 GHz, i.e. must be Hz not GHz
+        print('\nERROR: Radar frequency must be given in Hz!\n', file=sys.stderr)
+        return 2
 
 
     #%% ENU
@@ -410,14 +436,17 @@ def main(argv=None):
         length = geotiff.RasterYSize
         lon_w_p, dlon, _, lat_n_p, _, dlat = geotiff.GetGeoTransform()
         ## lat lon are in pixel registration. dlat is negative
-        lon_w_g = lon_w_p + dlon/2
-        lat_n_g = lat_n_p + dlat/2
-        ## to grit registration by shifting half pixel inside
+        ## to grid registration: shift half a (multilooked) pixel inside; the corner is
+        ## computed AFTER scaling dlon/dlat by nlook
+        ## (LiCSBAS2 98cd3a8 #174: before, the corner used the unscaled pixel and was off
+        ##  by (nlook-1)/2 original pixels for nlook>1)
         if nlook != 1:
             width = int(width/nlook)
             length = int(length/nlook)
             dlon = dlon*nlook
             dlat = dlat*nlook
+        lon_w_g = lon_w_p + dlon/2
+        lat_n_g = lat_n_p + dlat/2
     elif sbovl_ok:
         example_date = None
         for pair in sbovl_ok:
@@ -430,14 +459,14 @@ def main(argv=None):
                 width = geotiff.RasterXSize
                 length = geotiff.RasterYSize
                 lon_w_p, dlon, _, lat_n_p, _, dlat = geotiff.GetGeoTransform()
-                lon_w_g = lon_w_p + dlon / 2
-                lat_n_g = lat_n_p + dlat / 2
-
+                ## corner after scaling dlon/dlat by nlook (LiCSBAS2 98cd3a8 #174)
                 if nlook != 1:
                     width = int(width / nlook)
                     length = int(length / nlook)
                     dlon *= nlook
                     dlat *= nlook
+                lon_w_g = lon_w_p + dlon / 2
+                lat_n_g = lat_n_p + dlat / 2
                 break  # Exit loop when a valid file is found
         if example_date is None:
             print("No valid sbovl data found. Exiting.")
@@ -457,14 +486,17 @@ def main(argv=None):
         length = geotiff.RasterYSize
         lon_w_p, dlon, _, lat_n_p, _, dlat = geotiff.GetGeoTransform()
         ## lat lon are in pixel registration. dlat is negative
-        lon_w_g = lon_w_p + dlon/2
-        lat_n_g = lat_n_p + dlat/2
-        ## to grit registration by shifting half pixel inside
+        ## to grid registration: shift half a (multilooked) pixel inside; the corner is
+        ## computed AFTER scaling dlon/dlat by nlook
+        ## (LiCSBAS2 98cd3a8 #174: before, the corner used the unscaled pixel and was off
+        ##  by (nlook-1)/2 original pixels for nlook>1)
         if nlook != 1:
             width = int(width/nlook)
             length = int(length/nlook)
             dlon = dlon*nlook
             dlat = dlat*nlook
+        lon_w_g = lon_w_p + dlon/2
+        lat_n_g = lat_n_p + dlat/2
                     
     # 2021-11-11 fix for case where all is done except of par files..
     if not width:
@@ -473,13 +505,14 @@ def main(argv=None):
         width = geotiff.RasterXSize
         length = geotiff.RasterYSize
         lon_w_p, dlon, _, lat_n_p, _, dlat = geotiff.GetGeoTransform()
-        lon_w_g = lon_w_p + dlon/2
-        lat_n_g = lat_n_p + dlat/2
+        ## corner after scaling dlon/dlat by nlook (LiCSBAS2 98cd3a8 #174)
         if nlook != 1:
             width = int(width/nlook)
             length = int(length/nlook)
             dlon = dlon*nlook
             dlat = dlat*nlook
+        lon_w_g = lon_w_p + dlon/2
+        lat_n_g = lat_n_p + dlat/2
     #%% EQA.dem_par, slc.mli.par
     if not os.path.exists(mlipar):
         print('\nCreate slc.mli.par', flush=True)
@@ -490,6 +523,20 @@ def main(argv=None):
             print('radar_frequency: {} Hz'.format(radar_freq), file=f)
             if center_time is not None:
                 print('center_time: {}'.format(center_time), file=f)
+    elif radar_freq_given:
+        ## Existing slc.mli.par is kept, but its radar_frequency may be stale (#173)
+        try:
+            radar_freq_par = float(io_lib.get_param_par(mlipar, 'radar_frequency'))
+        except (subp.CalledProcessError, IndexError, ValueError, TypeError):
+            radar_freq_par = None
+        if radar_freq_par is not None and not np.isclose(radar_freq_par, float(radar_freq)):
+            text = open(mlipar).read()
+            text = re.sub(r'radar_frequency:.*', 'radar_frequency: {} Hz'.format(radar_freq), text)
+            with open(mlipar, 'w') as f:
+                f.write(text)
+            print('\nUpdate radar_frequency in existing slc.mli.par: {} -> {} Hz'
+                  .format(radar_freq_par, radar_freq), flush=True)
+            print('Steps after 02 must be rerun.', flush=True)
 
     if not os.path.exists(dempar):
         print('\nCreate EQA.dem_par', flush=True)
@@ -636,7 +683,10 @@ def convert_wrapper(ifgd, is_sbovl=False):
     # Save float outputs
     unw.tofile(unwfile)
     cc = np.nan_to_num(cc, nan=0)
-    cc = cc.astype(np.uint8)  # Convert NaNs to 0, auto-floor to max 255
+    ## Explicitly clip to 0-255 before the uint8 cast to avoid casting any residual
+    ## NaN to an integer (undefined behaviour; RuntimeWarning on numpy>=1.24)
+    ## (LiCSBAS2 2627e50 #169: "invalid value encountered in cast")
+    cc = np.clip(np.nan_to_num(cc), 0, 255).astype(np.uint8)  # auto-floored
     cc.tofile(ccfile)
 
     # Generate png images
