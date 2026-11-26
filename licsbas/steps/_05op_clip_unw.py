@@ -390,14 +390,14 @@ def main(argv=None):
                 print('Recreate slc.mli.png', flush=True)
                 mli = io_lib.read_img(os.path.join(out_dir, 'slc.mli'), length_c, width_c)
                 pngfile = os.path.join(out_dir, 'slc.mli.png')
-                plot_lib.make_im_png(mli, pngfile, 'gray', 'MLI', cbar=False)
+                plot_lib.make_im_png(mli, pngfile, 'gray', 'MLI', cbar=True)
             elif file==os.path.join(in_dir, 'hgt.png'):
                 print('Recreate hgt.png', flush=True)
                 hgt = io_lib.read_img(os.path.join(out_dir, 'hgt'), length_c, width_c)
                 vmax = np.nanpercentile(hgt, 99)
                 vmin = -vmax/3 ## bnecause 1/4 of terrain is blue
                 pngfile = os.path.join(out_dir, 'hgt.png')
-                plot_lib.make_im_png(hgt, pngfile, 'terrain', 'DEM (m)', vmin, vmax, cbar=True)
+                plot_lib.make_im_png(hgt, pngfile, 'terrain', 'DEM (m)', vmin, vmax, cbar=True, cbar_label='m')
             else:
                 print('Copy {}'.format(os.path.basename(file)), flush=True)
                 shutil.copy(file, out_dir)
@@ -485,7 +485,7 @@ def clip_wrapper(ifgix):
     ## Output png for corrected unw
     pngfile = os.path.join(out_dir1, ifgd+'.unw.png')
     title = '{} ({}pi/cycle)'.format(ifgd, cycle*2)
-    plot_lib.make_im_png(np.angle(np.exp(1j*unw/cycle)*cycle), pngfile, cmap_wrap, title, -np.pi, np.pi, cbar=False)
+    plot_lib.make_im_png(np.angle(np.exp(1j*unw/cycle)*cycle), pngfile, cmap_wrap, title, -np.pi, np.pi, cbar=True, cbar_label='rad')
 
 
 #%% main

@@ -50,10 +50,11 @@ from licsbas import inv_lib
 
 
 #%%
-def make_im_png(data, pngfile, cmap, title, vmin=None, vmax=None, cbar=True, ref_window=[None, None, None, None], logscale=False):
+def make_im_png(data, pngfile, cmap, title, vmin=None, vmax=None, cbar=True, cbar_label=None, ref_window=[None, None, None, None], logscale=False):
     """
     Make png image.
     cmap can be 'insar'. To wrap data, np.angle(np.exp(1j*x/cycle)*cycle)
+    cbar_label: optional axis label / units for the colorbar (e.g. 'rad', 'mm/yr')
     """
 
     if cmap=='insar':
@@ -91,6 +92,8 @@ def make_im_png(data, pngfile, cmap, title, vmin=None, vmax=None, cbar=True, ref
         if logscale and vmax == 1:
             cbar.set_ticks([0.05, 0.1, 0.2, 0.5, 1])
             cbar.ax.set_yticklabels([0.05, 0.1, 0.2, 0.5, 1])
+        if cbar_label:
+            cbar.set_label(cbar_label, fontsize=10)
 
     plt.savefig(pngfile)
     plt.close()
@@ -126,11 +129,12 @@ def da_to_xyz(da, out_path, varname=None):
     df.to_csv(out_path, sep=" ", header=False, index=False)
 
 #%%
-def make_3im_png(data3, pngfile, cmap, title3, vmin=None, vmax=None, cbar=True):
+def make_3im_png(data3, pngfile, cmap, title3, vmin=None, vmax=None, cbar=True, cbar_label=None):
     """
     Make png with 3 images for comparison.
     data3 and title3 must be list with 3 elements.
     cmap can be 'insar'. To wrap data, np.angle(np.exp(1j*x/cycle)*cycle)
+    cbar_label: optional axis label / units for the colorbars (e.g. 'rad')
     """
     ### Plot setting
     if cmap=='insar':
@@ -153,7 +157,10 @@ def make_3im_png(data3, pngfile, cmap, title3, vmin=None, vmax=None, cbar=True):
         ax.set_title(title3[i])
         ax.set_xticklabels([])
         ax.set_yticklabels([])
-        if cbar: fig.colorbar(im, ax=ax)
+        if cbar:
+            cbar = fig.colorbar(im, ax=ax)
+            if cbar_label:
+                cbar.set_label(cbar_label, fontsize=10)
 
     plt.tight_layout()
     plt.savefig(pngfile)

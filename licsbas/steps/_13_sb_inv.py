@@ -1372,7 +1372,7 @@ def main(argv=None):
         rms_cum_wrt_med.tofile(f)
 
     pngfile = os.path.join(infodir, '13rms_cum_wrt_med.png')
-    plot_lib.make_im_png(rms_cum_wrt_med, pngfile, cmap_noise_r, 'RMS of cum wrt median (mm)', np.nanpercentile(rms_cum_wrt_med, 1), np.nanpercentile(rms_cum_wrt_med, 99))
+    plot_lib.make_im_png(rms_cum_wrt_med, pngfile, cmap_noise_r, 'RMS of cum wrt median (mm)', np.nanpercentile(rms_cum_wrt_med, 1), np.nanpercentile(rms_cum_wrt_med, 99), cbar_label='mm')
 
     ### Save ref
     cumh5.create_dataset('refarea', data='{}:{}/{}:{}'.format(refx1s, refx2s, refy1s, refy2s))
@@ -1452,6 +1452,7 @@ def main(argv=None):
     names = ['vel', 'vintercept', 'resid_rms', 'n_gap', 'n_ifg_noloop', 'maxTlen']
     cmaps = [cmap_vel, cmap_vel, cmap_noise_r, cmap_noise_r, cmap_noise_r, cmap_noise]
     titles = ['Velocity (mm/yr)', 'Intercept of velocity (mm)', 'RMS of residual (mm)', 'Number of gaps in SB network', 'Number of ifgs with no loops', 'Max length of connected SB network (yr)']
+    cbar_labels = ['mm/yr', 'mm', 'mm', '', '', 'yr']
 
     print('\nOutput results and noise png images...', flush=True)
     for i in range(len(names)):
@@ -1467,7 +1468,7 @@ def main(argv=None):
             cmaxs[i] = np.nanpercentile(data, 99)
         if cmins[i] == cmaxs[i]: cmins[i] = cmaxs[i]-1
 
-        plot_lib.make_im_png(data, pngfile, cmaps[i], titles[i], cmins[i], cmaxs[i])
+        plot_lib.make_im_png(data, pngfile, cmaps[i], titles[i], cmins[i], cmaxs[i], cbar_label=cbar_labels[i])
 
     # additionally run cum2vel where this is possible:
     if offsetsflag and (singular_gauss or only_sb):
@@ -1619,7 +1620,7 @@ def inc_png_wrapper(imx, sbovl=False):
     data3 = [np.angle(np.exp(1j*(data/coef_r2m/cycle))*cycle) for data in [unw, inc, inc-unw]]
     title3 = ['Daisy-chain IFG ({}pi/cycle)'.format(cycle*2), 'Inverted ({}pi/cycle)'.format(cycle*2), 'Difference ({}pi/cycle)'.format(cycle*2)]
     pngfile = os.path.join(incdir, '{}.increment.png'.format(ifgd))
-    plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+    plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
     if not keep_incfile:
         os.remove(incfile)
@@ -1629,7 +1630,7 @@ def resid_png_wrapper(i):
     ifgd, infile, resid_rms, resid = resid_txt_wrapper(i)
     pngfile = infile+'.png'
     title = 'Residual (mm) of {} (RMS:{:.2f}mm)'.format(ifgd, resid_rms)
-    plot_lib.make_im_png(resid, pngfile, cmap_vel, title, -wavelength/2*1000, wavelength/2*1000)
+    plot_lib.make_im_png(resid, pngfile, cmap_vel, title, -wavelength/2*1000, wavelength/2*1000, cbar_label='mm')
 
 
 def resid_txt_wrapper(i):

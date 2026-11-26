@@ -407,7 +407,7 @@ def main():
             preview_png = os.path.join(tsadir, ifgd+'.png')
             print('See {}.'.format(preview_png))
             data = np.fromfile(unwfile, dtype=np.float32).reshape((length, width))*coef_r2m
-            plot_lib.make_im_png(data, preview_png, cmap_vel, ifgd, -wavelength / 2 * 1000, wavelength / 2 * 1000, ref_window=[refx1, refx2, refy1, refy2])
+            plot_lib.make_im_png(data, preview_png, cmap_vel, ifgd, -wavelength / 2 * 1000, wavelength / 2 * 1000, ref_window=[refx1, refx2, refy1, refy2], cbar_label='mm')
             sys.exit('All nan in ref area in {}.'.format(ifgd))
 
         ref_unw.append(np.nanmean(unw))
@@ -772,6 +772,7 @@ def main():
     cmaxs = [None, None, None, None, None, None]
     cmaps = [cmap_vel, cmap_vel, cmap_noise_r, cmap_noise_r, cmap_noise_r, cmap_noise]
     titles = ['Velocity (mm/yr)', 'Intercept of velocity (mm)', 'RMS of residual (mm)', 'Number of gaps in SB network', 'Number of ifgs with no loops', 'Max length of connected SB network (yr)']
+    cbar_labels = ['mm/yr', 'mm', 'mm', '', '', 'yr']
 
     print('\nOutput noise png images...', flush=True)
     for i in range(len(names)):
@@ -787,7 +788,7 @@ def main():
             cmaxs[i] = np.nanpercentile(data, 99)
         if cmins[i] == cmaxs[i]: cmins[i] = cmaxs[i]-1
 
-        plot_lib.make_im_png(data, pngfile, cmaps[i], titles[i], cmins[i], cmaxs[i])
+        plot_lib.make_im_png(data, pngfile, cmaps[i], titles[i], cmins[i], cmaxs[i], cbar_label=cbar_labels[i])
 
     #%% Finish
     elapsed_time = time.time()-start
@@ -872,7 +873,7 @@ def inc_png_wrapper(imx):
     data3 = [np.angle(np.exp(1j*(data/coef_r2m/cycle))*cycle) for data in [unw, inc, inc-unw]]
     title3 = ['Daisy-chain IFG ({}pi/cycle)'.format(cycle*2), 'Inverted ({}pi/cycle)'.format(cycle*2), 'Difference ({}pi/cycle)'.format(cycle*2)]
     pngfile = os.path.join(incdir, '{}.increment.png'.format(ifgd))
-    plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+    plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
     if not args.keep_incfile:
         os.remove(incfile)
@@ -888,7 +889,7 @@ def resid_png_wrapper(i):
 
     pngfile = infile+'.png'
     title = 'Residual (mm) of {} (RMS:{:.2f}mm)'.format(ifgd, resid_rms)
-    plot_lib.make_im_png(resid, pngfile, cmap_vel, title, -wavelength/2*1000, wavelength/2*1000)
+    plot_lib.make_im_png(resid, pngfile, cmap_vel, title, -wavelength/2*1000, wavelength/2*1000, cbar_label='mm')
 
     if not args.keep_incfile:
         os.remove(infile)

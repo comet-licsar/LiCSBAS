@@ -56,6 +56,21 @@ workflow (`--list-frames` then `--frame` then `nisar2geoc -i NISAR_GUNW/<frame>`
 `tests/test_nisar_step.py::test_list_frames_only` and `::test_frame_filter`
 (stubbed, no network); `test_nisar_chain` now checks `-i NISAR_GUNW[/<frame>]`
 and the `--frame` passthrough. Full suite: **90 passed, 2 skipped**.
+
+**Color bars with units on step-0X/1X preview PNGs.** `plot_lib.make_im_png`
+and `make_3im_png` accept a `cbar_label` argument now, and the per-IFG
+previews that were colour-blind before (wrapped phase, e.g. the 02/02to05/
+03/04/05/12/13/16 `*.png` previews) now render a color bar labelled **`rad`**;
+quantity previews got units too (`mm/yr` for velocity, `mm` for intercept/
+residual/DEM-err, `mm` for DEM/STC, `coherence` for the coherence maps of
+steps 04/12). The step-15 `mask.png` was **not** touched (as requested). Full
+suite still green (92 passed, 2 skipped incl. the merged 02op tests).
+
+**Original `batch_LiCSBAS.sh` restored from `main`.** The python thin wrapper
+was replaced by the full 856-line shell batch (settings block + step chain),
+so **both** batch systems work: the traditional `./batch_LiCSBAS.sh` (calls the
+`bin/LiCSBAS*.py` wrappers on PATH) and the v3 python engine
+(`licsbas-batch` / `examples/example_*.py`).
 ### 2026-12-19 (phase bias correction operator — optional 02op step)
 - New optional step `LiCSBAS02op_phasebias` (entry point
   `licsbas-02op-phasebias`, `licsbas/steps/_02op_phasebias.py`,

@@ -57,10 +57,11 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 ## NISAR follow-up (2026-12-20)
 - [x] GUNW-only + frame handling (see CHANGELOG 2026-12-20).
 - [x] Portrait (TB) tutorial flowcharts; `--flowchart-landscape` removed.
-- [ ] Restore the original `batch_LiCSBAS.sh` shell script from `main` — **both**
-      shell and python batch must keep working (user requirement).
-- [ ] Preview PNGs (steps 0X + 1X): add a **colorbar with units** (phase → `rad`;`
-      1X products in `mm`; skip the `mask*.png` output of step 15 — user requirement).
+- [x] Original `batch_LiCSBAS.sh` shell script restored from `main` — **both**
+      shell and python batch work (`licsbas-batch` / `examples/example_*.py` keep working).
+- [x] Preview PNGs (steps 0X + 1X): **colorbar with units added** (`cbar_label`
+      in `plot_lib`: `rad` for wrapped phase, `mm/yr`/`mm` for 1X quantities,
+      `coherence` for coh maps); step-15 `mask.png` left untouched (as requested).
 - [ ] End-to-end NISAR run on real GUNW `.h5` (CI tests are stubbed / no network yet).
 
 ### DONE: LiCSBAS2 bug-fix backports (standard step-02/03 route) — applied 2026-12-19

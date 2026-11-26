@@ -416,6 +416,7 @@ def main():
     cmaxs = [None, None, None]
     cmaps = [cmap_noise_r, cmap_noise_r, cmap_noise]
     titles = ['Number of gaps in SB network', 'Number of ifgs with no loops', 'Max length of connected SB network (yr)']
+    cbar_labels = ['', '', 'yr']
 
     if args.nullify:
         labels = ['_preNullNoLoop', ' before null_no_loop']
@@ -434,7 +435,7 @@ def main():
             cmaxs[i] = np.nanpercentile(data, 99)
         if cmins[i] == cmaxs[i]: cmins[i] = cmaxs[i]-1
         # print(pngfile)
-        plot_lib.make_im_png(data, pngfile, cmaps[i], '{}{}'.format(titles[i], labels[1]), cmins[i], cmaxs[i])
+        plot_lib.make_im_png(data, pngfile, cmaps[i], '{}{}'.format(titles[i], labels[1]), cmins[i], cmaxs[i], cbar_label=cbar_labels[i])
 
     ### New unw pngs
     if n_para > 1 and n_ifg > 20:
@@ -509,7 +510,7 @@ def null_png_wrapper(ifglist):
 
         pngfile = infile+'_noLoop_null.png'
         title = '{} (NoLoop Pixels Nulled)'.format(ifgd)
-        plot_lib.make_im_png(np.angle(np.exp(1j*(unw/coef_r2m/cycle))*cycle), pngfile, cmap_wrap, title, vmin=-np.pi, vmax=np.pi, cbar=False)
+        plot_lib.make_im_png(np.angle(np.exp(1j*(unw/coef_r2m/cycle))*cycle), pngfile, cmap_wrap, title, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
 def even_split(a, n):
     """ Divide a list, a, in to n even parts"""

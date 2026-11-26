@@ -202,7 +202,7 @@ def plot_gacos_corrections(outdir, gacosdir, ml, cliparea_geo=None):
                       'dsltd ({:.1f}% reduced)'.format(rate)]
             pngfile = os.path.join(outdir, pair, pair + '.gacos.png')
             plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3,
-                                 vmin=-np.pi, vmax=np.pi, cbar=False)
+                                 vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
             info_rows.append([pair, std_bef, std_aft, rate])
         except Exception as ex:
             print('WARNING: GACOS correction plot for pair {} failed: {}'.format(pair, ex))

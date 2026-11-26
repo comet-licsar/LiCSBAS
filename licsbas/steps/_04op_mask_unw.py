@@ -228,7 +228,7 @@ def main(argv=None):
         coh_avgfile = os.path.join(out_dir, 'coh_avg')
         coh_avg.tofile(coh_avgfile)
         title = 'Average coherence'
-        plot_lib.make_im_png(coh_avg, coh_avgfile+'.png', cmap_noise, title)
+        plot_lib.make_im_png(coh_avg, coh_avgfile+'.png', cmap_noise, title, cbar_label='coherence')
 
 
     #%% Check and set range to be masked based on specified area
@@ -399,7 +399,7 @@ def mask_wrapper(ifgix, sbovl=False):
     else:
         pngfile = os.path.join(out_dir1, ifgd + '.unw.png')
     title = '{} ({}pi/cycle)'.format(ifgd, cycle * 2)
-    plot_lib.make_im_png(np.angle(np.exp(1j * unw / cycle) * cycle), pngfile, cmap_wrap, title, -np.pi, np.pi, cbar=False)
+    plot_lib.make_im_png(np.angle(np.exp(1j * unw / cycle) * cycle), pngfile, cmap_wrap, title, -np.pi, np.pi, cbar=True, cbar_label='rad')
 #%% main
 if __name__ == "__main__":
     sys.exit(main())

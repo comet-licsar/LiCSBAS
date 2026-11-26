@@ -318,7 +318,7 @@ def main(argv=None):
         hgtpngfile = hgtfile+'.png'
         vmax = np.nanpercentile(hgt, 99)
         vmin = -vmax/3 ## bnecause 1/4 of terrain is blue
-        plot_lib.make_im_png(hgt, hgtpngfile, 'terrain', 'DEM (m)', vmin, vmax, cbar=True)
+        plot_lib.make_im_png(hgt, hgtpngfile, 'terrain', 'DEM (m)', vmin, vmax, cbar=True, cbar_label='m')
         print('  hgt[.png] created', flush=True)
     else:
         print('  No *.geo.hgt.tif found in {}'.format(os.path.basename(geocdir)), flush=True)
@@ -697,7 +697,7 @@ def convert_wrapper(ifgd, is_sbovl=False):
         plot_lib.make_im_png(cc / 255, ccpngfile, cmap_cc, ifgd + suffix[3], vmin=0.03, vmax=1, cbar=True, logscale=True)
 
     unwpngfile = os.path.join(ifgdir1, ifgd + suffix[2] + '.png')
-    plot_lib.make_im_png(np.angle(np.exp(1j * unw / cycle) * cycle), unwpngfile, cmap_wrap, ifgd + suffix[2], vmin=-np.pi, vmax=np.pi, cbar=False)
+    plot_lib.make_im_png(np.angle(np.exp(1j * unw / cycle) * cycle), unwpngfile, cmap_wrap, ifgd + suffix[2], vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
     return 0
 

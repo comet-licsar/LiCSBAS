@@ -551,7 +551,7 @@ def main(argv=None):
 
     pngfile = velmskdfile+'.png'
     title = 'Masked velocity (mm/yr)'
-    plot_lib.make_im_png(vel_mskd, pngfile, cmap_vel, title, vmin, vmax)
+    plot_lib.make_im_png(vel_mskd, pngfile, cmap_vel, title, vmin, vmax, cbar_label='mm/yr')
 
 
     maskfile = os.path.join(resultsdir,'mask')
