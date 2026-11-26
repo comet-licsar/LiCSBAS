@@ -4,21 +4,30 @@
 =========
 Overview
 =========
-Search and **download NISAR** Level-2 products (GUNW or GSLC) for a geographic
-bounding box from ASF (asf.alaska.edu), using the `asf_search` package.
+Search and **download NISAR** Level-2 GUNW products for a geographic bounding box
+from ASF (asf.alaska.edu), using the `asf_search` package. (GUNW — unwrapped
+interferograms — are the only product type LiCSBAS needs; GSLC is not used.)
 
 This is the NISAR analogue of `licsbas-01get-geotiff` (which downloads LiCSAR
 data from the COMET-LiCS portal): that step is left untouched; this step is a
 separate, optional NISAR data-acquisition step.
 
-Products are grouped by NISAR *frame* (a persistent track+frame compatibility
-group) and written to a per-frame subfolder:
+Products are grouped by NISAR *frame* id (the NISAR naming convention, i.e. the
+track/frame identification, naming ``<line><pass>_<beam>``, e.g. ``018A_01234`` — computed with
+``nisar_data.get_frameid``) and written to a per-frame subfolder:
 
     NISAR_GUNW/
-        18_A_01234/
-            NISAR_L2_PR_GUNW_..._A_01234_....h5
-            NISAR_L2_PR_GUNW_....h5
-        18_A_05678/...
+        018A_01234/
+            NISAR_L2_PR_GUNW_..._018_A_01234_....h5
+            NISAR_L2_PR_GUNW_..._....h5
+        019A_01235/...
+
+A geographic region is usually covered by **several frames (tracks)**. Each
+downloaded frame subfolder is a self-contained, independent dataset: you can
+(and should) process each frame on its own — GUNW interferograms from
+different frames **cannot** be combined in a single time series. Use
+``--list-frames`` to inspect what is available and ``--frame`` to download
+only the frame(s) you want.
 
 The ASF download uses the ASF session (streamed over HTTP with optional user
 authentication) instead of a shell `wget`. If ASF credentials exist they are
@@ -44,20 +53,22 @@ Requirements
 =====
 Usage
 =====
-licsbas-01get-nisar-data -g lon1/lon2/lat1/lat2 [-t GUNW|GSLC]
-                           [-s yyyymmdd] [-e yyyymmdd]
+licsbas-01-get-nisar-data -g lon1/lon2/lat1/lat2 [-s yyyymmdd] [-e yyyymmdd]
                            [-o outdir] [--max N] [--dry_run]
 
  -g  Geographic extent, LiCSBAS convention lon1/lon2/lat1/lat2 (required)
- -t  Product type: GUNW (interferograms, default) or GSLC (single looks)
  -s  Start date yyyymmdd (Default: 20250101, first NISAR L2 releases)
  -e  End   date yyyymmdd (Default: today)
- -o  Output directory (Default: ./NISAR_<type>)
+ -o  Output directory (Default: ./NISAR_GUNW)
+ --frame <FID[,FID2,...]>   Download only the selected NISAR frame(s)
+ --list-frames          Show the available frames + per-frame GUNW scene count, then exit
+                        without downloading
  --max  Maximum number of scenes to fetch (Default: 500)
  --dry_run     Perform the ASF search and print the selection; do NOT download
 """
 
 import os
+import re
 import sys
 import time
 import datetime as dt
@@ -158,19 +169,21 @@ def main(argv=None):
 
     #%% Default
     bbox = None            # lon1/lon2/lat1/lat2
-    dtype = "GUNW"
+    dtype = "GUNW"         # fixed: LiCSBAS runs only on GUNW products
     startdate = dt.date(2025, 1, 1)
     enddate = dt.date.today()
     outdir = None
     max_results = 500
+    framesel = None        # --frame  FID[,FID2,...] (optional restriction)
+    list_frames = False    # --list-frames: show frame inventory and exit
     dry_run = False
 
     #%% Read options
     try:
         try:
             opts, args = getopt.getopt(
-                argv[1:], "g:t:s:e:o:h",
-                ["help", "max=", "dry_run"])
+                argv[1:], "g:s:e:o:h",
+                ["help", "max=", "dry_run", "frame=", "list-frames"])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -179,8 +192,6 @@ def main(argv=None):
                 return 0
             elif o == "-g":
                 bbox = a
-            elif o == "-t":
-                dtype = a.upper()
             elif o == "-s":
                 startdate = _parse_date(a, "-s")
             elif o == "-e":
@@ -189,6 +200,10 @@ def main(argv=None):
                 outdir = a
             elif o == "--max":
                 max_results = int(a)
+            elif o == "--frame":
+                framesel = a
+            elif o == "--list-frames":
+                list_frames = True
             elif o == "--dry_run":
                 dry_run = True
     except Usage as e:
@@ -199,11 +214,8 @@ def main(argv=None):
     if not bbox:
         print("ERROR: -g lon1/lon2/lat1/lat2 is required", file=sys.stderr)
         return 1
-    if dtype not in ("GUNW", "GSLC"):
-        print("ERROR: -t must be GUNW or GSLC (got {})".format(dtype), file=sys.stderr)
-        return 1
     if outdir is None:
-        outdir = os.path.join(".", "NISAR_" + dtype)
+        outdir = os.path.join(".", "NISAR_GUNW")
 
     #%% Import NISAR helpers (lazy; clear error if deps missing)
     try:
@@ -253,11 +265,37 @@ def main(argv=None):
         frames.setdefault(fid, []).append(prod)
 
     print("\n  {} frame(s):".format(len(frames)), flush=True)
-    for fid, prods in sorted(frames.items()):
+    allfids = []
+    for fid in sorted(frames):
+        prods = frames[fid]
+        allfids.append(fid)
         dates = sorted((p.properties.get("acquisitionTime", "") for p in prods))
-        print("    {0:8}  {1:3} scene(s)   {2} .. {3}".format(
+        print("    {0:12}  {1:4} scene(s)   {2} .. {3}".format(
             fid, len(prods), dates[0][:10] if dates else "?", dates[-1][:10] if dates else "?"),
             flush=True)
+
+    if list_frames:
+        print("\n--list-frames: no download performed.", flush=True)
+        show = ", ".join(allfids[:6]) + (" ..." if len(allfids) > 6 else "")
+        print("  Download with:  --frame {}".format(show), flush=True)
+        print("  (each frame is a self-contained dataset - process frames separately)", flush=True)
+        return 0
+
+    if framesel:
+        wanted = [x.strip().upper() for x in re.split(r"[,:\s]+", framesel) if x.strip()]
+        av = {f.strip().upper(): f for f in frames}
+        chosen = [av[f] for f in wanted if f in av]
+        missing = [f for f in wanted if f not in av]
+        if missing:
+            print("  WARNING: requested frame(s) not found in this search: {}".format(
+                ", ".join(missing)), file=sys.stderr, flush=True)
+        if not chosen:
+            print("ERROR: none of the requested frame(s) have GUNW scenes in this search. "
+                  "Available: {}".format(", ".join(sorted(av.values()))), file=sys.stderr)
+            return 1
+        frames = {fid: prods for fid, prods in frames.items() if fid in chosen}
+        print("  -> restricting download to {} frame(s): {}".format(
+            len(frames), ", ".join(sorted(frames))), flush=True)
 
     if dry_run:
         print("\n--dry_run: not downloading. Set a real -o and drop --dry_run to fetch.")

@@ -20,16 +20,28 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 - [ ] Create the GitHub `v3.0.0` release (needs a token).
 
 ## NISAR data access (new, optional) — added 2026-11
-- [x] `licsbas-01-get-nisar-data` (ASF bbox search + GUNW/GSLC `.h5` download, per-frame subfolders).
+- [x] `licsbas-01-get-nisar-data` (ASF bbox search + **GUNW** `.h5` download — **GUNW-only: GSLC was removed 2026-12-20** — per-frame subfolders;
+      **`--list-frames` / `--frame FID[,FID2,...]`** for frame selection).
 - [x] `licsbas-nisar2geoc` (NISAR GUNW `.h5` → `GEOC/`: iono + range-offset corrections,
       rasterio WGS-84 export on a single shared grid, `baselines` + `metadata.txt`,
-      E/N/U + hgt + mli top-level files). Recommended NISAR route.
+      **E/N/U written once from the first GUNW**; **one frame per `GEOC`** — warns on
+      mixed frames). Recommended NISAR route. **mli amplitude: removed (needs GSLC,
+      which we do not use).**
 - [x] `licsbas-asf2geoc` (ASF/NIISAR pre-processed GeoTIFF → `GEOC/`).
 - [x] `docs/05_nisar.md` + README NISAR section / doc-table row.
 - [x] `bin/LiCSBAS01_get_NISAR_data.py`, `bin/LiCSBAS_nisar2geoc.py`, `bin/LiCSBAS_asf2geoc.py`.
 - [x] Tests: `tests/test_nisar_step.py`, `tests/test_nisar2geoc.py` (stubbed, no network/HDF5).
 - [ ] `licsar_extra`: publish the NISAR extras (`asf_search`, `geopandas`, `shapely`, `pyproj`)
       + `nisar_data.py` / `lics_proc_tools.py` (pushed separately in that repo).
+- [ ] End-to-end NISAR run on real GUNW `.h5` (CI tests are stubbed / no network yet).
+
+## NISAR follow-up (2026-12-20)
+- [x] GUNW-only + frame handling (see CHANGELOG 2026-12-20).
+- [x] Portrait (TB) tutorial flowcharts; `--flowchart-landscape` removed.
+- [ ] Restore the original `batch_LiCSBAS.sh` shell script from `main` — **both**
+      shell and python batch must keep working (user requirement).
+- [ ] Preview PNGs (steps 0X + 1X): add a **colorbar with units** (phase → `rad`;`
+      1X products in `mm`; skip the `mask*.png` output of step 15 — user requirement).
 - [ ] End-to-end NISAR run on real GUNW `.h5` (CI tests are stubbed / no network yet).
 
 ### DONE: LiCSBAS2 bug-fix backports (standard step-02/03 route) — applied 2026-12-19

@@ -47,7 +47,7 @@ The main wiki pages have been ported to local markdown under [docs/](docs/) and 
 | [**02 — Workflow & quick start**](docs/02_workflow.md) | End-to-end chain (01 → 02-05 → 11–16), step-by-step command reference, `02to05` re-unwrapping, SBOI notes |
 | [**03 — Visualization**](docs/03_visualization.md) | `licsbas-disp-img`, `licsbas-plot-ts`, `licsbas-plot-network`, tiles, NetCDF export |
 | [**04 — Other tools**](docs/04_other_tools.md) | `cum2vel`, dense network, contours, COMET extras, misc. utilities |
-| [**05 — NISAR data**](docs/05_nisar.md) *(experimental)* | `licsbas-01-get-nisar-data` (ASF search + download GUNW/GSLC), `licsbas-nisar2geoc` (NISAR GUNW → `GEOC/` + `baselines`), `licsbas-asf2geoc` (ASF GeoTIFF → `GEOC/`) |
+| [**05 — NISAR data**](docs/05_nisar.md) *(experimental)* | `licsbas-01-get-nisar-data` (ASF search + download of NISAR GUNW, per frame — `--list-frames`/`--frame`), `licsbas-nisar2geoc` (NISAR GUNW → `GEOC/` + `baselines`; one frame per GEOC), `licsbas-asf2geoc` (ASF GeoTIFF → `GEOC/`) |
 | [File structure](docs/file_structure.md) | Output products and per-step naming conventions (`GEOC → TS_* → results_*`) |
 | [Links](docs/links.md) | Data sources (ALOS/F3), tools (SNAPHU, GMT, ...), references, community |
 
@@ -55,18 +55,18 @@ Similarly, the original [quick start](https://github.com/yumorishita/LiCSBAS/wik
 
 ## Tutorials
 
-The tutorials are Jupyter notebooks, runnable directly with [Binder](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3) (no local install needed) or in [Google Colab].
+The tutorials are Jupyter notebooks, runnable directly with [Binder](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3) (no local install needed) or in Google Colab.
 They come in two parts — **Module 0** (data preparation, steps 0–5) and **Module 1** (time series, steps 11–16 + viewer) — and in several data flavours:
 
 <!-- NOTE: badges/links point at the `towards-v3` branch until v3 is merged into `main`. -->
 
 | Tutorial | Binder | Google Colab |
 |---|---|---|
+| [Standard tutorial](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_bash-compatible.ipynb) (`licsbas-*` console commands) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial_bash-compatible.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_bash-compatible.ipynb) |
 | [**0 — steps 0\* with LiCSAR data**](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_0.ipynb) (incl. the `02to05_unwrap` alternative route) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial_0.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_0.ipynb) |
 | [**0 — steps 0\* with NISAR data**](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_0_nisar.ipynb) *(experimental: ASF search + `nisar2geoc`)* | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial_0_nisar.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_0_nisar.ipynb) |
-| [**0 — steps 0\* with SBOVNL (SBOI) data**](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_0_sbovl.ipynb) (`--sbovl` chain) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial_0_sbovl.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_0_sbovl.ipynb) |
+| [**0 — steps 0\* with (S)BOI data**](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_0_sbovl.ipynb) (`--sbovl` chain) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial_0_sbovl.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_0_sbovl.ipynb) |
 | [**1 — time series (steps 1\*)** + viewer](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_1.ipynb) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial_1.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_1.ipynb) |
-| [Bash-compatible tutorial](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_bash-compatible.ipynb) (`licsbas-*` console commands, GMT-free viewer) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial_bash-compatible.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_bash-compatible.ipynb) |
 | [Batch processing (python & shell)](https://github.com/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_batch.ipynb) — `licsbas.batch` workflows (incl. `nisar`, `reunw_5`, `sbovl`) + PNG flowcharts | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/comet-licsar/LiCSBAS/towards-v3?labpath=tutorial/tutorial_batch.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/comet-licsar/LiCSBAS/blob/towards-v3/tutorial/tutorial_batch.ipynb) |
 
 Each **Module 0** notebook links to the **Module 1** (time series) notebook and
@@ -100,8 +100,8 @@ Once understood, run your chain via the **python batch processor**
 - `example_4_nisar.py` — NISAR GUNW chain (download + `nisar2geoc` + standard steps).
 
 Each script is a dry run by default and also writes a PNG flowchart of the chain
-(Graphviz `dot`), e.g. `licsbas-batch --workflow nisar --nisar-bbox 14.0/14.25/40.75/40.95
---flowchart chain.png --flowchart-landscape`. For simple cases the old command
+(Graphviz `dot`, portrait), e.g. `licsbas-batch --workflow nisar --nisar-bbox 14.0/14.25/40.75/40.95
+--flowchart chain.png`. For simple cases the old command
 line keeps working: `./batch_LiCSBAS.sh --help`.
 
 ## Citations

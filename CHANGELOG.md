@@ -2,6 +2,46 @@
 
 ## [unreleased] — branch `towards-v3`
 
+### 2026-12-20 (NISAR: GUNW-only + frame handling; portrait flowcharts)
+**NISAR data access is now GUNW-only.** LiCSBAS does not use GSLC products, so
+GSLC support was **removed entirely** from the NISAR chain: `nisar2geoc -E`
+(GSLC for E/N/U + mli), the download step's `-t GUNW|GSLC` / `--gslc` options,
+`batch.py`'s `pNISAR_type`/`pNISAR_gslc` and `--nisar-type/--nisar-gslc`, and
+`example_4_nisar.py`'s `--type/--gslc`. `licsbas-nisar2geoc` no longer writes an
+mli amplitude at all. (`licsbas-asf2geoc` still maps ASF's `*_amp.tif` to
+`X.geo.mli.tif` — that is a GeoTIFF product, not a GSLC.)
+
+**NISAR frames (tracks).** A region is covered by several NISAR frames, and each
+frame is a self-contained time series (frame id `<line><pass>_<beam>`, e.g.
+`018A_01234`, via `nisar_data.get_frameid`). New behaviour:
+- `licsbas-01-get-nisar-data` gained **`--list-frames`** (lists the available
+  frames + GUNW count per frame, then exits — no download) and **`--frame
+  FID[,FID2,...]`** (download only the selected frame(s); unknown ids are
+  rejected with the available list).
+- `licsbas-nisar2geoc` **warns if the input GUNWs span more than one frame**
+  (frames cannot be combined into one time series); help/`-i` doc now say
+  explicitly: **one frame per `GEOC/`**.
+- `batch.py`: `nisar2geoc` now gets an explicit **`-i`** (it was missing — it
+  would have searched CWD); with exactly one selected frame
+  (`--nisar-frames` / `pNISAR_frames`) `-i` points at that frame's subfolder.
+- **E/N/U are written once**, derived from the **first GUNW's own `radarGrid`**
+  metadata (the `earthquake_responder.py` approach — no GSLC needed);
+  best-effort (skipped, with a note, if unavailable).
+
+**Flowcharts are portrait now.** `tutorial/make_flowchart.py` defaults to
+`rankdir=TB` (top-to-bottom) and `licsbas-batch --flowchart-landscape` was
+removed; all four tutorial PNGs were regenerated vertically (`0_licsar.png`,
+`0_nisar.png`, `0_sbovl.png`, `1_ts.png`). `licsbas/flowchart.py` still accepts
+`rankdir` for opt-in LR layouts.
+
+**Tutorial/docs/tests** — the NISAR tutorial cells now teach the per-frame
+workflow (`--list-frames` then `--frame` then `nisar2geoc -i NISAR_GUNW/<frame>`);
+`docs/05_nisar.md`, the NISAR flowchart config, `examples/example_4_nisar.py`
+(`--frames`/`--outdir`) and the README row were updated accordingly. New tests:
+`tests/test_nisar_step.py::test_list_frames_only` and `::test_frame_filter`
+(stubbed, no network); `test_nisar_chain` now checks `-i NISAR_GUNW[/<frame>]`
+and the `--frame` passthrough. Full suite: **90 passed, 2 skipped**.
+
 ### 2026-12-19 (tutorial & documentation restructure; flowcharts; NISAR batch template)
 **Tutorial** — the monolithic `tutorial/tutorial.ipynb` is kept as the *master single-file template*, and four composed tutorials are published from it (`tutorial/build_notebooks.py` re-generates them):
 - `tutorial_0.ipynb` — **Module 0, LiCSAR data** (steps `0-1` → `0-5`), **plus a new ``02to05_unwrap`` alternative-route cell** that explains the *re-unwrapping* option (starts from the **wrapped** phase, does the unwrapping itself, and **substitutes steps `0-2` → `0-5`**).

@@ -12,7 +12,13 @@ ASF / other pre-processed GeoTIFFs into ``GEOC/``). The *structure* and the
 ``metadata.txt`` produced here are the same as ``asf2geoc``; the *difference*
 is the source and the corrections:
 
-* The source of every IFG is a NISAR GUNW ``.h5`` file.
+* The source of every IFG is a NISAR GUNW ``.h5`` file (**GUNW is all that is
+  needed — GSLC products are not used at all**).
+* A region is covered by **several frames (tracks)** — a frame ID has the NISAR
+  naming ``<line><pass>_<beam>`` (e.g. ``018A_01234``; see
+  ``nisar_data.get_frameid``). Point ``-i`` at a *single frame's* folder: GUNWs
+  from different frames cannot be combined into one time series (a
+  mixed-frame input is flagged with a warning).
 * The unwrapped phase is corrected the way ``earthquake_responder.py`` does it:
   the smooth **ionospheric** ramp and the **range-offset** (pixel-offset) ramp
   are removed before export (``nisar_data.load_gunw(..., iono_smooth_removal=True,
@@ -26,9 +32,11 @@ is the source and the corrections:
 * A LiCSBAS-compliant ``baselines`` file (per-IFG perpendicular baseline, read
   by ``io_lib.read_bperp_file``) is written.
 * **All** exported GeoTIFFs (unw / cc of every IFG, plus the top-level
-  E / N / U, hgt, mli) are written onto a **single shared WGS-84 grid**: the
+  E / N / U and hgt) are written onto a **single shared WGS-84 grid**: the
   first IFG defines the grid and every other output is forced onto it (same
   dimensions and coordinates).
+* The E / N / U vectors are written **once**, derived from the **first** GUNW
+  product (identical for every IFG of the same frame).
 
 ============
 Output files
@@ -37,9 +45,8 @@ Output files
    - yyyymmdd_yyyymmdd/
      - yyyymmdd_yyyymmdd.geo.unw.tif   (iono + range-offset corrected, cc-masked)
      - yyyymmdd_yyyymmdd.geo.cc.tif
-   - X.geo.E.tif / X.geo.N.tif / X.geo.U.tif   (if a NISAR GSLC is supplied)
+   - X.geo.E.tif / X.geo.N.tif / X.geo.U.tif   (from the **first** GUNW product's radarGrid metadata; written once)
    - X.geo.hgt.tif                            (if a DEM is available / downloaded)
-   - X.geo.mli.tif                            (if a NISAR GSLC amplitude is supplied)
    - baselines                                (bperp per pair — LiCSBAS standard)
    - metadata.txt                             (center_time, radar_freq)
 
@@ -51,10 +58,11 @@ Usage
    licbas-nisar2geoc -i NISAR_GUNW -o GEOC
                      [-c lonmin/lonmax/latmin/latmax] [-t 0.5]
                      [-f A|B] [--no_iono] [--no_offsets] [--no_deramp_quad]
-                     [-E path_to_GSLC.h5] [-D] [-n N_WORKERS] [--dry_run]
+                     [-D] [-n N_WORKERS] [--dry_run]
 
- -i  Directory containing NISAR GUNW ``.h5`` files (searched recursively), or a
-     single GUNW ``.h5`` file. (required)
+ -i  Directory containing *one frame's* NISAR GUNW ``.h5`` files (searched
+     recursively) — or a single GUNW ``.h5`` file. (required)
+     Do not mix frames (tracks) in one run; process each frame folder separately
  -o  Target GEOC directory (default: ./GEOC)
  -c  Crop outputs to a geographic bbox (lonmin/lonmax/latmin/latmax); this also
      fixes the shared grid.
@@ -63,7 +71,6 @@ Usage
  --no_iono         Do not remove the smooth ionospheric ramp
  --no_offsets      Do not remove the range-offset (pixel-offset) ramp
  --no_deramp_quad  Do not remove a 2-D quadratic ramp on export
- -E  NISAR GSLC ``.h5`` used for ENU (E/N/U) + amplitude (mli) top-level files
  -D  Also try to fetch a NISAR DEM for ``X.geo.hgt.tif`` (needs earthaccess)
  -n  Number of parallel workers (default: usable CPUs - 1)
  --dry_run         List the GUNW files / pairs that would be processed; don't write
@@ -389,13 +396,26 @@ def _xr_to_tif_on_grid(xrvar, crs, dst, ref, tmpdir, tag, alg="near"):
     return dst
 
 
-def _write_enu(out_geoc, gslc_h5, ref, tmpdir):
-    """Best-effort E/N/U from a NISAR GSLC (nisar_data.get_ENU), on the shared grid."""
-    if not gslc_h5 or not os.path.exists(gslc_h5):
-        print("  no GSLC provided; skipping E/N/U top-level files (-E ...)")
+def _write_enu(out_geoc, gunw_h5, ref, tmpdir):
+    """Best-effort E/N/U unit vectors, on the shared grid.
+
+    Derived **once** from the given (first) **GUNW product itself**
+    (``science/LSAR/GUNW/metadata/radarGrid``) — the earthquake_responder
+    approach: GSLC products are *not* used at all. E/N/U are optional for
+    LiCSBAS, so failures are non-fatal (best-effort)."""
+    enu = None
+    try:
+        nd = _get_nds()
+        if gunw_h5 and os.path.exists(gunw_h5):
+            try:
+                enu = nd.get_ENU(gunw_h5)
+            except Exception as e:  # e.g. no radarGrid metadata in the GUNW product
+                print("  E/N/U not derivable from the GUNW product: {0}".format(e))
+    except Exception as e:  # licsar_extra / nisar deps missing - skip (best-effort)
+        print("  E/N/U skipped (best-effort): {0}".format(e))
+    if enu is None:
+        print("  skipping E/N/U top-level files (optional; best-effort)")
         return False
-    nd = _get_nds()
-    enu = nd.get_ENU(gslc_h5)
     crs = enu.attrs.get("crs")
     wrote = False
     for dv in ("E", "N", "U"):
@@ -411,23 +431,6 @@ def _write_enu(out_geoc, gslc_h5, ref, tmpdir):
     return wrote
 
 
-def _write_mli(out_geoc, gslc_h5, ref, tmpdir):
-    """Best-effort amplitude/MLI from a NISAR GSLC, on the shared grid."""
-    dst = os.path.join(out_geoc, "X.geo.mli.tif")
-    if not gslc_h5 or not os.path.exists(gslc_h5) or os.path.exists(dst):
-        return False
-    try:
-        nd = _get_nds()
-        slc = nd.load_gslc(gslc_h5, freq_code="A", polarization="HH")
-        crs = slc.attrs.get("crs")
-        for dv in slc.data_vars:
-            if dv in ("amp", "magnitude", "amplitude", "intensity"):
-                _xr_to_tif_on_grid(slc[dv], crs, dst, ref, tmpdir, "mli")
-                print("  wrote {0}".format(os.path.basename(dst)))
-                return True
-    except Exception as e:
-        print("  MLI/amp skipped: {0}".format(e))
-    return False
 
 
 def _write_hgt(out_geoc, ref, wsen):
@@ -493,12 +496,13 @@ def _establish_ref(h5path, out_geoc, cc_thresh, freq_code, do_iono, do_offsets,
     return (rec.get("ref") if rec.get("ok") else None), rec
 
 
+
 # --------------------------------------------------------------------------- #
 # main
 # --------------------------------------------------------------------------- #
 def main(indir=".", outdir="GEOC", crop_geo=None, cc_thresh=0.5,
          freq_code="A", iono=True, offsets=True, deramp_quad=True,
-         gslc_h5=None, download_dem=False, n_workers=None, dry_run=False):
+         download_dem=False, n_workers=None, dry_run=False):
 
     indir = os.path.abspath(indir)
     if os.path.isfile(indir):
@@ -538,6 +542,24 @@ def main(indir=".", outdir="GEOC", crop_geo=None, cc_thresh=0.5,
         p = _pair_from_name(h)
         print("    {0}   ({1})".format(os.path.basename(h), p[0] + "_" + p[1] if p else "??"))
 
+    # NISAR frames (tracks) cannot be combined — warn if the input mixes frames
+    try:
+        _nd = _get_nds()
+        _fids = {}
+        for _h5 in h5files:
+            try:
+                _fid = _nd.get_frameid(os.path.basename(_h5))
+            except Exception:
+                _fid = None
+            if _fid:
+                _fids[_fid] = _fids.get(_fid, 0) + 1
+        if len(_fids) > 1:
+            print("WARNING: the input GUNWs span {0} NISAR frames {1} — frames (tracks) "
+                  "cannot be combined in one time series. Process each frame folder "
+                  "separately (one GEOC per frame).".format(len(_fids), sorted(_fids)))
+    except Usage:
+        pass
+
     if dry_run:
         print("\n--dry_run: not writing anything. Drop --dry_run to convert.")
         print("  would write into: " + out_geoc)
@@ -575,10 +597,10 @@ def main(indir=".", outdir="GEOC", crop_geo=None, cc_thresh=0.5,
     # 3) top-level files (all on the shared grid) + baselines + metadata.txt
     nbl = _write_baselines(out_geoc, records)
     print("wrote baselines ({0} pair(s))".format(nbl))
-    _write_enu(out_geoc, gslc_h5, ref, tmpdir)
+    # E/N/U are written **once**, from the first GUNW product of this frame
+    _write_enu(out_geoc, h5files[0], ref, tmpdir)
     if download_dem:
         _write_hgt(out_geoc, ref, _wgs84_bounds_from_geoc(out_geoc))
-    _write_mli(out_geoc, gslc_h5, ref, tmpdir)
     _write_metadata(out_geoc, records, freq_code)
 
     shutil.rmtree(tmpdir, ignore_errors=True)
@@ -596,7 +618,8 @@ def cli_main(argv=None):
     p = argparse.ArgumentParser(
         description="Convert NISAR L2 PR GUNW .h5 files into a LiCSBAS GEOC/ layout "
                     "(iono + range-offset corrected; rasterio WGS84 export; writes baselines, "
-                    "E/N/U, hgt, mli, metadata.txt — all on one shared grid)",
+                    "and metadata.txt, and E/N/U once from the first GUNW of the frame; "
+                    "all on one shared grid; process one NISAR frame per GEOC)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     p.add_argument("-i", "--indir", default=".", help="NISAR GUNW .h5 file or directory (recursive)")
     p.add_argument("-o", "--outdir", default="GEOC", help="Target GEOC directory")
@@ -606,7 +629,6 @@ def cli_main(argv=None):
     p.add_argument("--no_iono", action="store_true", help="Do not remove the smooth iono ramp")
     p.add_argument("--no_offsets", action="store_true", help="Do not remove the range-offset ramp")
     p.add_argument("--no_deramp_quad", action="store_true", help="Do not remove a 2-D quadratic ramp")
-    p.add_argument("-E", "--gslc", default=None, help="NISAR GSLC .h5 for E/N/U + mli")
     p.add_argument("-D", "--download_dem", action="store_true", help="Try to fetch a NISAR DEM")
     p.add_argument("-n", "--n_workers", type=int, default=None, help="Parallel workers")
     p.add_argument("--dry_run", action="store_true", help="List products; do not write")
@@ -615,7 +637,7 @@ def cli_main(argv=None):
     return main(
         indir=a.indir, outdir=a.outdir, crop_geo=a.crop, cc_thresh=a.cc,
         freq_code=a.freq, iono=not a.no_iono, offsets=not a.no_offsets,
-        deramp_quad=not a.no_deramp_quad, gslc_h5=a.gslc,
+        deramp_quad=not a.no_deramp_quad,
         download_dem=a.download_dem, n_workers=a.n_workers, dry_run=a.dry_run)
 
 

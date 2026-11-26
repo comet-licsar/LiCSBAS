@@ -120,7 +120,7 @@ def main():
 *A step-by-step tutorial to run LiCSBAS for the time series analysis. This first notebook covers **Module 0** (dataset preparation, steps `0-1` → `0-5`); the time series analysis (steps `11` → `16` + the interactive viewers) lives in [**`tutorial_1.ipynb`**](tutorial_1.ipynb).
 
 > **Other data routes for Module 0**
-> - [**NISAR data** (experimental)](tutorial_0_nisar.ipynb) — ALOS-2 L-band NISAR CSL2 GUNW/GSLC via ASF
+> - [**NISAR data** (experimental)](tutorial_0_nisar.ipynb) — ALOS-2 L-band NISAR CSL2 GUNW via ASF (per frame)
 > - [**SBOVNL / SBOI data**](tutorial_0_sbovl.ipynb) — the `--sbovl` burst-overlap chain (steps `0-1` → `1-6`)"""),
         md(c[1]["source"] if isinstance(c[1]["source"], list) else c[1]["source"]),  # "First, please execute..."
         setup_cell(c),
@@ -195,9 +195,11 @@ It unwraps (Goldstein filter, stability/constancy threshold `--thres`, optional 
     n0n = [
         md("""# COMET InSAR Workshop: LiCSBAS Tutorial — **Module 0: dataset preparation (NISAR data, experimental)**
 
-*This notebook is the **NISAR data route** of Module 0: data access (ASF search + download of NISAR CSL2 `GUNW`/`GSLC` products), conversion to the LiCSBAS `GEOC/` layout, and then the *same* steps `0-2` → `0-5` as in [the LiCSAR tutorial](tutorial_0.ipynb). The time series part is shared: [**`tutorial_1.ipynb`**](tutorial_1.ipynb).*
+*This notebook is the **NISAR data route** of Module 0: data access (ASF search + download of NISAR CSL2 `GUNW` products), conversion to the LiCSBAS `GEOC/` layout, and then the *same* steps `0-2` → `0-5` as in [the LiCSAR tutorial](tutorial_0.ipynb). The time series part is shared: [**`tutorial_1.ipynb`**](tutorial_1.ipynb).*
 
-> **What is NISAR?** — NISAR / ALOS-2 is a *dual-frequency (L + P band)* radar satellite. The NISAR CSL2 products distributed by ASF are **interferogram (GUNW)** and **SLC (GSLC)** products in `.h5` (HDF5) format, on **frames**. This is *not* Sentinel-1.
+> **What is NISAR?** — NISAR / ALOS-2 is a *dual-frequency (L + P band)* radar satellite. The NISAR CSL2 products distributed by ASF are **interferograms (GUNW)** in `.h5` (HDF5) format, organized into **frames (tracks)**. LiCSBAS uses **GUNW only** — GSLC is not needed.
+>
+> **Frames:** a region is usually covered by *several* frames, and each frame is a self-contained time series that must be processed **separately** (do not combine frames; `nisar2geoc` even warns if the input mixes them).
 >
 > **Why experimental?** — this chain is new (LiCSBAS v3), and requires the optional extras `licsar_extra[nisar]` + `licsbas[nisar]` (rasterio, rioxarray, dask, xarray, pyproj, h5py, statsmodels; plus `snaphu` for the L-band unwrapping used by the data provider). The steps degrade gracefully (`-h` works everywhere; the heavy imports are lazy).
 >
@@ -206,40 +208,50 @@ It unwraps (Goldstein filter, stability/constancy threshold `--thres`, optional 
         setup_cell(c),
         md("## The processing chain of this module (NISAR route)\n" + _img("0_nisar.png")),
         # ------------- step 0-1n: ASF search + download -------------
-        md("""## Step 0-1 (NISAR): **search ASF + download NISAR products** — `LiCSBAS01_get_NISAR_data.py`
+        md("""## Step 0-1 (NISAR): **search ASF + download NISAR GUNW** — `LiCSBAS01_get_NISAR_data.py`
 
-Searches [ASF](https://asf.alaska.edu) for NISAR CSL2 products over a bbox and streams them (via an ASF session, no shell `wget`) into per-frame subfolders:
+Searches [ASF](https://asf.alaska.edu) for NISAR CSL2 GUNW over a bbox and streams them (via an ASF session, no shell `wget`) into **per-frame subfolders** (the NISAR frame id, e.g. `018A_01234`):
 
 ```
 WORKdir/NISAR_GUNW/
-├── A2H_1038539_.../   20250101_20250117.h5
-└── ...
+├── 018A_01234/
+│   ├── 20250101_20250117.h5
+│   └── 20250117_20250133.h5
+└── 019A_01235/...
 ```
 
-> **Prerequisite:** `pip install licsbas[nisar]` and `licsar_extra[nisar]` (the `nisar_data` module). The `-h` below works even without them.
+Useful options (see `-h` for all):
+- `--list-frames` — show the available frames + how many GUNW per frame, *then exit (no download)*;
+- `--frame 018A_01234[, 018A_01235, ...]` — download **only** the selected frame(s).
+
+> **Prerequisite:** `pip install licsar_extra[nisar]` (the `nisar_data` module with ASF search + download). The `-h` below works even without it.
 >
-> **GSLC note:** add `--gslc` if you also want the co-registered SLCS (used to build the E/N/U components + the mli amplitude in the conversion step)."""),
+> **One frame per time series** — each frame folder is its own LiCSBAS dataset (its own `GEOC/`), processed with the steps below and with the time series module."""),
         code("![-h help] licsbas-01-get-nisar-data -h"),
         code("""# EXAMPLES (not run in this tutorial — needs the NISAR deps)
-# licsbas-01-get-nisar-data -o NISAR_GUNW -g 14.00/14.25/40.75/40.95 -t GUNW --dry_run
-# licsbas-01-get-nisar-data -o NISAR_GUNW -g 14.00/14.25/40.75/40.95 -t GUNW --gslc -s 20250101
-# licsbas-01-get-nisar-data -o NISAR_GUNW -i <one A2H_...h5> -t GUNW      # a single, already-downloaded file"""),
+# 1) which frames are available here? (no download)
+# licsbas-01-get-nisar-data -g 14.00/14.25/40.75/40.95 --list-frames
+# 2) dry-run: what would be downloaded (all frames in the bbox)
+# licsbas-01-get-nisar-data -g 14.00/14.25/40.75/40.95 -s 20250101 --dry_run
+# 3) download one frame only
+# licsbas-01-get-nisar-data -o NISAR_GUNW -g 14.00/14.25/40.75/40.95 --frame 018A_01234 -s 20250101"""),
         # ------------- nisar2geoc -------------
         md("""## NISAR → GEOC conversion — `LiCSBAS_nisar2geoc.py`
 
-Each frame folder is converted to the LiCSBAS `GEOC/<ifg>/...` layout, **in the same order the original GeoTIFF chain (`LiCSBAS_asf2geoc`) would produce**:
+One **frame folder** is converted to the LiCSBAS `GEOC/<ifg>/...` layout; from `02` onwards the chain is identical to the LiCSAR route:
 
-- removes the smooth **ionospheric ramp** (fit from the unwrapping residual) and the **range-offset ramp** (from GSLC coherence), *before* writing — following `licsar_extra/earthquake_responder.py`;
-- applies the coherence mask (default threshold `0.5`), sets the mli amplitude (from GSLC if `-E` given);
-- writes per-IFG `unw`/`cc`/`E`/`N`/`U` (+ `hgt` if `-D`), a shared **`slc.mli.par`/`EQA.dem_par`**, the standard **`baselines`** file and a `metadata.txt`;
-- **all GeoTIFFs share one WGS-84 grid** (the first IFG defines it; later ones are re-registered).
+- each IFG: `.geo.unw.tif` / `.geo.cc.tif`, with the smooth **ionospheric ramp** and the **range-offset (pixel-offset) ramp** removed *before* writing (following `earthquake_responder.py`), then the coherence mask (default threshold `0.5`);
+- top-level files, **written once** from the first GUNW of the frame: `X.geo.E.tif`/`X.geo.N.tif`/`X.geo.U.tif` (from the GUNW's own `radarGrid` metadata) and — with `-D` — `X.geo.hgt.tif` (best-effort NISAR DEM);
+- the standard **`baselines`** file (per-IFG perpendicular baseline) and a `metadata.txt` (`center_time`, `radar_freq`);
+- **all GeoTIFFs share one WGS-84 grid** (the first IFG defines it, `rasterio` export; the others are re-registered onto it).
 
-> *For ASF pre-exported GeoTIFF products (unw/cc/E/N/U/hgt/mli) use `LiCSBAS_asf2geoc.py` instead — the layout is identical.*"""),
+> **Do not mix frames (tracks)** — point `-i` at a *single frame* folder (one `GEOC/` per time series). `nisar2geoc` prints a warning if the input GUNWs span more than one frame."""),
         code("![-h help] licsbas-nisar2geoc -h"),
         code("""# EXAMPLES (not run in this tutorial — needs NISAR .h5 input + the NISAR deps)
-# licsbas-nisar2geoc -i NISAR_GUNW -o GEOC -t 0.5 -D
-# licsbas-nisar2geoc -i NISAR_GUNW -o GEOC -E NISAR_GUNW/A2H_.../A2H_...h5 -D
-# licsbas-nisar2geoc -i NISAR_GUNW -o GEOC --no_iono --no_offsets --no_deramp_quad --dry_run"""),
+# one frame (track) per GEOC:
+# licsbas-nisar2geoc -i NISAR_GUNW/018A_01234 -o GEOC_018A_01234 -t 0.5
+# licsbas-nisar2geoc -i NISAR_GUNW/018A_01234 -o GEOC_018A_01234 -D    # also write hgt (best-effort DEM)
+# licsbas-nisar2geoc -i NISAR_GUNW/018A_01234 -o GEOC --no_iono --no_offsets --no_deramp_quad --dry_run"""),
         md("## (alternative, GeoTIFF input) — `LiCSBAS_asf2geoc.py`\n\n`![-h help] licsbas-asf2geoc -h`"),
         # ------------- steps 0-2 .. 0-5 (same as LiCSAR) -------------
         md("""## Steps `0-2` → `0-5`: **identical to the LiCSAR route**

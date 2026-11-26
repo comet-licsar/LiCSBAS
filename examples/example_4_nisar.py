@@ -4,14 +4,17 @@
 Direct python replacement for the new NISAR route (see ``docs/05_nisar.md``
 and the ``nisar`` predefined workflow):
 
-    01-get-nisar-data (ASF search + download of NISAR CSL2 GUNW/GSLC .h5)
+    01-get-nisar-data (ASF search + download of NISAR CSL2 GUNW .h5, per frame;
+     use its --list-frames / --frame options)
     -> nisar2geoc (-> GEOC layout, shared WGS-84 grid, baselines, metadata)
     -> 02 ml prep -> 11 check unw -> 120 choose ref (optional)
     -> 12 loop closure -> 13 sb inversion -> 14 velocity/std
     -> 15 mask ts -> 16 filter ts
 
-Unlike the LiCSAR route the *data access* is by bounding box (there is no
-frame id / start-end date for NISAR GUNW in the same sense).
+A region is usually covered by **several NISAR frames (tracks)**; each frame is
+a self-contained dataset that must be processed **separately** (do not combine
+frames). Use ``--frames 018A_01234`` (see ``--help``) to select the frame(s),
+and point the chain at one frame per run.
 
 Prereqs: the optional extras ``licsbas[nisar]`` and ``licsar_extra[nisar]``
 (h5py, rasterio, rioxarray, xarray, pyproj, dask, statsmodels). The dry run
@@ -22,7 +25,7 @@ PNG flowchart is written. Pass ``--execute`` to actually run it.
 
 Usage:
     python3 examples/example_4_nisar.py --bbox 14.0/14.25/40.75/40.95   # dry run + PNG
-    python3 examples/example_4_nisar.py --bbox ... --gslc --execute     # run for real
+    python3 examples/example_4_nisar.py --bbox ... --frames 018A_01234 --execute  # run for real
 """
 import os
 import sys
@@ -41,9 +44,11 @@ def main():
     ap.add_argument("--bbox", "-g", default="14.00/14.25/40.75/40.95",
                     help="lon1/lon2/lat1/lat2 search area for the ASF NISAR search "
                          "(default: Campi Flegrei region)")
-    ap.add_argument("--type", "-t", default="GUNW", help="GUNW (default) or GSLC")
-    ap.add_argument("--gslc", action="store_true",
-                    help="also download GSLC (builds E/N/U + mli in nisar2geoc)")
+    ap.add_argument("--frames", dest="frames", default="",
+                    help="NISAR frame id FID[,FID2,...] to download (e.g. 018A_01234); "
+                         "run one GEOC time series per frame")
+    ap.add_argument("--outdir", dest="outdir", default="",
+                    help="NISAR download output directory (default ./NISAR_GUNW)")
     ap.add_argument("--start-date", dest="start_date", default="",
                     help="start date e.g. 20250101 (optional)")
     ap.add_argument("--end-date", dest="end_date", default="",
@@ -69,10 +74,10 @@ def main():
     cfg = BatchConfig(
         use_nisar=True,
         pNISAR_bbox=a.bbox,
-        pNISAR_type=a.type,
+        pNISAR_frames=a.frames,
+        pNISAR_outdir=a.outdir,
         pNISAR_start_date=a.start_date,
         pNISAR_end_date=a.end_date,
-        pNISAR_gslc=a.gslc,
         nisar2geoc_no_iono=a.no_iono,
         nisar2geoc_no_offsets=a.no_offsets,
         nisar2geoc_download_dem=a.dem,
