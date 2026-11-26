@@ -1,13 +1,13 @@
 # 3. Visualization
 
 Ported from the original [wiki](https://github.com/yumorishita/LiCSBAS/wiki) page.
-Commands are `licbas-*` console entry points in v3 (the legacy `LiCSBAS_*.py` names
+Commands are `licsbas-*` console entry points in v3 (the legacy `LiCSBAS_*.py` names
 still work via the installed `bin/` wrappers). Use `-h` for the usage.
 
-## `licbas-disp-img` (LiCSBAS_disp_img.py)
+## `licsbas-disp-img` (LiCSBAS_disp_img.py)
 
 ```
-licbas-disp-img -i image_file -p par_file [-c cmap] [--cmin float]
+licsbas-disp-img -i image_file -p par_file [-c cmap] [--cmin float]
   [--cmax float] [--auto_crange float] [--n_color int] [--cycle float]
   [--nodata float] [--bigendian] [--png pngname] [--kmz kmzname]
 
@@ -43,10 +43,10 @@ Displays an image file.
 
 ![disp_img](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/disp_img_insar.png) ![disp_img](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/disp_img_roma.png)
 
-## `licbas-plot-ts` (LiCSBAS_plot_ts.py)
+## `licsbas-plot-ts` (LiCSBAS_plot_ts.py)
 
 ```
-licbas-plot-ts [-i cum[_filt].h5] [--i2 cum*.h5] [-m yyyymmdd] [-d results_dir]
+licsbas-plot-ts [-i cum[_filt].h5] [--i2 cum*.h5] [-m yyyymmdd] [-d results_dir]
     [-u U.geo] [-r x1:x2/y1:y2] [--ref_geo lon1/lon2/lat1/lat2] [-p x/y]
     [--p_geo lon/lat] [-c cmap] [--nomask] [--vmin float] [--vmax float]
     [--auto_crange float] [--dmin float] [--dmax float] [--ylen float]
@@ -63,7 +63,7 @@ licbas-plot-ts [-i cum[_filt].h5] [--i2 cum*.h5] [-m yyyymmdd] [-d results_dir]
  --ref_geo   Initial reference area in geographical coordinates.
  -p    Initial selected point for time series plot (Default: ref point)
  --p_geo     Initial selected point in geographical coordinates.
- -c    Color map for velocity and cumulative displacement. See help of licbas-disp-img.
+ -c    Color map for velocity and cumulative displacement. See help of licsbas-disp-img.
        (Default: SCM.roma_r, reverse of SCM.roma)
  --nomask     Not use mask (Default: use mask)
  --vmin|vmax  Min|max values of color for velocity map (Default: auto)
@@ -82,7 +82,7 @@ right-dragging.
 
 [<img src="https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/LiCSBAS_plot_ts.py_demo_small.gif" alt="Demonstration Video"/>](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/LiCSBAS_plot_ts.py_demo.mp4)
 
-## `LiCSBAS_profile.py` (bin wrapper; no console entry point — run `python -m licsbas.steps._profile`)
+## `licsbas-profile` (`LiCSBAS_profile.py`)
 
 ```
 LiCSBAS_profile.py -i infile -p dempar [-r x1,y1/x2,y2] [-g lon1,lat1/lon2,lat2]
@@ -105,10 +105,10 @@ and a text file and a KML file are output.
 
 ![profile](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/profile.png)
 
-## `licbas-plot-network` (LiCSBAS_plot_network.py)
+## `licsbas-plot-network` (LiCSBAS_plot_network.py)
 
 ```
-licbas-plot-network -i ifg_list -b bperp_list [-o outpngfile] [-r bad_ifg_list]
+licsbas-plot-network -i ifg_list -b bperp_list [-o outpngfile] [-r bad_ifg_list]
     [--not_plot_bad] [-s]
 
  -i  Text file of ifg list (format: yyymmdd_yyyymmdd)
@@ -124,10 +124,10 @@ a black vertical line; bad ifgs can be denoted by red lines.
 
 ![network](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/network.png)
 
-## `licbas-color-geotiff2tiles` (LiCSBAS_color_geotiff2tiles.py)
+## `licsbas-color-geotiff2tiles` (LiCSBAS_color_geotiff2tiles.py)
 
 ```
-licbas-color-geotiff2tiles -i infile [-o outdir] [--zmin int] [--zmax int]
+licsbas-color-geotiff2tiles -i infile [-o outdir] [--zmin int] [--zmax int]
     [--xyz] [--n_para int]
 
  -i  Input color GeoTIFF file
@@ -142,10 +142,10 @@ licbas-color-geotiff2tiles -i infile [-o outdir] [--zmin int] [--zmax int]
 
 Generates a directory with TMS/XYZ tiles using [gdal2tiles.py](https://gdal.org/programs/gdal2tiles.html).
 
-## `licbas-out2nc` (LiCSBAS_out2nc.py)
+## `licsbas-out2nc` (LiCSBAS_out2nc.py)
 
 ```text
-licbas-out2nc [-i infile] [-o outfile] [-m yyyymmdd]
+licsbas-out2nc [-i infile] [-o outfile] [-m yyyymmdd]
     [--ref_geo lon1/lon2/lat1/lat2] [--clip_geo lon1/lon2/lat1/lat2]
     [--alignsar] [--zarr] [--addtif test.tif]
 
@@ -165,8 +165,8 @@ licbas-out2nc [-i infile] [-o outfile] [-m yyyymmdd]
  --xcube  Set basics for viewing via xcube
 ```
 
-Outputs a standard **NetCDF4** file using LiCSBAS results, which can be directly read
-by QGIS (requires `xarray` and `rioxarray`). A QGIS plugin "Temporal/Spectral Profile
+Outputs a standard **NetCDF4** file using LiCSBAS results. 
+A popular QGIS plugin "Temporal/Spectral Profile
 Tool" can plot the time series at a selected point.
 
 ![TSProfileTool](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/TSProfileTool1.png) ![TSProfileTool](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/TSProfileTool2.png)

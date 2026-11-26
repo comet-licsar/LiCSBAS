@@ -29,17 +29,19 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 __all__ = ["BatchConfig", "BatchStep", "build_pipeline", "run_batch",
-           "save_flowchart", "main"]
+           "save_flowchart", "make_config", "list_workflows",
+           "register_workflow", "main"]
 
 # ---------------------------------------------------------------------------
 # Step / pipeline data structures
 # ---------------------------------------------------------------------------
 
-# legacy step id -> (module inside licsbas.steps, legacy script name for logs)
+# legacy step id -> (module inside licsbas.steps or licsbas.scripts, legacy script name for logs)
 _STEP_MODULES = {
     "01":         ("licsbas.steps._01_get_geotiff",            "LiCSBAS01_get_geotiff.py"),
     "02":         ("licsbas.steps._02_ml_prep",                "LiCSBAS02_ml_prep.py"),
     "02to05":     ("licsbas.steps._02to05_unwrap",             "LiCSBAS02to05_unwrap.py"),
+    "02op":       ("licsbas.steps._02op_phasebias",            "LiCSBAS02op_phasebias.py"),
     "03":         ("licsbas.steps._03op_gacos",                "LiCSBAS03op_GACOS.py"),
     "04":         ("licsbas.steps._04op_mask_unw",             "LiCSBAS04op_mask_unw.py"),
     "05":         ("licsbas.steps._05op_clip_unw",             "LiCSBAS05op_clip_unw.py"),
@@ -53,14 +55,19 @@ _STEP_MODULES = {
     "14":         ("licsbas.steps._14_vel_std",                "LiCSBAS14_vel_std.py"),
     "15":         ("licsbas.steps._15_mask_ts",                "LiCSBAS15_mask_ts.py"),
     "16":         ("licsbas.steps._16_filt_ts",                "LiCSBAS16_filt_ts.py"),
-    "eqoffs":     ("licsbas.steps._get_eqoffsets",             "LiCSBAS_get_eqoffsets.py"),
-    "residcheck": ("licsbas.steps._resid_check",               "LiCSBAS_resid_check.py"),
+    "eqoffs":     ("licsbas.scripts._get_eqoffsets",         "LiCSBAS_get_eqoffsets.py"),
+    "residcheck": ("licsbas.scripts._resid_check",           "LiCSBAS_resid_check.py"),
+    # NISAR data-access route (alternative to the LiCSAR step-01 download)
+    "01nisar":    ("licsbas.steps._01_get_nisar_data",        "LiCSBAS01_get_NISAR_data.py"),
+    "nisar2geoc": ("licsbas.scripts._nisar2geoc",             "LiCSBAS_nisar2geoc.py"),
+    "asf2geoc":   ("licsbas.scripts._asf2geoc",               "LiCSBAS_asf2geoc.py"),
 }
 
 _PHASES = {
     "01": "Download & data preparation (steps 01-06)",
     "02": "Download & data preparation (steps 01-06)",
     "02to05": "Download & data preparation (steps 01-06)",
+    "02op": "Download & data preparation (steps 01-06)",
     "03": "Download & data preparation (steps 01-06)",
     "04": "Download & data preparation (steps 01-06)",
     "05": "Download & data preparation (steps 01-06)",
@@ -76,6 +83,9 @@ _PHASES = {
     "14": "Velocity, masking & filtering (steps 14-16)",
     "15": "Velocity, masking & filtering (steps 14-16)",
     "16": "Velocity, masking & filtering (steps 14-16)",
+    "01nisar": "NISAR data access (01-nisar)",
+    "nisar2geoc": "GEOC conversion (nisar2geoc)",
+    "asf2geoc": "GEOC conversion (asf2geoc)",
 }
 
 
@@ -84,7 +94,7 @@ class BatchStep:
     """One executable step of the chain."""
     key: str                 # internal key, e.g. "13" or "02to05"
     name: str                # legacy script name used for logging/flowchart
-    module: str              # licsbas.steps._XX
+    module: str              # licsbas.steps._XX or licsbas.scripts._XX
     argv: List[str]          # command line arguments (without the name)
     optional: bool = False   # True = optional step (shown grey in flowchart if off)
     note: str = ""           # extra annotation for the flowchart
@@ -123,6 +133,11 @@ class BatchConfig:
     eqoffs_txtfile: str = "eqoffsets.txt"
     eqoffs_buffer: float = 0.1
 
+    # --- optional 02op: phase bias correction (before step 02) -----------
+    do02op_phasebias: bool = False         # run LiCSBAS02op_phasebias.py (needs 'phasebias' pkg)
+    p02op_phasebias_out: str = "GEOC_phasebias"   # corrected stack output dir
+    p02op_phasebias_options: str = ""      # extra options, e.g. "--frame 082D_05125_020000"
+
     # --- updated pipeline: re-unwrapping with 02to05 ---------------------
     run_reunw: bool = False              # use LiCSBAS02to05_unwrap.py instead of 02[,03,04,05]
     p02to05_gacos: bool = False          # use GACOS data if available
@@ -132,6 +147,27 @@ class BatchConfig:
     p02to05_thres: str = ""              # default 0.35
     p02to05_cliparea_geo: str = ""       # e.g. 130.11/131.12/34.34/34.6
     p02to05_op_GEOCdir: str = ""         # default: GEOC
+
+    # --- NISAR data access (alternative to the LiCSAR step-01 download) ---
+    # When enabled, LiCSAR step 01 is replaced by:
+    #   01nisar  = licsbas-01-get-nisar-data (ASF search + download of GUNW/GSLC .h5)
+    #   nisar2geoc = licsbas-nisar2geoc (.h5 -> LiCSBAS GEOC/ layout, iono+offsets
+    #                corrected, shared WGS-84 grid, baselines + metadata.txt)
+    # Steps 02-16 then run exactly as for LiCSAR data.
+    use_nisar: bool = False
+    pNISAR_bbox: str = ""                # -g  lon1/lon2/lat1/lat2 (needed if use_nisar)
+    pNISAR_type: str = "GUNW"            # -t  GUNW (ifgs) or GSLC
+    pNISAR_start_date: str = ""          # -s  yyyymmdd (default 20250101)
+    pNISAR_end_date: str = ""            # -e  yyyymmdd (default today)
+    pNISAR_outdir: str = ""              # -o  (default ./NISAR_<type>)
+    pNISAR_max: str = ""                 # --max scenes (default 500)
+    pNISAR_gslc: str = ""                # GSLC .h5 for nisar2geoc -E (E/N/U + mli)
+    nisar2geoc_freq: str = ""            # nisar2geoc -f A|B (empty = keep scene's band)
+    nisar2geoc_cc_thre: str = "0.5"      # nisar2geoc -t coherence mask threshold
+    nisar2geoc_no_iono: bool = False     # --no_iono
+    nisar2geoc_no_offsets: bool = False  # --no_offsets
+    nisar2geoc_no_deramp_quad: bool = False  # --no_deramp_quad
+    nisar2geoc_download_dem: bool = False    # -D (try to fetch a NISAR DEM)
 
     # --- optional steps 03-06 ---------------------------------------------
     order_op03_05: List[int] = field(default_factory=lambda: [3, 4, 5, 6])
@@ -263,6 +299,97 @@ class BatchConfig:
 
 
 # ---------------------------------------------------------------------------
+# Predefined workflow templates
+# ---------------------------------------------------------------------------
+# A workflow is a named factory producing a BatchConfig: a stable, reusable
+# starting point (e.g. "reunw_5" = re-unwrapping with multilook 5).
+# New templates can be registered at runtime or in project-local scripts:
+#
+#     from licsbas.batch import register_workflow, BatchConfig
+#
+#     @register_workflow("my_study", "study-specific chain")
+#     def _():
+#         return BatchConfig(sbovl=True, nlook=10, p01_start_date="20141001")
+
+_WORKFLOWS: dict = {}
+
+
+def register_workflow(name: str, description: str = ""):
+    """Register a factory (name -> BatchConfig) under ``name``."""
+    def deco(fn):
+        _WORKFLOWS[name] = (description, fn)
+        return fn
+    return deco
+
+
+def list_workflows() -> dict:
+    """``{name: description}`` of all registered workflows."""
+    return {n: d for n, (d, _) in _WORKFLOWS.items()}
+
+
+def make_config(workflow: str = "standard", **overrides) -> BatchConfig:
+    """Create a :class:`BatchConfig` from a named workflow template.
+
+    Any ``BatchConfig`` field may be overridden, e.g.
+    ``make_config("reunw_5", nlook=10, start_date...)``.
+    """
+    if workflow not in _WORKFLOWS:
+        raise ValueError(f"unknown workflow '{workflow}'; "
+                         f"known: {', '.join(sorted(_WORKFLOWS))}")
+    cfg = _WORKFLOWS[workflow][1]()
+    for k, v in overrides.items():
+        if not hasattr(cfg, k):
+            raise ValueError(f"'BatchConfig' has no field '{k}'")
+        setattr(cfg, k, v)
+    return cfg
+
+
+@register_workflow("standard",
+                   "standard chain 01->16 (historical batch_LiCSBAS.sh defaults)")
+def _wf_standard():
+    return BatchConfig()
+
+
+@register_workflow("reunw_5",
+                   "re-unwrapping via LiCSBAS02to05_unwrap.py, multilook 5")
+def _wf_reunw_5():
+    return BatchConfig(run_reunw=True, nlook=5)
+
+
+@register_workflow("reunw_10",
+                   "re-unwrapping via LiCSBAS02to05_unwrap.py, multilook 10")
+def _wf_reunw_10():
+    return BatchConfig(run_reunw=True, nlook=10)
+
+@register_workflow("reunw_cascade",
+                   "re-unwrapping via LiCSBAS02to05_unwrap.py, cascading towards multilook 1")
+def _wf_reunw_cascade():
+    return BatchConfig(run_reunw=True, nlook=1, p02to05_cascade=True)
+
+@register_workflow("sbovl",
+                   "SBOI chain (--sbovl options)")
+def _wf_sbovl():
+    return BatchConfig(sbovl=True)
+
+
+@register_workflow("sbovl_abs",
+                   "SBOI absolute chain (sbovl + sbovl_abs)")
+def _wf_sbovl_abs():
+    return BatchConfig(sbovl=True, sbovl_abs=True)
+
+
+@register_workflow("nisar",
+                   "NISAR chain: 01-get-nisar-data + nisar2geoc -> 02-05 -> 11-16 "
+                   "(set pNISAR_bbox!)")
+def _wf_nisar():
+    return BatchConfig(
+        use_nisar=True,
+        nlook=10,
+        # pNISAR_bbox="14.00/14.25/40.75/40.95",   # e.g. Campi Flegrei - set to your AOI
+    )
+
+
+# ---------------------------------------------------------------------------
 # Pipeline construction
 # ---------------------------------------------------------------------------
 
@@ -290,7 +417,7 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
                                phase=_PHASES[key]))
 
     # ---------------- step 01 ----------------
-    if start <= 1 <= end:
+    if start <= 1 <= end and not cfg.use_nisar:
         argv: List[str] = []
         _add(argv, "-f", cfg.p01_frame)
         _add(argv, "-s", cfg.p01_start_date)
@@ -319,6 +446,47 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
             argv.append("--skip_unw")
         add("01", argv, note="reunw: also downloads pha & mli" if cfg.run_reunw else "")
 
+    # ---------------- NISAR data access (alternative to step 01) ------------
+    if cfg.use_nisar and start <= 1 <= end:
+        if not cfg.pNISAR_bbox:
+            print("WARNING: use_nisar is set but pNISAR_bbox (-g lon1/lon2/lat1/lat2) "
+                  "is empty; the search will have no search area.", flush=True)
+        argv = []
+        if cfg.pNISAR_bbox:
+            argv += ["-g", cfg.pNISAR_bbox]
+        _add(argv, "-t", cfg.pNISAR_type)
+        _add(argv, "-s", cfg.pNISAR_start_date)
+        _add(argv, "-e", cfg.pNISAR_end_date)
+        _add(argv, "-o", cfg.pNISAR_outdir)
+        _add(argv, "--max", cfg.pNISAR_max)
+        add("01nisar", argv, note="ASF search + NISAR GUNW/GSLC .h5 download")
+
+        argv = []
+        _add(argv, "-f", cfg.nisar2geoc_freq)
+        _add(argv, "-t", cfg.nisar2geoc_cc_thre)
+        if cfg.pNISAR_gslc:
+            argv += ["-E", cfg.pNISAR_gslc]
+        if cfg.nisar2geoc_download_dem:
+            argv.append("-D")
+        if cfg.nisar2geoc_no_iono:
+            argv.append("--no_iono")
+        if cfg.nisar2geoc_no_offsets:
+            argv.append("--no_offsets")
+        if cfg.nisar2geoc_no_deramp_quad:
+            argv.append("--no_deramp_quad")
+        add("nisar2geoc", argv,
+            note="NISAR .h5 -> GEOC (iono+range-offset corrected, shared grid, baselines)")
+
+    # ---------------- optional 02op: phase bias correction ----------------
+    phasebias_out: Optional[str] = None
+    if cfg.do02op_phasebias and not cfg.run_reunw and (start <= 1 <= end or start <= 2 <= end):
+        argv = ["-i", cfg.p02_GEOCdir or "GEOC",
+                "-o", cfg.p02op_phasebias_out or "GEOC_phasebias"]
+        argv += cfg.p02op_phasebias_options.split()
+        add("02op", argv, optional=True,
+            note="phase bias correction (needs 'phasebias' pkg)")
+        phasebias_out = cfg.p02op_phasebias_out or "GEOC_phasebias"
+
     # ---------------- step 02 / 02to05 ----------------
     if cfg.run_reunw:
         # updated workflow: 02to05 instead of 02[,03,04,05]
@@ -337,7 +505,12 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
             argv.append("--gacos")
         add("02to05", argv, note="re-unwrapping (02to05) workflow")
     elif start <= 2 <= end:
-        argv = ["-i", cfg.p02_GEOCdir or "GEOC"]
+        if phasebias_out:
+            # phase bias correction ran: step 02 reads the corrected stack
+            geo_in = cfg.p02_GEOCdir or (phasebias_out + "/GEOC")
+        else:
+            geo_in = cfg.p02_GEOCdir or "GEOC"
+        argv = ["-i", geo_in]
         _add(argv, "-o", cfg.p02_GEOCmldir)
         argv += ["-n", str(cfg.nlook)]
         _add(argv, "--freq", cfg.p02_freq or cfg.freq)
@@ -514,7 +687,7 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
                 argv.append("--model")
             add("131abs", argv, note="ICCP+ESD offset, absolute SET/Iono correction (SBOI)")
         else:
-            corr = [f"--{c}" for c, on in (("--tide", cfg.p131_tide),
+            corr = [c for c, on in (("--tide", cfg.p131_tide),
                                            ("--iono", cfg.p131_iono),
                                            ("--gacos", cfg.p131_gacos)) if on]
             if corr:
@@ -676,10 +849,13 @@ def run_batch(cfg: BatchConfig, dry_run: Optional[bool] = None) -> int:
 # ---------------------------------------------------------------------------
 
 def save_flowchart(cfg: BatchConfig, out_png: str,
-                   title: str = "LiCSBAS processing chain (python batch)") -> str:
+                   title: str = "LiCSBAS processing chain (python batch)",
+                   rankdir: str = "TB") -> str:
     """Write a PNG flowchart of the chain to ``out_png``.
 
-    Uses :mod:`licsbas.flowchart`, which requires the Graphviz ``dot`` binary.
+    ``rankdir``: "TB" (default, vertical) or "LR" (landscape - better for
+    embedding in notebooks/documents). Uses :mod:`licsbas.flowchart`, which
+    requires the Graphviz ``dot`` binary.
     """
     from licsbas.flowchart import FlowStep, render_flowchart
 
@@ -691,7 +867,7 @@ def save_flowchart(cfg: BatchConfig, out_png: str,
             cmd = cmd[:77] + "..."
         fs.append(FlowStep(name=s.name, details=cmd, active=active,
                            phase=s.phase, note=s.note))
-    return render_flowchart(fs, out_png, title=title)
+    return render_flowchart(fs, out_png, title=title, rankdir=rankdir)
 
 
 # ---------------------------------------------------------------------------
@@ -703,20 +879,37 @@ def main(argv=None):
     ap = argparse.ArgumentParser(
         prog="licsbas-batch",
         description="Run the LiCSBAS processing chain in python (v3 batch). "
-                    "See licsbas.batch.BatchConfig / examples/ for the full set of options.")
-    ap.add_argument("--start", type=int, default=1, help="first step, 1-16 (default 1)")
-    ap.add_argument("--end", type=int, default=16, help="last step, 1-16 (default 16)")
-    ap.add_argument("--nlook", type=int, default=1, help="multilook factor (default 1)")
+                    "A predefined workflow template (see --list-workflows) can be "
+                    "selected with --workflow, e.g. 'reunw_5'; licsbas.batch.BatchConfig "
+                    "/ examples/ hold the full set of options.")
+    ap.add_argument("--list-workflows", action="store_true",
+                    help="show the predefined workflow templates and exit")
+    ap.add_argument("--workflow", default="standard",
+                    help="workflow template to start from "
+                         "(default: standard; choices via --list-workflows)")
+    ap.add_argument("--start", type=int, default=None, help="first step, 1-16 (overrides workflow)")
+    ap.add_argument("--end", type=int, default=None, help="last step, 1-16 (overrides workflow)")
+    ap.add_argument("--nlook", type=int, default=None, help="multilook factor (overrides workflow)")
     ap.add_argument("--n-para", type=int, default=None, help="parallel workers (default: usable CPUs)")
     ap.add_argument("--gpu", action="store_true", help="use GPU where supported")
     ap.add_argument("--check-only", action="store_true", help="print commands only")
     ap.add_argument("--sbovl", action="store_true", help="SBOI/SBOVL chain (--sbovl options)")
     ap.add_argument("--sbovl-abs", action="store_true", help="SBOI absolute (close referencing, ICC+ESD, abs corr)")
+    ap.add_argument("--nisar", action="store_true",
+                    help="NISAR data access: 01-get-nisar-data + nisar2geoc instead of step 01")
+    ap.add_argument("--nisar-bbox", dest="nisar_bbox", default="",
+                    help="NISAR bbox lon1/lon2/lat1/lat2 (with --nisar)")
+    ap.add_argument("--nisar-type", dest="nisar_type", default="GUNW",
+                    choices=["GUNW", "GSLC"], help="NISAR product type (default GUNW)")
+    ap.add_argument("--nisar-gslc", dest="nisar_gslc", default="",
+                    help="GSLC .h5 passed to nisar2geoc -E (E/N/U + mli)")
     ap.add_argument("--reunw", action="store_true", help="use LiCSBAS02to05_unwrap.py (re-unwrapping workflow)")
     ap.add_argument("--gacos", action="store_true", help="enable optional GACOS step (03op)")
     ap.add_argument("--mask", action="store_true", help="enable optional unw masking step (04op)")
     ap.add_argument("--clip", action="store_true", help="enable optional clip step (05op)")
     ap.add_argument("--era5", action="store_true", help="enable optional ERA5 step (06op/03op_ERA5)")
+    ap.add_argument("--phasebias", action="store_true",
+                    help="enable phase bias correction (02op; requires the 'phasebias' package)")
     ap.add_argument("--no-multi-prime", dest="multi_prime", action="store_false",
                     help="turn OFF step 12: --multi_prime (on by default)")
     ap.add_argument("--nullify", action="store_true", help="step 12: --nullify")
@@ -725,19 +918,68 @@ def main(argv=None):
     ap.add_argument("--gacos-corr", action="store_true", dest="gacos_corr",
                     help="post-13 gacos corrections")
     ap.add_argument("--flowchart", default="", help="also write a PNG flowchart to this path")
+    ap.add_argument("--flowchart-landscape", action="store_true",
+                    help="draw the flowchart left-to-right (landscape)")
     a = ap.parse_args(argv)
 
-    cfg = BatchConfig(
-        start_step=a.start, end_step=a.end, nlook=a.nlook,
-        n_para=a.n_para, gpu=a.gpu, check_only=a.check_only,
-        sbovl=a.sbovl, sbovl_abs=a.sbovl_abs, run_reunw=a.reunw,
-        do03op_GACOS=a.gacos or a.gacos_corr, do04op_mask=a.mask,
-        do05op_clip=a.clip, do06op_ERA5=a.era5,
-        p12_multi_prime=a.multi_prime, p12_nullify=a.nullify,
-        p131_tide=a.tide, p131_iono=a.iono,
-    )
+    if a.list_workflows:
+        print("Predefined workflow templates (pick with --workflow NAME):")
+        for name in sorted(list_workflows()):
+            print(f"  {name:<12} {list_workflows()[name]}")
+        return 0
+
+    config = make_config(a.workflow)
+    overrides = {}
+    if a.start is not None:
+        overrides["start_step"] = a.start
+    if a.end is not None:
+        overrides["end_step"] = a.end
+    if a.nlook is not None:
+        overrides["nlook"] = a.nlook
+    if a.n_para is not None:
+        overrides["n_para"] = a.n_para
+    if a.gpu:
+        overrides["gpu"] = True
+    if a.sbovl:
+        overrides["sbovl"] = True
+    if a.sbovl_abs:
+        overrides["sbovl_abs"] = True
+    if a.nisar:
+        overrides["use_nisar"] = True
+    # NISAR search params apply with BOTH --nisar and --workflow nisar
+    if a.nisar_bbox:
+        overrides["pNISAR_bbox"] = a.nisar_bbox
+    if a.nisar_type and a.nisar_type.lower() != "gunw":
+        overrides["pNISAR_type"] = a.nisar_type
+    if a.nisar_gslc:
+        overrides["pNISAR_gslc"] = a.nisar_gslc
+    if a.reunw:
+        overrides["run_reunw"] = True
+    if a.gacos or a.gacos_corr:
+        overrides["do03op_GACOS"] = True
+    if a.mask:
+        overrides["do04op_mask"] = True
+    if a.clip:
+        overrides["do05op_clip"] = True
+    if a.era5:
+        overrides["do06op_ERA5"] = True
+    if a.phasebias:
+        overrides["do02op_phasebias"] = True
+    if not a.multi_prime:
+        overrides["p12_multi_prime"] = False
+    if a.nullify:
+        overrides["p12_nullify"] = True
+    if a.tide:
+        overrides["p131_tide"] = True
+    if a.iono:
+        overrides["p131_iono"] = True
+    if a.gacos_corr:
+        overrides["p131_gacos"] = True
+    cfg = make_config(a.workflow, **overrides)
+    cfg.check_only = a.check_only
+
     if a.flowchart:
-        save_flowchart(cfg, a.flowchart)
+        save_flowchart(cfg, a.flowchart, rankdir="LR" if a.flowchart_landscape else "TB")
         print(f"[batch] flowchart written to: {a.flowchart}")
     return run_batch(cfg)
 

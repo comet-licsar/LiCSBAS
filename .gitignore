@@ -13,3 +13,7 @@ dist/
 # LiCSBAS runtime output
 *.png
 log/
+
+TODO*.md
+STATUS.md
+PLA*.md

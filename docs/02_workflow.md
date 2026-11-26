@@ -1,27 +1,31 @@
 # 2. Workflow & Quick start
 
 This is a v3-adapted port of the original [wiki](https://github.com/yumorishita/LiCSBAS/wiki)
-workflow pages. Commands are now `licbas-*` console entry points (the legacy `LiCSBAS*.py`
+workflow pages. Commands are now `licsbas-*` console entry points (the legacy `LiCSBAS*.py`
 names still work via the installed `bin/` wrappers). Use `-h`/`--help` for the full
 option list of any command.
+
+**Package layout (v3):** numbered pipeline steps live in `licsbas/steps/`,
+and the unnumbered utility scripts in `licsbas/scripts/` (e.g. `cum2vel`,
+`disp_img`, `plot_ts`, `out2nc`, `profile`). All are exposed as `licsbas-*`
+console entry points, or run as e.g. `python -m licsbas.scripts._cum2vel`.
 
 **Name mapping (legacy → v3):**
 
 | Original (v1.x) | v3 entry point |
 | --- | --- |
-| `LiCSBAS01_get_geotiff.py` | `licbas-get-geotiff` (ALOS: `licbas-get-geotiff-alos`) |
-| `LiCSBAS02_ml_prep.py` | `licbas-ml-prep` |
-| `LiCSBAS03op_GACOS.py` | `licbas-gacos` |
-| `LiCSBAS04op_mask_unw.py` | `licbas-mask-unw` |
-| `LiCSBAS05op_clip_unw.py` | `licbas-clip-unw` |
-| `LiCSBAS11_check_unw.py` | `licbas-check-unw` |
-| `LiCSBAS12_loop_closure.py` | `licbas-loop-closure` |
-| `LiCSBAS13_sb_inv.py` | `licbas-sb-inv` |
-| `LiCSBAS14_vel_std.py` | `licbas-vel-std` |
-| `LiCSBAS15_mask_ts.py` | `licbas-mask-ts` |
-| `LiCSBAS16_filt_ts.py` | `licbas-filt-ts` |
-| `LiCSBAS17_plot_corrections.py` | `licbas-plot-corrections` |
-| `LiCSBAS_plot_ts.py` | `licbas-plot-ts` |
+| `LiCSBAS01_get_geotiff.py` | `licsbas-get-geotiff` (ALOS: `licsbas-get-geotiff-alos`) |
+| `LiCSBAS02_ml_prep.py` | `licsbas-ml-prep` |
+| `LiCSBAS03op_GACOS.py` | `licsbas-gacos` |
+| `LiCSBAS04op_mask_unw.py` | `licsbas-mask-unw` |
+| `LiCSBAS05op_clip_unw.py` | `licsbas-clip-unw` |
+| `LiCSBAS11_check_unw.py` | `licsbas-check-unw` |
+| `LiCSBAS12_loop_closure.py` | `licsbas-loop-closure` |
+| `LiCSBAS13_sb_inv.py` | `licsbas-sb-inv` |
+| `LiCSBAS14_vel_std.py` | `licsbas-vel-std` |
+| `LiCSBAS15_mask_ts.py` | `licsbas-mask-ts` |
+| `LiCSBAS16_filt_ts.py` | `licsbas-filt-ts` |
+| `LiCSBAS_plot_ts.py` | `licsbas-plot-ts` |
 
 ## Quick start
 
@@ -53,13 +57,27 @@ Run the batch script:
 ./batch_LiCSBAS.sh
 ```
 
+> **Predefined workflow templates (v3).** The batch processor also accepts named
+> templates via `--workflow` (or `make_config(...)` in python, see
+> [`tutorial/tutorial_batch.ipynb`](../tutorial/tutorial_batch.ipynb) and
+> `licsbas.batch.register_workflow`):
+>
+> ```bash
+> licsbas-batch --list-workflows
+> licsbas-batch --workflow reunw_5 --check-only    # 02to05 re-unwrapping, multilook 5
+> licsbas-batch --workflow sbovl --tide --iono      # SBOI chain + corrections
+> ```
+>
+> Any `BatchConfig` field can be overridden by flags, so the templates compose
+> with the classic settings above.
+
 All steps from 0-1 (downloading GeoTIFF files) to 1-6 (time series analysis) run, and the
 `GEOC`, `GEOCml1`, `TS_GEOCml1` (and `log`) directories are created.
 
 Display the derived time series and velocity:
 
 ```bash
-licbas-plot-ts -i TS_GEOCml1/cum_filt.h5 &
+licsbas-plot-ts -i TS_GEOCml1/cum_filt.h5 &
 ```
 
 ![velocity quicklook](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/sample_vel.png) ![timeseries plot](https://raw.githubusercontent.com/wiki/yumorishita/LiCSBAS/images/sample_ts.png)
@@ -107,7 +125,7 @@ Steps 0-3 to 0-5 are optional and can be run in no particular order.
 ### Step 0-1: download GeoTIFF from COMET-LiCS web portal
 
 ```
-licbas-get-geotiff [-f FRAME] [-s start_date] [-e end_date] [--get_gacos] [--n_para int]
+licsbas-get-geotiff [-f FRAME] [-s start_date] [-e end_date] [--get_gacos] [--n_para int]
 ```
 
 Downloads GeoTIFF files of unw (unwrapped interferogram) and cc (coherence) in the
@@ -119,7 +137,7 @@ available data are downloaded.
 ### Step 0-2: convert (and downsample)
 
 ```
-licbas-ml-prep -i GEOCdir [-o GEOCmldir] [-n nlook] [--freq float] [--n_para int]
+licsbas-ml-prep -i GEOCdir [-o GEOCmldir] [-n nlook] [--freq float] [--n_para int]
 ```
 
 Converts GeoTIFF unw/cc to float32/uint8 for time series analysis and optionally
@@ -129,7 +147,7 @@ Sentinel-1; e.g. 1.27e9 for ALOS).
 ### Step 0-3: GACOS correction (optional)
 
 ```
-licbas-gacos -i in_dir -o out_dir [-g gacosdir] [--fillhole] [--n_para int]
+licsbas-gacos -i in_dir -o out_dir [-g gacosdir] [--fillhole] [--n_para int]
 ```
 
 Applies a tropospheric correction using [GACOS](http://www.gacos.net/) data, which may
@@ -139,7 +157,7 @@ can be checked with `GACOS_info.png` and `*/*.gacos.png`.
 ### Step 0-4: mask UNW (optional)
 
 ```
-licbas-mask-unw -i in_dir -o out_dir [-c coh_thre] [-r x1:x2/y1:y2] [-f txtfile]
+licsbas-mask-unw -i in_dir -o out_dir [-c coh_thre] [-r x1:x2/y1:y2] [-f txtfile]
 ```
 
 Masks low-coherence or user-specified areas of the unw stack. Effective when the data
@@ -148,7 +166,7 @@ include areas with many unwrapping errors, and can improve step 1-2 (loop closur
 ### Step 0-5: clip UNW (optional)
 
 ```
-licbas-clip-unw -i in_dir -o out_dir [-r x1:x2/y1:y2] [-g lon1/lon2/lat1/lat2]
+licsbas-clip-unw -i in_dir -o out_dir [-r x1:x2/y1:y2] [-g lon1/lon2/lat1/lat2]
 ```
 
 Clips a rectangular area of interest from unw and cc data. Smaller data → faster
@@ -156,25 +174,25 @@ processing and better loop-closure results.
 
 ## 2.3. Steps 1-1 to 1-6: time series processing
 
-### Step 1-1: quality check — `licbas-check-unw`
+### Step 1-1: quality check — `licsbas-check-unw`
 
 ```
-licbas-check-unw -d ifgdir [-t tsadir] [-c coh_thre] [-u unw_thre]
+licsbas-check-unw -d ifgdir [-t tsadir] [-c coh_thre] [-u unw_thre]
 ```
 
 Checks quality of the unw data and identifies bad interferograms based on average
 coherence and coverage of the unw data. Also prepares the time series working
 directory `TS_GEOCml*` (overwritten if already exists).
 
-### Step 1-1b (COMET extra): choose reference — `licbas-choose-reference`
+### Step 1-1b (COMET extra): choose reference — `licsbas-choose-reference`
 
 Identifies a preliminary reference point for the loop-closure check, stored in
 `info/12ref.txt`.
 
-### Step 1-2: loop closure — `licbas-loop-closure`
+### Step 1-2: loop closure — `licsbas-loop-closure`
 
 ```
-licbas-loop-closure -d ifgdir [-t tsadir] [-l loop_thre] [--multi_prime]
+licsbas-loop-closure -d ifgdir [-t tsadir] [-l loop_thre] [--multi_prime]
     [--rm_ifg_list file] [--n_para int]
 ```
 
@@ -189,21 +207,21 @@ systematic unwrapping errors in the individual interferograms
 (Lazecký et al., 2024; IGARSS 2021):
 
 ```
-licbas-residual-threshold        # 131: flag high-residual pixels/ifgs
-licbas-boi-absolute              # 131: absolute offset correction (RANSAC; extra "ml")
-licbas-bovl2abs                  # 131: convert relative offsets to absolute
-licbas-unwrapping-correction     # 132: re-unwrap corrected ifgs (extra "unwrap" + SNAPHU)
+licsbas-residual-threshold        # 131: flag high-residual pixels/ifgs
+licsbas-boi-absolute              # 131: absolute offset correction (RANSAC; extra "ml")
+licsbas-bovl2abs                  # 131: convert relative offsets to absolute
+licsbas-unwrapping-correction     # 132: re-unwrap corrected ifgs (extra "unwrap" + SNAPHU)
 licsbas-133-write-h5             # 133: write corrected cumulative displacement
-licbas-sb-inv --keep_incfile     # 130: keep incremental files for inspection
-licbas-plot-corrections          # 17: plot the corrections for QC
+licsbas-sb-inv --keep_incfile     # 130: keep incremental files for inspection
+licsbas-plot-corrections          # 17: plot the corrections for QC
 ```
 
 These are optional; the original pipeline skips directly from 1-2 to 1-3.
 
-### Step 1-3: small baseline inversion — `licbas-sb-inv`
+### Step 1-3: small baseline inversion — `licsbas-sb-inv`
 
 ```
-licbas-sb-inv -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float]
+licsbas-sb-inv -d ifgdir [-t tsadir] [--inv_alg LS|WLS] [--mem_size float]
     [--gamma float] [--n_para int] [--n_unw_r_thre float] [--keep_incfile] [--gpu]
 ```
 
@@ -212,19 +230,19 @@ Inverts the SB network to obtain the time series and velocity using the NSBAS ap
 after the inversion: the point with minimum RMS of the time series wrt median and
 minimum n_gap.
 
-### Step 1-4: velocity std by bootstrap — `licbas-vel-std`
+### Step 1-4: velocity std by bootstrap — `licsbas-vel-std`
 
 ```
-licbas-vel-std -t tsadir [--mem_size float] [--gpu]
+licsbas-vel-std -t tsadir [--mem_size float] [--gpu]
 ```
 
 Calculates the standard deviation of the velocity (bootstrap) and STC (spatio-temporal
 consistency; Hanssen et al., 2008).
 
-### Step 1-5: mask time series — `licbas-mask-ts`
+### Step 1-5: mask time series — `licsbas-mask-ts`
 
 ```
-licbas-mask-ts -t tsadir [-c coh_thre] [-u n_unw_r_thre] [-v vstd_thre] [-T maxTlen_thre]
+licsbas-mask-ts -t tsadir [-c coh_thre] [-u n_unw_r_thre] [-v vstd_thre] [-T maxTlen_thre]
     [-g n_gap_thre] [-s stc_thre] [-i n_ifg_noloop_thre] [-l n_loop_err_thre]
     [-r resid_rms_thre] [--vmin float] [--vmax float] [--keep_isolated] [--noautoadjust]
 ```
@@ -250,10 +268,10 @@ L-band: -c 0.01 -u 1   -v 200 -T 1 -g 1  -s 10 -i 50 -l 1 -r 10
 | n_loop_err | Number of unclosed loops after network refinement |
 | resid_rms | RMS of residuals in the SB inversion (mm) |
 
-### Step 1-6: filter (& deramp) time series — `licbas-filt-ts`
+### Step 1-6: filter (& deramp) time series — `licsbas-filt-ts`
 
 ```
-licbas-filt-ts -t tsadir [-s filtwidth_km] [-y filtwidth_yr] [-r deg]
+licsbas-filt-ts -t tsadir [-s filtwidth_km] [-y filtwidth_yr] [-r deg]
     [--hgt_linear] [--hgt_min int] [--hgt_max int] [--nomask] [--n_para int]
     [--range x1:x2/y1:y2 | --range_geo lon1/lon2/lat1/lat2]
     [--ex_range ... | --ex_range_geo ...]
@@ -287,21 +305,12 @@ module load licsar_framebatch
 source /gws/smf/j04/nceo_geohazards/software/condalics/load_condalics.rc
 ```
 
-You can skip step 0-1 because the GeoTIFFs already exist in your framebatch processing
-directory (after `framebatch_06_geotiffs.sh`): run `update_bperp_file.sh` to refresh the
-baselines file, then **start from step 0-2** in your frame directory.
-
-On JASMIN you may run the whole LiCSBAS procedure with the LiCSAR command:
+Then (in a scratch directory) you may run the whole LiCSBAS procedure with the LiCSAR command:
 
 ```shell
-licsar2licsbas.sh $FRAME
+licsar2licsbas.sh
 ```
 
-with optional re-unwrapping of multilooked data (Lazecký et al., IGARSS 2021), e.g.
-towards 1×1 km resolution:
-
-```shell
-licsar2licsbas.sh -M 10 $FRAME
-```
+that would link existing geotiff files and optionally apply specific routines (see available parameters) 
 
 **Back to [quick start](#quick-start) · [workflow overview](#workflow-overview)**

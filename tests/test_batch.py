@@ -57,6 +57,35 @@ def test_sbovl_abs_chain():
     assert "--sbovl_abs" in s13.argv
 
 
+def test_nisar_chain():
+    cfg = BatchConfig(use_nisar=True, nlook=10,
+                      pNISAR_bbox="14.00/14.25/40.75/40.95")
+    steps = build_pipeline(cfg)
+    k = keys(steps)
+    # the LiCSAR step-01 download is replaced by the NISAR data-access pair
+    assert "01" not in k
+    assert "01nisar" in k
+    assert "nisar2geoc" in k
+    # steps 02-16 run exactly as for LiCSAR data
+    assert "02" in k
+    for sk in ("11", "12", "13", "14", "15", "16"):
+        assert sk in k
+    s01n = next(s for s in steps if s.key == "01nisar")
+    assert "-g" in s01n.argv and "14.00/14.25/40.75/40.95" in s01n.argv
+    assert "-t" in s01n.argv and "GUNW" in s01n.argv
+    sng = next(s for s in steps if s.key == "nisar2geoc")
+    assert "-t" in sng.argv  # coherence threshold (default 0.5)
+    assert "--sbovl" not in sng.argv
+
+    # GSLC / correction overrides flow through
+    cfg2 = BatchConfig(use_nisar=True, pNISAR_bbox="1/2/3/4", pNISAR_gslc="G/h5",
+                       nisar2geoc_no_iono=True, nisar2geoc_download_dem=True)
+    st2 = build_pipeline(cfg2)
+    sng2 = next(s for s in st2 if s.key == "nisar2geoc")
+    assert "-E" in sng2.argv and "G/h5" in sng2.argv
+    assert "-D" in sng2.argv and "--no_iono" in sng2.argv
+
+
 def test_reunw_chain():
     cfg = BatchConfig(run_reunw=True, nlook=20)
     steps = build_pipeline(cfg)
@@ -123,3 +152,33 @@ def test_flowchart_png(tmp_path):
     p = save_flowchart(cfg, str(out))
     assert os.path.exists(p)
     assert os.path.getsize(p) > 1000
+
+
+def test_tide_iono_corrections_call_standard_step():
+    """Tide/iono corrections must go through LiCSBAS131_corrections (the standard step),
+    not through inline `python -c` calls, and sbovl mode must add --sbovl."""
+    cfg = BatchConfig(p131_tide=True, p131_iono=True, p01_start_date="20141001")
+    steps = build_pipeline(cfg)
+    c = [s for s in steps if s.key == "131corr"]
+    assert c, "expected a 131corr step when tide/iono corrections are enabled"
+    s = c[0]
+    assert s.name == "LiCSBAS131_corrections.py"
+    assert "--tide" in s.argv and "--iono" in s.argv
+    assert "--sbovl" not in s.argv
+    assert "python" not in " ".join(s.argv) and not any(":" in a for a in s.argv[:0])
+
+    cfg_s = BatchConfig(sbovl=True, p131_tide=True, p131_iono=True)
+    s2 = [s for s in build_pipeline(cfg_s) if s.key == "131corr"][0]
+    assert "--sbovl" in s2.argv
+
+
+def test_131_corrections_step_is_importable_and_accepts_flags():
+    """Smoke check that the standard corrections step exists with the expected flags."""
+    try:
+        import licsbas.steps._131_corrections as m  # noqa: F401
+    except ModuleNotFoundError as e:
+        pytest.skip(f"optional runtime dep missing: {e}")
+    assert callable(m.main)
+    src = open(m.__file__).read()
+    for flag in ("--tide", "--iono", "--gacos", "--sbovl", "correct_cum_from_tifs"):
+        assert flag in src, f"expected {flag} in _131_corrections"

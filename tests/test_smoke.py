@@ -12,8 +12,12 @@ REPO = Path(__file__).resolve().parent.parent
 
 
 def _all_eps():
-    from importlib.metadata import entry_points
-    return list(entry_points().select(group="console_scripts"))
+    """Console entry points declared in the repository `pyproject.toml`
+    (single source of truth; avoids dependence on a possibly stale install)."""
+    import tomllib
+    with open(REPO / "pyproject.toml", "rb") as f:
+        scripts = tomllib.load(f)["project"]["scripts"]
+    return [type("EP", (), {"name": n, "value": v}) for n, v in scripts.items()]
 
 
 def test_version():

@@ -69,7 +69,7 @@ import numpy as np
 import pandas as pd
 import datetime as dt
 import time
-#from licsbas.steps._out2nc import loadall2cube
+#from licsbas.scripts._out2nc import loadall2cube
 try:
     import daz_lib_licsar as dl
 except ImportError:

@@ -1,0 +1,69 @@
+{
+  "title": "LiCSBAS Module 1: time series, steps 11 \u2192 16 (from the pre-processed GEOC* stack)",
+  "clusters": [
+    {
+      "label": "Input (output of Module 0)",
+      "steps": [
+        {"name": "GEOC* (ml/GACOS/mask/clip) stack",
+         "details": "unw + cc, baselines, slc.mli.par, EQA.dem_par",
+         "note": "produced by steps 0-1 \u2192 0-5 (or the 02to05 alternative)"}
+      ]
+    },
+    {
+      "label": "Step 1-1: quality check",
+      "steps": [
+        {"name": "LiCSBAS11_check_unw.py",
+         "details": "-d GEOC* -t TS_GEOC* [-u 0.3 -c 0.05]",
+         "note": "flag bad interferograms, prepare the TS working dir"}
+      ]
+    },
+    {
+      "label": "Step 1-2: loop closure (+ reference)",
+      "steps": [
+        {"name": "LiCSBAS12_loop_closure.py",
+         "details": "-d GEOC* -t TS_GEOC* -l <thre> --multi_prime",
+         "note": "optional: LiCSBAS120_choose_reference.py to re-pick a stable reference"}
+      ]
+    },
+    {
+      "label": "Step 1-3: small-baseline inversion",
+      "steps": [
+        {"name": "LiCSBAS13_sb_inv.py",
+         "details": "-d GEOC* -t TS_GEOC* [--mem_size 8000] [--singular]",
+         "note": "NSBAS/SBAS small-baseline inversion \u2192 cum.h5 + velocity"}
+      ]
+    },
+    {
+      "label": "Step 1-4: velocity standard deviation",
+      "steps": [
+        {"name": "LiCSBAS14_vel_std.py",
+         "details": "-t TS_GEOC* [--mem_size 4000]",
+         "note": "bootstrap velocity STD (vstd) + spatio-temporal consistency"}
+      ]
+    },
+    {
+      "label": "Step 1-5: mask the time series",
+      "steps": [
+        {"name": "LiCSBAS15_mask_ts.py",
+         "details": "-t TS_GEOC* [-c 0.05 -u 1.5 -v 100 -T 1 -g 10 -s 5 -i 50 -l 5] [-r thre]",
+         "note": "mask using several noise indices (see the noise-index table in the notebook)"}
+      ]
+    },
+    {
+      "label": "Step 1-6: filter (& deramp) the time series",
+      "steps": [
+        {"name": "LiCSBAS16_filt_ts.py",
+         "details": "-t TS_GEOC* [-r <n>] [--hgt_linear] [--nofilter]",
+         "note": "denoising / deramping \u2192 cum_filt.h5"}
+      ]
+    },
+    {
+      "label": "Viewer & export (final)",
+      "steps": [
+        {"name": "licsbas-plot-ts / licsbas-out2nc",
+         "details": "interactive plot-ts; NetCDF datacube; pygmt / pylight_plot_interactive viewers",
+         "note": "see also licsbas-flt2geotiff for a GeoTIFF velocity map"}
+      ]
+    }
+  ]
+}

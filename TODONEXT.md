@@ -19,6 +19,60 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 - [ ] Publish `licsbas` 3.0.0 to PyPI (needs a token; local wheel/sdist build verified).
 - [ ] Create the GitHub `v3.0.0` release (needs a token).
 
+## Since v3.0.0
+- [x] **Phase bias correction** (optional 02op step, added 2026-12): new
+      `LiCSBAS02op_phasebias` operator (`licsbas-02op-phasebias` entry point,
+      `bin/LiCSBAS02op_phasebias.py`) wrapping the companion `phasebias`
+      package (comet-licsar/InSAR_PhaseBias_Correction, tag v1.1.0,
+      pip-installable). Python batch: `do02op_phasebias=True` /
+      `licsbas-batch --phasebias` (auto-redirects step 02 to the corrected
+      stack `$p02op_phasebias_out/GEOC`).
+      Companion repo work: `updated_previous` merged into `main` (old main
+      preserved as `archive/chunk-based-main`), restructured into the
+      `phasebias` package with `phasebias-01..05` entry points, plus fixes
+      (numpy≥1.25 warning, os.walk ordering/None-crash in step 03, non-blocking
+      plots, HGT-less georeferencing fallback in step 05). Validated
+      end-to-end on the 082D_05125_020000 dataset (2017–2021, 12407 ifgs →
+      1190 corrected ifgs).
+- [ ] `phasebias`: publish to PyPI as `insar-phasebias` (package + tag ready;
+      needs a PyPI account/token) — then the LiCSBAS operator's install hint
+      becomes `pip install insar-phasebias`.
+
+## NISAR data access (new, optional) — added 2026-11
+- [x] `licsbas-01-get-nisar-data` (ASF bbox search + GUNW/GSLC `.h5` download, per-frame subfolders).
+- [x] `licsbas-nisar2geoc` (NISAR GUNW `.h5` → `GEOC/`: iono + range-offset corrections,
+      rasterio WGS-84 export on a single shared grid, `baselines` + `metadata.txt`,
+      E/N/U + hgt + mli top-level files). Recommended NISAR route.
+- [x] `licsbas-asf2geoc` (ASF/NIISAR pre-processed GeoTIFF → `GEOC/`).
+- [x] `docs/05_nisar.md` + README NISAR section / doc-table row.
+- [x] `bin/LiCSBAS01_get_NISAR_data.py`, `bin/LiCSBAS_nisar2geoc.py`, `bin/LiCSBAS_asf2geoc.py`.
+- [x] Tests: `tests/test_nisar_step.py`, `tests/test_nisar2geoc.py` (stubbed, no network/HDF5).
+- [ ] `licsar_extra`: publish the NISAR extras (`asf_search`, `geopandas`, `shapely`, `pyproj`)
+      + `nisar_data.py` / `lics_proc_tools.py` (pushed separately in that repo).
+- [ ] End-to-end NISAR run on real GUNW `.h5` (CI tests are stubbed / no network yet).
+
+### DONE: LiCSBAS2 bug-fix backports (standard step-02/03 route) — applied 2026-12-19
+> The 4 fixes (PLANS_NISAR.md Task 2) are now in v3, each with an inline comment
+> citing the LiCSBAS2 commit/PR + a CHANGELOG line (see 2026-12-19 changelog). The
+> **02to05 substitution route was audited and needs none of them** (no uint8 `cc`
+> cast, no par-file corner write, no `gdal.Warp` GACOS resampling, no `--freq`
+> overwrite bug). Full suite green (87 passed, 2 skipped).
+- [x] `2627e50` — `_02_ml_prep` `cc.astype(np.uint8)` on NaN → `np.clip(np.nan_to_num(cc),0,255).astype(np.uint8)` (1 line; avoids undefined cast).
+- [x] `98cd3a8` (#174) — `_02_ml_prep` EQA.dem_par corner now computed **after** `dlon/dlat` are scaled by `-n` (was off by (n−1)/2 px for `-n>1`, 4 sites).
+- [x] `fcd0b6d` (#178) — `_03op_gacos` `gdal.Warp(outputBounds=...)` now outer edges (center ± ½ px); grid recorded in `sltd/sltd_grid.txt` and mismatched existing outputs detected.
+- [x] `51f09b6` (#173) — `_02_ml_prep` radar_freq precedence `--freq` > `metadata.txt` > default + Hz sanity check + stale-par update.
+
+### DONE: tutorial & documentation restructure — 2026-12-19
+- [x] `tutorial.ipynb` kept as **master single-file template** (marked as such in its title cell); the published tutorials are now composed from it:
+      - [x] `tutorial/tutorial_0.ipynb` — Module 0, LiCSAR data (steps `0-1` → `0-5`) **+ the `02to05_unwrap` alternative-route cell** (starts from the *wrapped* phase and substitutes steps `0-2` → `0-5`).
+      - [x] `tutorial/tutorial_0_nisar.ipynb` — Module 0, NISAR data (`licsbas-01-get-nisar-data` → `licsbas-nisar2geoc` (+ `licsbas-asf2geoc` alternative) → steps `0-2` → `0-5`).
+      - [x] `tutorial/tutorial_0_sbovl.ipynb` — SBOVNL (SBOI) chain, steps `0-1` → `1-6` all with `--sbovl`.
+      - [x] `tutorial/tutorial_1.ipynb` — Module 1: time series, steps `11` → `16` + viewers/exports (works from Binder *and* Colab; cross-linked with the Module-0 notebooks in the same session).
+- [x] **PNG flowcharts** (landscape, Graphviz `dot`; the long SBOVNL chain is portrait): `tutorial/0_licsar.png`, `0_nisar.png`, `0_sbovl.png`, `1_ts.png`, shown just before the first script of each notebook. Regenerate with `python3 tutorial/make_flowchart.py` (configs in `tutorial/tutorial_cfg/*.json`).
+- [x] `licsbas/flowchart.py`: `rankdir` parameter (TB/LR) + **alt-route styling** (amber nodes, dashed edge from the divergence point, "(alternative route)" tag) + `--flowchart-landscape` in `licsbas-batch`.
+- [x] `examples/example_4_nisar.py` — NISAR GUNW batch template (dry-run by default; `--execute` to run), completing the standard / reunw / sbovl / nisar template set (`licsbas-batch --list-workflows` already had `nisar`).- [x] README: slimmed (installation detail → `docs/01_installation.md`), tutorials table with Binder + Colab badges for all four split notebooks (+ bash-compatible + batch tutorials); badge/links point at the `towards-v3` branch until v3 lands on `main`.
+- [x] `bin/` wrappers: removed the `"DEPRECATED"` banner from **all 55** `bin/*.py` (docstring now reads `"Legacy wrapper for the console entry point \u0060\u0060…\u0060\u0060"`). They remain the supported traditional PATH-based CLI (user requirement).
+
 ## v3.1+
 - [ ] **Do NOT remove `bin/` wrappers or `bashrc_LiCSBAS.sh`** — user requirement,
       they keep the traditional PATH-based workflow (already decided, kept in 3.0.0).
@@ -37,7 +91,7 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 - [x] ~~Docs: wiki pages still reference the old flat layout~~ — done in v3.0.0 final:
       main wiki pages ported to local `docs/` (01_installation, 02_workflow,
       03_visualization, 04_other_tools, file_structure, links) with
-      old-name → `licbas-*` mappings; README documentation section links to them.
+      old-name → `licsbas-*` mappings; README documentation section links to them.
 - [ ] PyPI: publish `licsbas` (and consider a PyPI release of `licsar_extra`).
 
 ## Housekeeping

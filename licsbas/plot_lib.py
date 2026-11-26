@@ -214,6 +214,61 @@ def plot_gacos_info(gacos_infofile, pngfile):
     fig.savefig(pngfile)
 
 
+def plot_gacos_info2(gacos_infofile, pngfile, label="tropospheric correction"):
+    """Hexbin-style correlation plot of STD before/after correction.
+
+    Pure-matplotlib version (no seaborn) of the correlation diagram
+    previously made with `sns.jointplot(kind='hex')` in the ERA5/GACOS steps.
+    Reads the same `*_info` csv files as :func:`plot_gacos_info`.
+    """
+    ### Read data
+    with open(gacos_infofile, "r") as f:
+        info = f.readlines()[1:]
+
+    std_bf, std_af, rate = [], [], []
+    for line in info:
+        parts = line.split()
+        if len(parts) < 4 or parts[1] in ('0.0', 'nan') or parts[2] in ('0.0', 'nan'):
+            continue
+        std_bf.append(float(parts[1]))
+        std_af.append(float(parts[2]))
+        rate.append(float(parts[3][:-1]))
+
+    if not std_bf:
+        print('WARNING: no valid entries in {}, skipping info2 plot'.format(gacos_infofile))
+        return
+
+    std_bf = np.array(std_bf)
+    std_af = np.array(std_af)
+    rate = np.array(rate)
+
+    xylim1 = np.max(np.concatenate((std_bf, std_af))) + 1
+
+    ### Good / no change / bad statistics (same criteria as before)
+    porpos = len(rate[rate > 1.]) / len(rate) * 100
+    pornero = len(rate[np.abs(rate) <= 1.]) / len(rate) * 100
+    porneg = len(rate[rate < -1.]) / len(rate) * 100
+
+    fig = plt.figure(figsize=(5.5, 5))
+    ax = fig.add_subplot(1, 1, 1)
+    hb = ax.hexbin(std_bf, std_af, gridsize=40, bins='log',
+                   cmap='magma', extent=(0, xylim1, 0, xylim1),
+                   mincnt=1, reduce_C_function=None)
+    ax.plot([0, xylim1], [0, xylim1], linewidth=2, color='grey', alpha=0.5, zorder=4)
+    ax.text(xylim1 * 0.98, 0.02, "Good: {:.2f}%\nNo change: {:.2f}%\nBad: {:.2f}%".format(
+        porpos, pornero, porneg),
+        fontweight='bold', ha='right', va='bottom')
+    cbar_ax = fig.add_axes([0.93, 0.15, 0.035, 0.7])
+    plt.colorbar(hb, cax=cbar_ax, label="Pixel count")
+    ax.set_xlim(0, xylim1)
+    ax.set_ylim(0, xylim1)
+    ax.set_xlabel('STD before (rad)', fontweight='bold')
+    ax.set_ylabel('STD after (rad)', fontweight='bold')
+    ax.set_title('STD before vs after {} (per interferogram)'.format(label))
+    fig.savefig(pngfile, bbox_inches='tight')
+    plt.close(fig)
+
+
 #%%
 def plot_hgt_corr(data_bf, fit_hgt, hgt, title, pngfile):
     """

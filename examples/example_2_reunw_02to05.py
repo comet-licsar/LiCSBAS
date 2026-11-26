@@ -35,23 +35,23 @@ def main():
                     help="actually run the chain (default: dry run / check only)")
     ap.add_argument("--start", type=int, default=1, help="first step (default 1)")
     ap.add_argument("--end", type=int, default=16, help="last step (default 16)")
-    ap.add_argument("--nlook", type=int, default=20,
-                    help="multilook factor for the 02to05 step (default 20 here)")
+    ap.add_argument("--nlook", type=int, default=10,
+                    help="multilook factor (default 10 here)")
     ap.add_argument("--start-date", dest="start_date", default="", help="step 01 start date")
     ap.add_argument("--end-date", dest="end_date", default="", help="step 01 end date")
     # 02to05 specific (old p02to05_* settings)
     ap.add_argument("--reunw-gacos", dest="reunw_gacos", action="store_true",
-                    help="02to05: use GACOS data if available (default: dropped)")
+                    help="use GACOS data if available (default: dropped)")
     ap.add_argument("--hgtcorr", action="store_true",
-                    help="02to05: height correction (recommended for high, varying terrain)")
+                    help="height correction (recommended for high, varying terrain)")
     ap.add_argument("--cascade", action="store_true",
-                    help="02to05: cascade unwrapping from higher ML factors")
-    ap.add_argument("--filter", default="", choices=["", "gold", "gauss", "adf"],
-                    help="02to05 spatial filter (default gold)")
-    ap.add_argument("--thres", default="", help="02to05 consistency threshold (default 0.35)")
+                    help="cascade unwrapping from higher ML factors (recommended with --nlook 1)")
+    ap.add_argument("--filter", default="gold", choices=["", "gold", "gauss", "adf"],
+                    help="spatial filter (default gold)")
+    ap.add_argument("--thres", default="", help="coherence/consistency threshold (default 0.35)")
     ap.add_argument("--cliparea-geo", dest="cliparea_geo", default="",
-                    help="02to05 geo clip box, e.g. 130.11/131.12/34.34/34.6")
-    ap.add_argument("--geocdir", default="", help="02to05 input GEOC dir (default GEOC)")
+                    help="geo clip box, e.g. 130.11/131.12/34.34/34.6")
+    ap.add_argument("--geocdir", default="GEOC", help="input GEOC dir (default GEOC)")
     ap.add_argument("--nullify", action="store_true", help="step 12: --nullify")
     ap.add_argument("--out", default="flowchart_reunw_02to05.png",
                     help="flowchart output path")

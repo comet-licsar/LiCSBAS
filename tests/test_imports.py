@@ -20,8 +20,10 @@ REPO = os.path.dirname(HERE)
 # tool (licsar_extra / usgs-libcomcat) is not installed
 OK_EXIT = {
     "licsbas.steps._02to05_unwrap",
-    "licsbas.steps._get_eqoffsets",
+    "licsbas.scripts._get_eqoffsets",
     "licsbas.steps._17_plot_corrections",
+    # optional 'viewer' extras (pygmt + system GMT) not installed
+    "licsbas.extras",
 }
 
 
@@ -69,6 +71,10 @@ CORE_MODULES = [
 
 def _legacy_step_shims():
     d = os.path.join(REPO, "LiCSBAS_lib", "_shims")
+    # The legacy shim layer was removed in v3.0.0; if it is absent there is
+    # nothing to collect/test here.
+    if not os.path.isdir(d):
+        return []
     out = []
     for name in sorted(os.listdir(d)):
         if os.path.isfile(os.path.join(d, name, "__init__.py")):
@@ -102,6 +108,8 @@ def test_legacy_shims(module):
 
 
 def test_legacy_shim_aliases_to_licsbas():
+    if not os.path.isdir(os.path.join(REPO, "LiCSBAS_lib")):
+        pytest.skip("legacy LiCSBAS_lib shim layer removed in v3.0.0")
     r = py_subprocess(
         "import importlib\n"
         "m1 = importlib.import_module('LiCSBAS_meta')\n"
@@ -155,9 +163,11 @@ def test_entry_points_exist_and_resolve():
             % (modname, attr)
         )
         r = py_subprocess(code)
-        if modname in OK_EXIT:
+        if r.returncode != 0 and modname in OK_EXIT:
+            # expected: clean exit message about a missing optional tool
             out = (r.stdout + r.stderr).lower()
-            assert "not installed" in out or "not found" in out or "licsar_extra" in out, r.stdout
+            assert ("not installed" in out or "not found" in out
+                    or "not loaded" in out or "licsar_extra" in out), r.stdout
             continue
         assert r.returncode == 0, (e.name, r.stderr)
         assert "EP_OK" in r.stdout

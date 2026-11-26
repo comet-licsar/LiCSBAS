@@ -33,6 +33,8 @@ Outputs in GEOCml*GACOS/
  - no_gacos_im.txt  : List of images with no available GACOS data
  - sltd/
    - yyyymmdd.sltd.geo : Slantrange tropospheric delay in rad
+   - sltd_grid.txt     : grid the GACOS data are resampled onto (to detect outputs
+                         made on another grid)
  - other files needed for following time series analysis
 
 =====
@@ -265,7 +267,13 @@ def main(argv=None):
     lonw_geo = float(io_lib.get_param_par(dempar, 'corner_lon'))
     lats_geo = latn_geo+dlat_geo*(length_geo-1)
     lone_geo = lonw_geo+dlon_geo*(width_geo-1)
-    outputBounds = (lonw_geo, lats_geo, lone_geo, latn_geo)
+    ## outputBounds of gdal.Warp are the OUTER EDGES (pixel registration), not the
+    ## pixel centers. The dem_par corner is a grid (center) registration, so expand
+    ## by half a pixel. (LiCSBAS2 fcd0b6d #178: passing the centers shrunk the
+    ##  resampled grid by one pixel, so the GACOS delay was sampled +0.5 px off at the
+    ##  west/north edge and -0.5 px off at the east/south edge.)
+    outputBounds = (lonw_geo-dlon_geo/2, lats_geo+dlat_geo/2,
+                    lone_geo+dlon_geo/2, latn_geo-dlat_geo/2)
     
     ### Check coordinate
     if width_unw!=width_geo or length_unw!=length_geo:
@@ -283,6 +291,35 @@ def main(argv=None):
     imdates = tools_lib.ifgdates2imdates(ifgdates)
     n_ifg = len(ifgdates)
     n_im = len(imdates)
+
+    #%% Check the grid of existing outputs. They are NOT re-created, so outputs made
+    ### on another grid (a build whose GACOS grid was shrunk by one pixel, #178, or
+    ### before EQA.dem_par was recreated, #174) would silently remain and be mixed
+    ### with new ones.
+    sltd_gridfile = os.path.join(sltddir, 'sltd_grid.txt')
+    sltd_grid = list(outputBounds) + [width_geo, length_geo]
+    existing = (glob.glob(os.path.join(sltddir, '*.sltd.geo')) or
+                glob.glob(os.path.join(out_dir, '*', '*.unw')))
+    if not existing:
+        os.makedirs(sltddir, exist_ok=True)
+        with open(sltd_gridfile, 'w') as f:
+            print(' '.join(str(v) for v in sltd_grid), file=f)
+    else:
+        try:
+            with open(sltd_gridfile) as f:
+                sltd_grid_old = [float(v) for v in f.read().split()]
+        except (OSError, ValueError):  ## no record: made by an earlier build
+            sltd_grid_old = []
+        if len(sltd_grid_old) != len(sltd_grid) or \
+           not np.allclose(sltd_grid_old, sltd_grid, rtol=0, atol=1e-9):
+            out_base = os.path.basename(out_dir)
+            print('\nERROR: Existing outputs in {} were made on another grid than the current one\n'
+                  '(a build whose GACOS grid was shrunk by one pixel, #178, or before EQA.dem_par was\n'
+                  'recreated, #174).\n'
+                  'Remove {} and the outputs of the later steps made from it\n'
+                  '(e.g., {}mask, ...clip, TS_{{}}) and rerun them, because existing outputs are not recreated.\n'
+                  .format(out_dir, out_dir, out_base), file=sys.stderr, flush=True)
+            return 1
 
 
     #%% Process ztd files 

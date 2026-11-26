@@ -68,10 +68,6 @@ from licsbas import tools_lib
 from licsbas import plot_lib
 from matplotlib import pyplot as plt
 from matplotlib import dates as mdates
-try:
-    import seaborn as sns
-except:
-    print('seaborn not installed - will skip some plotting')
 
 class Usage(Exception):
     """Usage context manager"""
@@ -80,83 +76,8 @@ class Usage(Exception):
 
 #%% 
 def plot_gacos_info2(gacos_infofile, pngfile):
-
-    # import seaborn as sns
-    import pandas as pd
-    import warnings
-    warnings.simplefilter(action="ignore", category=FutureWarning)
-### Read data
-    with open(gacos_infofile, "r") as f:
-        info = f.readlines()[1:]
-
-    std_bf, std_af, rate = [], [], []; 
-    std_bfok, std_afok, std_bfbad, std_afbad= [], [], [], []; 
-  
-
-    conp=0
-    conn=0
-    conc=0
-    contador=0
-    for line in info:
-     date, std_bf1, std_af1, rate1 = line.split()
-     #print(std_bf1, std_af1)
-     if float(std_bf1)>float(std_af1):
-      conp=conp+1
-     elif float(std_bf1)==float(std_af1):
-      conc=conc+1
-     else:
-      conn=conn+1
-     contador=contador+1
-
-    total=contador #conp+conn
-    print("TOTAL",total,len(std_bf1))
-    porpos=(conp*100)/total
-    porneg=(conn*100)/total
-    porcero=(conc*100)/total
-
-    for line in info:
-        date, std_bf1, std_af1, rate1 = line.split()
-        if std_bf1=='0.0' or std_bf1=='nan' or std_af1=='0.0' or std_af1=='nan':
-            continue
-        std_bf.append(float(std_bf1))
-        std_af.append(float(std_af1))
-        rate.append(float(rate1[:-1]))
-
-    std_bf1 = np.array(std_bf)
-    std_af1 = np.array(std_af)
-   
-    yy=np.max(std_bf1)
-    xx=np.max(std_af1)
-    xylim1 = np.max(np.concatenate((std_bf1, std_af1)))+1 
-    #print(std_bf)
-#    std_bf.insert(0, str('x'))
- #   std_af.insert(0, str('y'))
-    data = np.column_stack((std_bf,std_af))
-    df1 = pd.DataFrame(data, columns=['std_before', 'std_after'])
-#    print(df1)
-    xylim1 = np.max(np.concatenate((std_bf, std_af)))+1
-
-    #joint_kws=dict(gridsize=40)
-    #graph = sns.jointplot(x=df1.std_before, y=df1.std_after, kind ="hex",color="lightcoral",joint_kws= joint_kws)
-    #sns.lineplot([0, xylim1], [0, xylim1], ax=graph.ax_joint,linewidth=2, color='grey', alpha=0.5, zorder=2)
-    #cbar_ax = graph.fig.add_axes([1, .25, .05, .4])  # x, y, width, height
-    #plt.colorbar(cax=cbar_ax, label="Pixel count")
-    #graph.ax_joint.set_xlabel('STD Before (rad)', fontweight='bold')
-    #graph.ax_joint.set_ylabel('STD After (rad)', fontweight='bold')
-    #graph.savefig(pngfile)
-    try:
-        graph = sns.jointplot(x=df1.std_before, y=df1.std_after, kind ="hex",color="lightcoral")
-        #sns.lineplot([0, xylim1], [0, xylim1], ax=graph.ax_joint,linewidth=2, color='grey', alpha=0.5, zorder=2)
-        plt.plot([0, xylim1], [0, xylim1], linewidth=2, color='grey', alpha=0.5, zorder=2)
-        plt.text(xx-2, 0.5 , "Good: {:.2f}%\nNo Change: {:.2f}%\n".format(porpos,porcero),fontweight='bold')
-        plt.text(0.5, yy , "Bad: {:.2f}%".format(porneg),fontweight='bold' )
-        cbar_ax = graph.fig.add_axes([1, .25, .05, .4])  # x, y, width, height
-        plt.colorbar(cax=cbar_ax, label="Pixel count")
-        graph.ax_joint.set_xlabel('STD Before (rad)', fontweight='bold')
-        graph.ax_joint.set_ylabel('STD After (rad)', fontweight='bold')
-        graph.savefig(pngfile)
-    except:
-        print('seaborn not installed, skipping STD before/after plot')
+    """STD before/after correlation diagram - matplotlib-native (no seaborn)."""
+    plot_lib.plot_gacos_info2(gacos_infofile, pngfile, label="ERA5 (tropospheric) correction")
 
 
 
@@ -438,8 +359,7 @@ def main(argv=None):
 
  #%% Create correlation png
     pngfile = os.path.join(out_dir, 'ERA5_info2.png')
-#    plot_lib.plot_gacos_info2(gacinfofile, pngfile)    
-    plot_gacos_info2(gacinfofile, pngfile)    
+    plot_lib.plot_gacos_info2(gacinfofile, pngfile, label="ERA5 (tropospheric) correction")
     
     #%% Copy other files
     files = glob.glob(os.path.join(in_dir, '*'))
