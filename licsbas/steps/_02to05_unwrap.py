@@ -105,6 +105,8 @@ def _require_licsar_extra():
         print('please install from https://github.com/comet-licsar/licsar_extra')
         print('e.g.:')
         print("pip install 'licsbas[unwrap]'")
+        print('or (clearer):')
+        print('pip install --upgrade git+https://github.com/comet-licsar/licsar_extra.git')
         sys.exit(1)
 
 
@@ -116,8 +118,8 @@ class Usage(Exception):
 
 #%% Main
 def main(argv=None):
-    _require_snaphu()
     _require_licsar_extra()
+    _require_snaphu()
     
     #%% Check argv
     if argv == None:
