@@ -22,9 +22,11 @@ step reference, batch options) now lives in the [docs](docs/) — starting with
 ## Installation
 
 ```bash
-git clone https://github.com/comet-licsar/LiCSBAS.git
+git clone --depth 1 --single-branch -b towards-v3 https://github.com/comet-licsar/LiCSBAS.git
 cd LiCSBAS
 pip install .                # or: pip install .[all] for every optional extra
+source bashrc_LiCSBAS.sh     # this is to set up paths to the bash scripts (bin directory)
+# echo "source $(pwd)/bashrc_LiCSBAS.sh >> ~/.bashrc"  # this is to set up the paths permamently (OS Linux, maybe Mac as well?)
 ```
 
 Alternative: a (micro)mamba/conda environment from `environment.yml`.
