@@ -41,6 +41,7 @@ _STEP_MODULES = {
     "01":         ("licsbas.steps._01_get_geotiff",            "LiCSBAS01_get_geotiff.py"),
     "02":         ("licsbas.steps._02_ml_prep",                "LiCSBAS02_ml_prep.py"),
     "02to05":     ("licsbas.steps._02to05_unwrap",             "LiCSBAS02to05_unwrap.py"),
+    "02op":       ("licsbas.steps._02op_phasebias",            "LiCSBAS02op_phasebias.py"),
     "03":         ("licsbas.steps._03op_gacos",                "LiCSBAS03op_GACOS.py"),
     "04":         ("licsbas.steps._04op_mask_unw",             "LiCSBAS04op_mask_unw.py"),
     "05":         ("licsbas.steps._05op_clip_unw",             "LiCSBAS05op_clip_unw.py"),
@@ -66,6 +67,7 @@ _PHASES = {
     "01": "Download & data preparation (steps 01-06)",
     "02": "Download & data preparation (steps 01-06)",
     "02to05": "Download & data preparation (steps 01-06)",
+    "02op": "Download & data preparation (steps 01-06)",
     "03": "Download & data preparation (steps 01-06)",
     "04": "Download & data preparation (steps 01-06)",
     "05": "Download & data preparation (steps 01-06)",
@@ -130,6 +132,11 @@ class BatchConfig:
     eqoffs_minmag: float = 0.0           # 0 = skip auto-find
     eqoffs_txtfile: str = "eqoffsets.txt"
     eqoffs_buffer: float = 0.1
+
+    # --- optional 02op: phase bias correction (before step 02) -----------
+    do02op_phasebias: bool = False         # run LiCSBAS02op_phasebias.py (needs 'phasebias' pkg)
+    p02op_phasebias_out: str = "GEOC_phasebias"   # corrected stack output dir
+    p02op_phasebias_options: str = ""      # extra options, e.g. "--frame 082D_05125_020000"
 
     # --- updated pipeline: re-unwrapping with 02to05 ---------------------
     run_reunw: bool = False              # use LiCSBAS02to05_unwrap.py instead of 02[,03,04,05]
@@ -444,7 +451,7 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
         if not cfg.pNISAR_bbox:
             print("WARNING: use_nisar is set but pNISAR_bbox (-g lon1/lon2/lat1/lat2) "
                   "is empty; the search will have no search area.", flush=True)
-        argv: List[str] = []
+        argv = []
         if cfg.pNISAR_bbox:
             argv += ["-g", cfg.pNISAR_bbox]
         _add(argv, "--frame", cfg.pNISAR_frames)
@@ -476,6 +483,16 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
         add("nisar2geoc", argv,
             note="NISAR .h5 -> GEOC (iono+range-offset corrected, shared grid, baselines)")
 
+    # ---------------- optional 02op: phase bias correction ----------------
+    phasebias_out: Optional[str] = None
+    if cfg.do02op_phasebias and not cfg.run_reunw and (start <= 1 <= end or start <= 2 <= end):
+        argv = ["-i", cfg.p02_GEOCdir or "GEOC",
+                "-o", cfg.p02op_phasebias_out or "GEOC_phasebias"]
+        argv += cfg.p02op_phasebias_options.split()
+        add("02op", argv, optional=True,
+            note="phase bias correction (needs 'phasebias' pkg)")
+        phasebias_out = cfg.p02op_phasebias_out or "GEOC_phasebias"
+
     # ---------------- step 02 / 02to05 ----------------
     if cfg.run_reunw:
         # updated workflow: 02to05 instead of 02[,03,04,05]
@@ -494,7 +511,12 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
             argv.append("--gacos")
         add("02to05", argv, note="re-unwrapping (02to05) workflow")
     elif start <= 2 <= end:
-        argv = ["-i", cfg.p02_GEOCdir or "GEOC"]
+        if phasebias_out:
+            # phase bias correction ran: step 02 reads the corrected stack
+            geo_in = cfg.p02_GEOCdir or (phasebias_out + "/GEOC")
+        else:
+            geo_in = cfg.p02_GEOCdir or "GEOC"
+        argv = ["-i", geo_in]
         _add(argv, "-o", cfg.p02_GEOCmldir)
         argv += ["-n", str(cfg.nlook)]
         _add(argv, "--freq", cfg.p02_freq or cfg.freq)
@@ -891,6 +913,8 @@ def main(argv=None):
     ap.add_argument("--mask", action="store_true", help="enable optional unw masking step (04op)")
     ap.add_argument("--clip", action="store_true", help="enable optional clip step (05op)")
     ap.add_argument("--era5", action="store_true", help="enable optional ERA5 step (06op/03op_ERA5)")
+    ap.add_argument("--phasebias", action="store_true",
+                    help="enable phase bias correction (02op; requires the 'phasebias' package)")
     ap.add_argument("--no-multi-prime", dest="multi_prime", action="store_false",
                     help="turn OFF step 12: --multi_prime (on by default)")
     ap.add_argument("--nullify", action="store_true", help="step 12: --nullify")
@@ -940,6 +964,8 @@ def main(argv=None):
         overrides["do05op_clip"] = True
     if a.era5:
         overrides["do06op_ERA5"] = True
+    if a.phasebias:
+        overrides["do02op_phasebias"] = True
     if not a.multi_prime:
         overrides["p12_multi_prime"] = False
     if a.nullify:

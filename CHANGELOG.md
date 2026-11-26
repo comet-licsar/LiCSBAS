@@ -1,5 +1,20 @@
 # Changelog — LiCSBAS
 
+### 2026-12-19 (post-merge cleanups — phase bias + NISAR/python-batch merge)
+- Merged upstream `towards-v3` (NISAR data-access, python `licsbas/batch.py`,
+  `licsbas/steps`+`licsbas/scripts` split, 59 single-named entry points, new
+  tutorials/flowcharts) with the 02op phase bias addition; conflicts resolved
+  in `pyproject.toml` (upstream entry points + `licsbas-02op-phasebias`),
+  `batch_LiCSBAS.sh` (upstream thin wrapper), `CHANGELOG.md`, `TODONEXT.md`.
+  Phase bias now integrated in `licsbas/batch.py` (`--phasebias`), not the
+  bash batch script.
+- Fixed two latent bugs found by the post-merge mypy/test run: `extras.py`
+  error message used `% e` formatting on a string containing `` `%matplotlib` ``
+  (would crash with `ValueError` instead of reporting the real error) — now an
+  f-string; `batch.py` re-annotated `argv` in the NISAR branch (mypy
+  `no-redef` error). `licsbas.extras` (optional `viewer` extras) is now
+  tolerated by `test_imports.py` when pygmt is absent.
+
 ## [unreleased] — branch `towards-v3`
 
 ### 2026-12-20 (NISAR: GUNW-only + frame handling; portrait flowcharts)
@@ -41,6 +56,28 @@ workflow (`--list-frames` then `--frame` then `nisar2geoc -i NISAR_GUNW/<frame>`
 `tests/test_nisar_step.py::test_list_frames_only` and `::test_frame_filter`
 (stubbed, no network); `test_nisar_chain` now checks `-i NISAR_GUNW[/<frame>]`
 and the `--frame` passthrough. Full suite: **90 passed, 2 skipped**.
+### 2026-12-19 (phase bias correction operator — optional 02op step)
+- New optional step `LiCSBAS02op_phasebias` (entry point
+  `licsbas-02op-phasebias`, `licsbas/steps/_02op_phasebias.py`,
+  `bin/LiCSBAS02op_phasebias.py` wrapper): runs the standalone `phasebias`
+  package (https://github.com/comet-licsar/InSAR_PhaseBias_Correction,
+  tag v1.1.0) — all 5 steps, sequential, with `--dry-run`, `--steps` resume,
+  and auto-generated `config.txt`. Clear install guidance when the package
+  is missing.
+- Python batch: `BatchConfig(do02op_phasebias=True)` (+ `p02op_phasebias_out`,
+  `p02op_phasebias_options`) / `licsbas-batch --phasebias`; step 02 then
+  reads the corrected stack (`$p02op_phasebias_out/GEOC`).
+- Companion repo work (tag v1.1.0): restructured into a pip-installable
+  `phasebias` package (`phasebias-01..05` console entry points);
+  `updated_previous` merged into `main` (old main preserved as
+  `archive/chunk-based-main`); fixes: `np.VisibleDeprecationWarning` removed
+  in numpy >= 1.25, unsorted `os.walk` order misaligning coherence/phase
+  lists (root cause of step-03 `NoneType` crash), step-03 blocking
+  `plt.show()` -> saved PNGs, step-05 no longer requires the
+  `.geo.hgt.tif` DEM (falls back to any metadata raster as georeferencing
+  template).
+- Validated end-to-end on the 082D_05125_020000 test dataset (2017-2021,
+  12407 ifgs): 1190 corrected interferograms written (a1=0.537, a2=0.350).
 
 ### 2026-12-19 (tutorial & documentation restructure; flowcharts; NISAR batch template)
 **Tutorial** — the monolithic `tutorial/tutorial.ipynb` is kept as the *master single-file template*, and four composed tutorials are published from it (`tutorial/build_notebooks.py` re-generates them):

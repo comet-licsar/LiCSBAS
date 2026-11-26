@@ -22,8 +22,8 @@ try:
     from pygmt.helpers import GMTTempFile
 except Exception as _e:
     raise ImportError(
-        "licsbas.extras (the pygmt viewer) requires the optional 'viewer' extras and a "
-        "system GMT install. Install with: pip install 'licsbas[viewer]'  "
+        "licsbas.extras (the pygmt viewer) requires the optional 'viewer' extras "
+        "(pygmt + system GMT not installed). Install with: pip install 'licsbas[viewer]'  "
         "(and e.g. 'sudo apt-get install gmt'). "
         f"Underlying error: {_e}"
     ) from _e
@@ -426,7 +426,7 @@ def pygmt_plot_interactive(cube, title, label='deformation rate [mm/year]', lims
         fig.canvas.mpl_connect('button_press_event', onclick)
     except Exception as e:
         raise RuntimeError(
-            "Cannot connect mouse-click events to this matplotlib backend (%s). "
+            f"Cannot connect mouse-click events to this matplotlib backend ({e}). "
             "The interactive viewer needs the widget backend - use `%matplotlib widget` "
-            "(ipympl) before calling pygmt_plot_interactive." % e)
+            "(ipympl) before calling pygmt_plot_interactive.")
     return ax1

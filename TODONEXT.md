@@ -19,6 +19,25 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 - [ ] Publish `licsbas` 3.0.0 to PyPI (needs a token; local wheel/sdist build verified).
 - [ ] Create the GitHub `v3.0.0` release (needs a token).
 
+## Since v3.0.0
+- [x] **Phase bias correction** (optional 02op step, added 2026-12): new
+      `LiCSBAS02op_phasebias` operator (`licsbas-02op-phasebias` entry point,
+      `bin/LiCSBAS02op_phasebias.py`) wrapping the companion `phasebias`
+      package (comet-licsar/InSAR_PhaseBias_Correction, tag v1.1.0,
+      pip-installable). Python batch: `do02op_phasebias=True` /
+      `licsbas-batch --phasebias` (auto-redirects step 02 to the corrected
+      stack `$p02op_phasebias_out/GEOC`).
+      Companion repo work: `updated_previous` merged into `main` (old main
+      preserved as `archive/chunk-based-main`), restructured into the
+      `phasebias` package with `phasebias-01..05` entry points, plus fixes
+      (numpy≥1.25 warning, os.walk ordering/None-crash in step 03, non-blocking
+      plots, HGT-less georeferencing fallback in step 05). Validated
+      end-to-end on the 082D_05125_020000 dataset (2017–2021, 12407 ifgs →
+      1190 corrected ifgs).
+- [ ] `phasebias`: publish to PyPI as `insar-phasebias` (package + tag ready;
+      needs a PyPI account/token) — then the LiCSBAS operator's install hint
+      becomes `pip install insar-phasebias`.
+
 ## NISAR data access (new, optional) — added 2026-11
 - [x] `licsbas-01-get-nisar-data` (ASF bbox search + **GUNW** `.h5` download — **GUNW-only: GSLC was removed 2026-12-20** — per-frame subfolders;
       **`--list-frames` / `--frame FID[,FID2,...]`** for frame selection).
