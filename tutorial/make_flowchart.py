@@ -46,10 +46,10 @@ def build(cfgdict: dict, out_png: str) -> str:
                 note=s.get("note", ""),
                 alt=s.get("alt", False),
             ))
-    # landscape by default; very long chains may set "rankdir": "TB" in the config
+    # portrait (top-to-bottom) by default; a config may still set "rankdir": "LR"
     return render_flowchart(steps, out_png,
                             title=cfgdict.get("title", "LiCSBAS processing chain"),
-                            rankdir=cfgdict.get("rankdir", "LR"))
+                            rankdir=cfgdict.get("rankdir", "TB"))
 
 
 def main():

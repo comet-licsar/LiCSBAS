@@ -5,12 +5,13 @@
 > extra `licsar_extra` package and the NISAR extras.
 
 LiCSBAS is designed around LiCSAR (Sentinel-1) data downloaded from the
-COMET-LiCS portal by `licsbas-get-geotiff`. For **NISAR** (NISAR L2 GUNW / GSLC)
-and other ASF products we provide two complementary tools:
+COMET-LiCS portal by `licsbas-get-geotiff`. For **NISAR** (NISAR L2 **GUNW —
+the only product type used; GSLC is not needed**) and other ASF products we
+provide the following tools:
 
 | Tool | Entry point | What it does |
 | --- | --- | --- |
-| `licsbas-01-get-nisar-data` | `licsbas.steps._01_get_nisar_data` | Search ASF for NISAR GUNW/GSLC in a bbox and **download** the `.h5`, grouped into per-frame subfolders |
+| `licsbas-01-get-nisar-data` | `licsbas.steps._01_get_nisar_data` | Search ASF for NISAR GUNW in a bbox (per frame; `--list-frames` / `--frame` to select) and **download** the `.h5`, grouped into per-frame subfolders |
 | `licsbas-asf2geoc` | `licsbas.scripts._asf2geoc` | Convert ASF *pre-processed* product directories (`*_unw_phase.tif`, `*_corr.tif`, `*_lv_*`, `*_dem.tif`, `*_amp.tif`) into a LiCSBAS `GEOC/` layout |
 
 Both use LiCSBAS conventions (`long/lat` bounding boxes as `lon1/lon2/lat1/lat2`,
@@ -38,13 +39,16 @@ Without credentials the step will still fetch publicly accessible scene URLs.
 
 ```bash
 # GUNW interferograms for a study area (LiCSBAS bbox: lon1/lon2/lat1/lat2)
-licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 -t GUNW -s 20250101 -e 20251231 -o NISAR_GUNW
+licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 -s 20250101 -e 20251231 -o NISAR_GUNW
 
 # Only list the selection (no download)
-licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 -t GUNW --dry_run
+licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 --dry_run
 
-# GSLC single looks
-licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 -t GSLC -o NISAR_GSLC
+# Which frames (tracks) are available here?
+licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 --list-frames
+
+# Download only one (or a few) frame(s)
+licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 --frame 018A_01234 -o NISAR_GUNW
 ```
 
 Options:
@@ -52,22 +56,23 @@ Options:
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `-g` | geographic extent `lon1/lon2/lat1/lat2` (required) | — |
-| `-t` | `GUNW` (ifgs) or `GSLC` | `GUNW` |
+| `--frame` | NISAR frame id(s) `FID[,FID2,...]` (e.g. `018A_01234`) — download only these | all |
+| `--list-frames` | list the available frames + GUNW count per frame, then exit | off |
 | `-s` / `-e` | start / end date `yyyymmdd` | `20250101` / today |
-| `-o` | output directory | `./NISAR_<type>` |
+| `-o` | output directory | `./NISAR_GUNW` |
 | `--max` | maximum scenes to fetch | `500` |
 | `--dry_run` | search + list only, do not download | off |
 
-Output layout (NISAR **frame** = a persistent track+frame compatibility group,
-derived from the scene name via `get_frameid`):
+Output layout (a NISAR **frame** is a track; its id — e.g. `018A_01234`,
+`<line><pass>_<beam>` — is derived from the scene name via `get_frameid`):
 
 ```text
 NISAR_GUNW/
-├── 07_2025/            # frame 07, ...
-│   ├── NISAR_L2_PR_GUNW_009_018_A_007_20250601....h5
-│   └── NISAR_L2_PR_GUNW_009_018_A_007_20250615....h5
-└── 08_2025/
-    └── NISAR_L2_PR_GUNW_009_021_B_008_20250601....h5
+├── 018A_01234/
+│   ├── NISAR_L2_PR_GUNW_..._018_A_01234_....h5
+│   └── NISAR_L2_PR_GUNW_..._018_A_01234_....h5
+└── 019A_01235/
+    └── NISAR_L2_PR_GUNW_..._019_A_01235_....h5
 ```
 
 Existing non-empty files are not re-downloaded. Downloads are streamed over
@@ -83,9 +88,15 @@ There are two converters into the `GEOC/` layout, depending on your source:
 | `licsbas-asf2geoc` | pre-exported **GeoTIFF**s (unw/cc/E/N/U/hgt/mli) | You already have LiCSAR-style GeoTIFFs (ASF or the `nisar_data` export). |
 
 Both produce the same directory structure and `metadata.txt`, and **all exported
-GeoTIFFs (unw/cc of every IFG plus the top-level E/N/U, hgt, mli) are written
-onto a single shared WGS-84 grid** (first product defines it) with `DEFLATE`,
+GeoTIFFs (unw/cc of every IFG plus the top-level E/N/U, hgt) are written onto a
+single shared WGS-84 grid** (first product defines it) with `DEFLATE`,
 `PREDICTOR=2`, `TILED=YES` compression.
+
+> **Frames (tracks):** one region is covered by several NISAR frames. Each
+> frame subfolder is a **self-contained time series** — run the converter
+> (and the rest of LiCSBAS) **once per frame**, producing one `GEOC/` per
+> frame. GUNWs from different frames cannot be combined; `nisar2geoc` prints
+> a warning if it sees a mixed-frame input.
 
 ### `licsbas-nisar2geoc` (NISAR GUNW `.h5` → `GEOC/`) — *recommended*
 
@@ -99,25 +110,24 @@ It also writes a LiCSBAS-standard `baselines` file (per-pair `bperp`, read by
 `io_lib.read_bperp_file`).
 
 ```bash
-licsbas-nisar2geoc -i <dir_of_NISAR_GUNW.h5> -o GEOC \
+# one frame (track) per GEOC:
+licsbas-nisar2geoc -i NISAR_GUNW/018A_01234 -o GEOC_018A_01234 \
     [-c lonmin/lonmax/latmin/latmax] [-t 0.5] [-f A|B] \
     [--no_iono] [--no_offsets] [--no_deramp_quad] \
-    [-E gslc.h5] [-D] [-n 4] [--dry_run]
+    [-D] [-n 4] [--dry_run]
 ```
 
- -i  directory (searched recursively) or a single GUNW `.h5`
+ -i  one frame folder (searched recursively), or a single GUNW `.h5`
  -t  coherence threshold for masking unw (default 0.5)
  -f  NISAR band `A` (1.27e9) or `B` (1.2215e9); fixes `radar_freq` in metadata
  --no_iono / --no_offsets / --no_deramp_quad — opt out of that correction
- -E  NISAR GSLC `.h5` used to export `X.geo.{E,N,U}.tif` + `X.geo.mli.tif`
  -D  also try to fetch a NISAR DEM for `X.geo.hgt.tif` (needs earthaccess + net)
 ```text
 GEOC/
 ├── 20250601_20250615/20250601_20250615.geo.unw.tif   # iono+range-offset corrected, cc-masked
 ├── 20250601_20250615/20250601_20250615.geo.cc.tif
-├── X.geo.E.tif / X.geo.N.tif / X.geo.U.tif            (if -E given)
-├── X.geo.hgt.tif                                      (if -D given)
-├── X.geo.mli.tif                                      (if -E given)
+├── X.geo.E.tif / X.geo.N.tif / X.geo.U.tif            # written once, from the first GUNW (radarGrid metadata)
+├── X.geo.hgt.tif                                      # (if -D given)
 ├── baselines                                          # bperp per pair — LiCSBAS standard
 └── metadata.txt                                       # center_time, radar_freq
 ```

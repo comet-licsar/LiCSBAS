@@ -72,17 +72,23 @@ def test_nisar_chain():
         assert sk in k
     s01n = next(s for s in steps if s.key == "01nisar")
     assert "-g" in s01n.argv and "14.00/14.25/40.75/40.95" in s01n.argv
-    assert "-t" in s01n.argv and "GUNW" in s01n.argv
+    # GUNW-only download step: no -t (product type) and no -E (GSLC) flags
+    assert "-t" not in s01n.argv and "-E" not in s01n.argv
     sng = next(s for s in steps if s.key == "nisar2geoc")
+    assert sng.argv[0] == "-i" and "NISAR_GUNW" in sng.argv
     assert "-t" in sng.argv  # coherence threshold (default 0.5)
     assert "--sbovl" not in sng.argv
 
-    # GSLC / correction overrides flow through
-    cfg2 = BatchConfig(use_nisar=True, pNISAR_bbox="1/2/3/4", pNISAR_gslc="G/h5",
+    # frame selection + correction overrides flow through
+    cfg2 = BatchConfig(use_nisar=True, pNISAR_bbox="1/2/3/4",
+                       pNISAR_frames="018A_01234",
                        nisar2geoc_no_iono=True, nisar2geoc_download_dem=True)
     st2 = build_pipeline(cfg2)
+    s01n2 = next(s for s in st2 if s.key == "01nisar")
+    assert "--frame" in s01n2.argv and "018A_01234" in s01n2.argv
     sng2 = next(s for s in st2 if s.key == "nisar2geoc")
-    assert "-E" in sng2.argv and "G/h5" in sng2.argv
+    i = sng2.argv.index("-i")
+    assert sng2.argv[i + 1] == os.path.join("NISAR_GUNW", "018A_01234")
     assert "-D" in sng2.argv and "--no_iono" in sng2.argv
 
 

@@ -23,7 +23,7 @@ README badge links must use the `towards-v3` branch until the v3 release).
     rankdir=...)`, workflow registry `@register_workflow(name, desc)` with
     workflows **`standard`, `reunw_5`, `sbovl`, `sbovl_abs`, `nisar`** —
     `licsbas-batch --list-workflows`, `--workflow <name>`, `--check-only`,
-    `--flowchart x.png --flowchart-landscape`.
+    `--flowchart x.png` (portrait PNG by default).
   - `licsbas/flowchart.py` — Graphviz `dot` (subprocess; **no python
     `graphviz` dep**): `FlowStep(name,details,active,phase,note,alt)`,
     `render_flowchart(steps, out_png, title=..., rankdir=...)`. `rankdir` is
@@ -37,7 +37,9 @@ README badge links must use the `towards-v3` branch until the v3 release).
   call `main()`. **Preserve** `bin/` and `bashrc_LiCSBAS.sh` (user requirement).
 - `examples/` — dry-run batch templates that also write a PNG flowchart:
   `example_1_standard.py`, `example_2_reunw_02to05.py`, `example_3_sbovl.py`,
-  `example_4_nisar.py` (`--bbox`, `--gslc`, `--execute`, …).
+  `example_4_nisar.py` (`--bbox`, `--frames 018A_01234`, `--execute`, …).
+- `batch_LiCSBAS.sh` — **original shell batch script (restored from `main`)**;
+  the python batch engine is `licsbas-batch` / `examples/*.py`. Both coexist.
 - `docs/` — wiki pages ported to local markdown, v3 naming:
   `01_installation.md` (incl. v1→v3), `02_workflow.md`, `03_visualization.md`,
   `04_other_tools.md`, `05_nisar.md` (NISAR access), `file_structure.md`,
@@ -90,16 +92,21 @@ regenerated after an upgrade.
 
 ## NISAR data access (optional, experimental)
 - `licsbas-01-get-nisar-data`: ASF bbox search + streamed download of NISAR
-  CSL2 GUNW/GSLC `.h5` (per-frame subfolders) via `asf_search`. Uses
-  `licsar_extra.nisar_data` (lazy). No shell `wget`.
-- `licsbas-nisar2geoc`: NISAR GUNW `.h5` → `GEOC/<ifg>/` in the **same order**
-  the GeoTIFF chain would produce: removes smooth ionospheric ramp (from the
-  unwrapping residual) and the range-offset ramp (from GSLC coherence) *before*
-  export (per `earthquake_responder.py`), applies coherence mask, writes
-  `unw/cc/E/N/U` (+ `hgt` with `-D`), one shared WGS-84 grid (first IFG defines
-  it; later ones re-registered), `slc.mli.par`/`EQA.dem_par`, standard
-  **`baselines`** (4-col) and `metadata.txt`. `--no_iono/--no_offsets/
-  --no_deramp_quad`, `-E gslc.h5`, `-t cc_thre`, `-f A|B`, `-D`, `--dry_run`.
+  CSL2 **GUNW `.h5`** (LiCSBAS uses GUNW only — **GSLC is not used at all**)
+  into per-frame subfolders. **`--frame FID[,FID2,...]`** restricts to selected
+  frames; **`--list-frames`** lists the available frames + GUNW count per frame
+  and exits (no download). Frame id = `<line><pass>_<beam>` (e.g. `018A_01234`),
+  from `nisar_data.get_frameid`. Uses `licsar_extra.nisar_data` (lazy). No shell
+  `wget`.
+- `licsbas-nisar2geoc`: **one frame per GEOC** (frames/tracks cannot be
+  combined; it warns if the input GUNWs span >1 frame). Removes smooth
+  ionospheric ramp and the range-offset ramp *before* export (per
+  `earthquake_responder.py`), applies coherence mask, writes `unw/cc` per IFG,
+  **`X.geo.E/N/U.tif` once, from the first GUNW's own `radarGrid` metadata**,
+  `+ hgt` with `-D`, one shared WGS-84 grid (first IFG defines it; later ones
+  re-registered), standard **`baselines`** (4-col) and `metadata.txt`.
+  `-i <frame_folder>`, `-t cc_thre`, `-f A|B`, `--no_iono/--no_offsets/
+  --no_deramp_quad`, `-D`, `--dry_run`.
 - `licsbas-asf2geoc`: ASF pre-exported GeoTIFF (unw/cc/E/N/U/hgt/mli) → `GEOC/`
   (the alternate entry to the same layout).
 - Docs: `docs/05_nisar.md`; tutorial: `tutorial/tutorial_0_nisar.ipynb`;
@@ -131,9 +138,10 @@ regenerated after an upgrade.
   All cross-linked (relative links open in the same Binder session) with fresh
   Binder + Colab badges; each is nbformat 4.5 valid.
 - **Flowcharts** (`licsbas/flowchart.py` + `tutorial/make_flowchart.py`):
-  landscape PNGs from JSON configs in `tutorial/tutorial_cfg/*.json`, shown just
-  before the first script. `rankdir` TB/LR; `alt` styling for the 02to05 route.
-  Regenerate: `python3 tutorial/make_flowchart.py [name]`. The four PNGs live in
+  **portrait (TB)** PNGs from JSON configs in `tutorial/tutorial_cfg/*.json`,
+  shown just before the first script. `rankdir` TB (default) / LR (opt-in in a
+  config); `alt` styling for the 02to05 route. Regenerate:
+  `python3 tutorial/make_flowchart.py [name]`. The four PNGs live in
   `tutorial/` (they are `git add -f`-ed; `*.png` is git-ignored).
 
 ## Install / test commands

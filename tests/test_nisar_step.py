@@ -80,7 +80,7 @@ def test_groups_by_frame_and_downloads(tmp_path):
         ])
     mod = importlib.import_module("licsbas.steps._01_get_nisar_data")
     outdir = str(tmp_path / "NISAR_GUNW")
-    rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-t", "GUNW", "-o", outdir, "--max", "500"])
+    rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-o", outdir, "--max", "500"])
     assert rc == 0
     d1 = os.path.join(outdir, "07_2025")
     d2 = os.path.join(outdir, "08_2025")
@@ -90,18 +90,61 @@ def test_groups_by_frame_and_downloads(tmp_path):
     assert os.path.getsize(os.path.join(d1, "NISAR_L2_PR_GUNW_009_018_A_007_20250601.h5")) > 0
 
     # Re-run: everything is skipped, still rc==0
-    rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-t", "GUNW", "-o", outdir])
+    rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-o", outdir])
     assert rc == 0
 
     # Dry run: no download, rc==0
     outdir2 = str(tmp_path / "NISAR_GUNW_dry")
-    rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-t", "GUNW", "-o", outdir2, "--dry_run"])
+    rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-o", outdir2, "--dry_run"])
     assert rc == 0
     assert not os.path.exists(os.path.join(outdir2, "07_2025", "NISAR_L2_PR_GUNW_009_018_A_007_20250601.h5"))
 
 
+def test_list_frames_only(tmp_path, capsys):
+    _install_fake_nisar(
+        tmp_path,
+        [
+            ("NISAR_L2_PR_GUNW_009_018_A_007_20250601.h5", "07_2025", 40, "https://asf/f1.h5"),
+            ("NISAR_L2_PR_GUNW_009_021_B_008_20250601.h5", "08_2025", 41, "https://asf/f3.h5"),
+        ])
+    mod = importlib.import_module("licsbas.steps._01_get_nisar_data")
+    outdir = str(tmp_path / "NISAR_GUNW")
+    rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-o", outdir,
+                   "--list-frames",
+                   ])
+    out = capsys.readouterr()
+    assert rc == 0
+    assert "07_2025" in out.out and "08_2025" in out.out
+    assert "--frame" in out.out  # usage hint shown
+    # nothing was downloaded
+    assert not os.path.exists(outdir)
+
+
+def test_frame_filter(tmp_path, capsys):
+    _install_fake_nisar(
+        tmp_path,
+        [
+            ("NISAR_L2_PR_GUNW_009_018_A_007_20250601.h5", "07_2025", 40, "https://asf/f1.h5"),
+            ("NISAR_L2_PR_GUNW_009_021_B_008_20250601.h5", "08_2025", 41, "https://asf/f3.h5"),
+        ])
+    mod = importlib.import_module("licsbas.steps._01_get_nisar_data")
+    outdir = str(tmp_path / "NISAR_GUNW")
+    # keep frame 07_2025 only
+    rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-o", outdir,
+                   "--frame", "07_2025"])
+    assert rc == 0
+    assert os.path.isfile(os.path.join(outdir, "07_2025", "NISAR_L2_PR_GUNW_009_018_A_007_20250601.h5"))
+    assert not os.path.exists(os.path.join(outdir, "08_2025"))
+    # unknown frame -> rc 1 + availability listed
+    outdir2 = str(tmp_path / "NISAR_GUNW_bad")
+    rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-o", outdir2,
+                   "--frame", "99_2025"])
+    err = capsys.readouterr().err
+    assert rc == 1 and "99_2025" in err
+
+
 def test_missing_bbox(tmp_path, capsys):
     mod = importlib.import_module("licsbas.steps._01_get_nisar_data")
-    rc = mod.main(["prog", "-t", "GUNW"])
+    rc = mod.main(["prog"])
     assert rc == 1
     assert "required" in capsys.readouterr().err

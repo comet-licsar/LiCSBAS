@@ -764,7 +764,7 @@ def main(argv=None):
             deramp_title3 = ['Before DEMerr corr ({}pi/cycle)'.format(cycle * 2),
                              'DEM err phase (bperp:{:.0f}m)'.format(bperp[i]),
                              'After DEMerr corr ({}pi/cycle)'.format(cycle * 2)]
-            plot_lib.make_3im_png(data3, pngfile, cmap_wrap, deramp_title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+            plot_lib.make_3im_png(data3, pngfile, cmap_wrap, deramp_title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
             # Subtract
             cum[i, :, :] = cum[i, :, :] - demerr * bperp[i]
@@ -856,7 +856,7 @@ def main(argv=None):
         with open(rms_cum_wrt_med_file, 'w') as f:
             rms_cum_wrt_med.tofile(f)
         pngfile = os.path.join(infodir, '16rms_cum_wrt_med.png')
-        plot_lib.make_im_png(rms_cum_wrt_med, pngfile, cmap_noise_r, 'RMS of cum wrt median (mm)', np.nanpercentile(rms_cum_wrt_med, 1), np.nanpercentile(rms_cum_wrt_med, 99))
+        plot_lib.make_im_png(rms_cum_wrt_med, pngfile, cmap_noise_r, 'RMS of cum wrt median (mm)', np.nanpercentile(rms_cum_wrt_med, 1), np.nanpercentile(rms_cum_wrt_med, 99), cbar_label='mm')
 
         ### Save ref
         cumfh5.create_dataset('refarea', data='{}:{}/{}:{}'.format(refx1s, refx2s, refy1s, refy2s))
@@ -962,7 +962,7 @@ def main(argv=None):
     title = 'Filtered velocity (mm/yr)'
     vmin = np.nanpercentile(vel, 1)
     vmax = np.nanpercentile(vel, 99)
-    plot_lib.make_im_png(vel, pngfile, cmap_vel, title, vmin, vmax)
+    plot_lib.make_im_png(vel, pngfile, cmap_vel, title, vmin, vmax, cbar_label='mm/yr')
 
     ## vintercept
     if sbovl_abs:
@@ -972,14 +972,14 @@ def main(argv=None):
     title = 'Intercept of filtered velocity (mm)'
     vmin = np.nanpercentile(vconst, 1)
     vmax = np.nanpercentile(vconst, 99)
-    plot_lib.make_im_png(vconst, pngfile, cmap_vel, title, vmin, vmax)
+    plot_lib.make_im_png(vconst, pngfile, cmap_vel, title, vmin, vmax, cbar_label='mm')
 
     if demerrflag:
         pngfile = os.path.join(resultsdir, 'demerr.png')
         title = 'Coefficient of DEM error phase (mm/m)'
         vmin = np.nanpercentile(demerr, 1)
         vmax = np.nanpercentile(demerr, 99)
-        plot_lib.make_im_png(demerr, pngfile, cmap_vel, title, vmin, vmax)
+        plot_lib.make_im_png(demerr, pngfile, cmap_vel, title, vmin, vmax, cbar_label='mm')
 
 
     if maskflag:
@@ -990,7 +990,7 @@ def main(argv=None):
         title = 'Masked filtered velocity (mm/yr)'
         vmin = np.nanpercentile(vel_mskd, 1)
         vmax = np.nanpercentile(vel_mskd, 99)
-        plot_lib.make_im_png(vel_mskd, pngfile, cmap_vel, title, vmin, vmax)
+        plot_lib.make_im_png(vel_mskd, pngfile, cmap_vel, title, vmin, vmax, cbar_label='mm/yr')
 
         ## vintercept
         if sbovl_abs:
@@ -1000,7 +1000,7 @@ def main(argv=None):
         title = 'Masked intercept of filtered velocity (mm)'
         vmin = np.nanpercentile(vconst_mskd, 1)
         vmax = np.nanpercentile(vconst_mskd, 99)
-        plot_lib.make_im_png(vconst_mskd, pngfile, cmap_vel, title, vmin, vmax)
+        plot_lib.make_im_png(vconst_mskd, pngfile, cmap_vel, title, vmin, vmax, cbar_label='mm')
 
 
     #%% Finish
@@ -1036,7 +1036,7 @@ def deramp_wrapper(i):
         data3 = [np.angle(np.exp(1j*(data/coef_r2m/cycle))*cycle) for data in [cum_bf, fit_hgt, _cum*mask]]
         title3 = ['Before hgt-linear (STD: {:.1f}mm)'.format(std_before), 'hgt-linear phase ({:.1f}mm/km)'.format(model[-1]*1000), 'After hgt-linear (STD: {:.1f}mm)'.format(std_after)]
         pngfile = os.path.join(filtcumdir, imdates[i]+'_hgt_linear.png')
-        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
         pngfile = os.path.join(filtcumdir, imdates[i]+'_hgt_corr.png')
         title = '{} ({:.1f}mm/km, based on {}<=hgt<={})'.format(imdates[i], model[-1]*1000, hgt_min, hgt_max)
@@ -1052,7 +1052,7 @@ def deramp_wrapper(i):
         data3 = [np.angle(np.exp(1j*(data/coef_r2m/cycle))*cycle) for data in [cum_org[i, :, :]*mask, ramp, cum_org[i, :, :]*mask-ramp]]
         pngfile = os.path.join(filtcumdir, imdates[i]+'_deramp.png')
         deramp_title3 = ['Before deramp ({}pi/cycle)'.format(cycle*2), 'ramp phase (deg:{})'.format(deg_ramp), 'After deramp ({}pi/cycle)'.format(cycle*2)]
-        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, deramp_title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, deramp_title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
     return _cum, model
 
@@ -1073,7 +1073,7 @@ def deramp_wrapper2(i):
         data3 = [np.angle(np.exp(1j*(data/coef_r2m/cycle))*cycle) for data in [inc+fit_hgt-fit_hgt1, fit_hgt-fit_hgt1, inc]]
         title3 = ['Before hgt-linear (STD: {:.1f}mm)'.format(std_before), 'hgt-linear phase ({:.1f}mm/km)'.format((models[i][-1]-models[i-1][-1])*1000), 'After hgt-linear (STD: {:.1f}mm)'.format(std_after)]
         pngfile = os.path.join(filtincdir, '{}_{}_hgt_linear.png'.format(imdates[i-1], imdates[i]))
-        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
         pngfile = os.path.join(filtincdir, '{}_{}_hgt_corr.png'.format(imdates[i-1], imdates[i]))
         title = '{}_{} ({:.1f}mm/km, based on {}<=hgt<={})'.format(imdates[i-1], imdates[i], (models[i][-1]-models[i-1][-1])*1000, hgt_min, hgt_max)
@@ -1093,7 +1093,7 @@ def deramp_wrapper2(i):
         data3 = [np.angle(np.exp(1j*(data/coef_r2m/cycle))*cycle) for data in [inc_org, ramp-ramp1, inc_org-(ramp-ramp1)]]
         pngfile = os.path.join(filtincdir, '{}_{}_deramp.png'.format(imdates[i-1], imdates[i]))
         deramp_title3 = ['Before deramp ({}pi/cycle)'.format(cycle*2), 'ramp phase (deg:{})'.format(deg_ramp), 'After deramp ({}pi/cycle)'.format(cycle*2)]
-        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, deramp_title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, deramp_title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
 
 #%%
@@ -1153,7 +1153,7 @@ def filter_wrapper(i):
         data3 = [np.angle(np.exp(1j*(data/coef_r2m/cycle))*cycle) for data in [cum[i, :, :]*mask, cum_hptlps*mask, _cum_filt*mask]]
         title3 = ['Before filter ({}pi/cycle)'.format(cycle*2), 'Filter phase ({}pi/cycle)'.format(cycle*2), 'After filter ({}pi/cycle)'.format(cycle*2)]
         pngfile = os.path.join(filtcumdir, imdates[i]+'_filt.png')
-        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+        plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
     # Optionally interpolating the (unmasked) nan values of pixels
     if interpolateflag:
@@ -1180,7 +1180,7 @@ def filter_wrapper2(i):
               'Filter phase ({}pi/cycle)'.format(cycle*2),
               'After filter ({}pi/cycle)'.format(cycle*2)]
     pngfile = os.path.join(filtincdir, '{}_{}_filt.png'.format(imdates[i-1], imdates[i]))
-    plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+    plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
 
 #%% main

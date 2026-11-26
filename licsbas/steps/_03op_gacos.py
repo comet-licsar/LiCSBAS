@@ -575,12 +575,12 @@ def correct_wrapper(i):
     data3 = [np.angle(np.exp(1j*(data/cycle))*cycle) for data in [unw, unw_cor, dsltd]]
     title3 = ['unw_org (STD: {:.1f} rad)'.format(std_unw), 'unw_cor (STD: {:.1f} rad)'.format(std_unwcor), 'dsltd ({:.1f}% reduced)'.format(rate)]
     pngfile = os.path.join(out_dir1, ifgd+'.gacos.png')
-    plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=False)
+    plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
     
     ## Output png for corrected unw
     pngfile = os.path.join(out_dir1, ifgd+'.unw.png')
     title = '{} ({}pi/cycle)'.format(ifgd, cycle*2)
-    plot_lib.make_im_png(np.angle(np.exp(1j*unw_cor/cycle)*cycle), pngfile, cmap_wrap, title, -np.pi, np.pi, cbar=False)
+    plot_lib.make_im_png(np.angle(np.exp(1j*unw_cor/cycle)*cycle), pngfile, cmap_wrap, title, -np.pi, np.pi, cbar=True, cbar_label='rad')
 
     return 2, [ifgd, std_unw, std_unwcor, rate]
 

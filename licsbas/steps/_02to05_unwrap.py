@@ -62,7 +62,7 @@ LiCSBAS02to05_unwrap.py -i WORKdir [-M nlook] [-g lon1/lon2/lat1/lat2] [--filter
  --n_para <int> Number of parallel processing (Default: # of usable CPU)
  --nolandmask Do not apply landmask (ON by default)
  --nopngs  This would skip generating unw previews
- 
+
 The command will run reunwrapping on interferograms inside WORKdir/GEOC.
 Outputs are stored inside WORKdir/GEOCmlX[GACOS][clip] where X is the multilooking factor (-M).
 For more information about the procedure, see e.g. https://ieeexplore.ieee.org/document/9884337
@@ -353,7 +353,7 @@ def main(argv=None):
                 nproc = int(a)
             elif o == '--nopngs':
                 create_unw_previews = False
-        
+
         if not workdir:
             raise Usage('No WORK directory given, -d is not optional!')
         elif not os.path.isdir(workdir):

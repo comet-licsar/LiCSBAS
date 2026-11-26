@@ -587,7 +587,7 @@ def main(argv=None):
         cmax = np.nanpercentile(loop_ph_rms_points_masked, 95)
         pngfile = loop_ph_rms_maskedfile + '.png'
         title = 'RMS of loop phase (rad)'
-        plot_lib.make_im_png(loop_ph_rms_points_masked, pngfile, cmap_noise_r, title, None, cmax)
+        plot_lib.make_im_png(loop_ph_rms_points_masked, pngfile, cmap_noise_r, title, None, cmax, cbar_label='rad')
 
     ### Check ref exist in unw. If not, list as noref_ifg
     noref_ifg = []
@@ -865,10 +865,10 @@ def main(argv=None):
 
     ### Save png
     title = 'Average coherence'
-    plot_lib.make_im_png(coh_avg, coh_avgfile + '.png', cmap_noise, title)
+    plot_lib.make_im_png(coh_avg, coh_avgfile + '.png', cmap_noise, title, cbar_label='coherence')
 
     title = 'Average {} days coherence'.format(str(thisbtemp))
-    plot_lib.make_im_png(coh_avg_freq, coh_avgFfile + '.png', cmap_noise, title)
+    plot_lib.make_im_png(coh_avg_freq, coh_avgFfile + '.png', cmap_noise, title, cbar_label='coherence')
 
     title = 'Number of used unw data'
     plot_lib.make_im_png(n_unw, n_unwfile + '.png', cmap_noise, title, n_im)
@@ -1334,7 +1334,7 @@ def loop_closure_4th(args, da):
     title = 'Average phase loop closure error'
     # plot_lib.make_im_png(loop_ph_wrapped_sum_abs/n_loop, file + '.png', cmap_noise_r, title)
     try:
-        plot_lib.make_im_png(loop_ph_avg, file + '.png', cmap_noise_r, title)
+        plot_lib.make_im_png(loop_ph_avg, file + '.png', cmap_noise_r, title, cbar_label='rad')
     except:
         print('WARNING, loop_ph_avg (without abs) is probably wrong')
     # and create preview only for the abs (for masking)
@@ -1344,7 +1344,7 @@ def loop_closure_4th(args, da):
     np.float32(loop_ph_avg_abs).tofile(file)
     title = 'Average phase loop closure error (abs)'
     #plot_lib.make_im_png(loop_ph_wrapped_sum_abs/n_loop, file + '.png', cmap_noise_r, title)
-    plot_lib.make_im_png(loop_ph_avg_abs, file + '.png', cmap_noise_r, title)
+    plot_lib.make_im_png(loop_ph_avg_abs, file + '.png', cmap_noise_r, title, cbar_label='rad')
     # for debugging as there are strange high values... very weird..
     file = os.path.join(resultsdir, 'debug_nonan_count')
     np.float32(nonan_count).tofile(file)
@@ -1419,7 +1419,7 @@ def nullify_unw(ifgd, mask):
             cmap_wrap = cmc.romaO
             cycle = 3
             plot_lib.make_im_png(np.angle(np.exp(1j * unw / cycle) * cycle), unwpngfile, cmap_wrap,
-                                 unwfile, vmin=-np.pi, vmax=np.pi, cbar=False)
+                                 unwfile, vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
 
 # %% main
 if __name__ == "__main__":

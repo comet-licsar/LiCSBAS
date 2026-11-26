@@ -333,7 +333,7 @@ def main(argv=None):
             title = 'Spatio-temporal consistency (mm)'
             cmin = np.nanpercentile(stc, 1)
             cmax = np.nanpercentile(stc, 99)
-            plot_lib.make_im_png(stc, pngfile, cmap_noise_r, title, cmin, cmax)
+            plot_lib.make_im_png(stc, pngfile, cmap_noise_r, title, cmin, cmax, cbar_label='mm')
 
         if dovstd:
             vstd = io_lib.read_img(vstdfile, length, width)
@@ -341,14 +341,14 @@ def main(argv=None):
             title = 'STD of velocity (mm/yr)'
             cmin = np.nanpercentile(vstd, 1)
             cmax = np.nanpercentile(vstd, 99)
-            plot_lib.make_im_png(vstd, pngfile, cmap_noise_r, title, cmin, cmax)
+            plot_lib.make_im_png(vstd, pngfile, cmap_noise_r, title, cmin, cmax, cbar_label='mm/yr')
             bootvel = io_lib.read_img(bootvelfile, length, width)
             title = 'Bootstrapped velocity (mm/yr)'
             cmin = np.nanpercentile(bootvel, 1)
             cmax = np.nanpercentile(bootvel, 99)
             cmap_vel = cmc.roma.reversed()
             bootvel = io_lib.read_img(bootvelfile, length, width)
-            plot_lib.make_im_png(bootvel, bootvelfile + '.png', cmap_vel, title, cmin, cmax)
+            plot_lib.make_im_png(bootvel, bootvelfile + '.png', cmap_vel, title, cmin, cmax, cbar_label='mm/yr')
             
             #saving bootvel to the cum_file
             if sbovl_abs:
@@ -373,7 +373,7 @@ def main(argv=None):
             cmin = np.nanpercentile(vel2, 1)
             cmax = np.nanpercentile(vel2, 99)
             cmap_vel = cmc.roma.reversed()
-            plot_lib.make_im_png(vel2, pngfile, cmap_vel, title, cmin, cmax)
+            plot_lib.make_im_png(vel2, pngfile, cmap_vel, title, cmin, cmax, cbar_label='mm/yr')
             
             #saving the cum_file
             if sbovl_abs:

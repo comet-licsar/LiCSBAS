@@ -378,7 +378,7 @@ def discard_ifg_with_all_nans_at_ref():
             pngfile = os.path.join(no_ref_dir, ifgd + '.png')
             plot_lib.make_im_png(unw_data, pngfile, cmc.roma.reversed(), ifgd,
                                  vmin=np.nanpercentile(unw_data, 1), vmax=np.nanpercentile(unw_data, 99),
-                                 ref_window=[refx1, refx2, refy1, refy2])
+                                 ref_window=[refx1, refx2, refy1, refy2], cbar_label='rad')
 
         # else:  # save referenced unw to original folder
         #     unw_referenced = unw_data - np.nanmean(unw_ref)
