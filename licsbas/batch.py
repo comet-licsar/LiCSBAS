@@ -451,7 +451,7 @@ def build_pipeline(cfg: BatchConfig) -> List[BatchStep]:
         if not cfg.pNISAR_bbox:
             print("WARNING: use_nisar is set but pNISAR_bbox (-g lon1/lon2/lat1/lat2) "
                   "is empty; the search will have no search area.", flush=True)
-        argv: List[str] = []
+        argv = []
         if cfg.pNISAR_bbox:
             argv += ["-g", cfg.pNISAR_bbox]
         _add(argv, "-t", cfg.pNISAR_type)

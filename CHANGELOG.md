@@ -1,5 +1,20 @@
 # Changelog — LiCSBAS
 
+### 2026-12-19 (post-merge cleanups — phase bias + NISAR/python-batch merge)
+- Merged upstream `towards-v3` (NISAR data-access, python `licsbas/batch.py`,
+  `licsbas/steps`+`licsbas/scripts` split, 59 single-named entry points, new
+  tutorials/flowcharts) with the 02op phase bias addition; conflicts resolved
+  in `pyproject.toml` (upstream entry points + `licsbas-02op-phasebias`),
+  `batch_LiCSBAS.sh` (upstream thin wrapper), `CHANGELOG.md`, `TODONEXT.md`.
+  Phase bias now integrated in `licsbas/batch.py` (`--phasebias`), not the
+  bash batch script.
+- Fixed two latent bugs found by the post-merge mypy/test run: `extras.py`
+  error message used `% e` formatting on a string containing `` `%matplotlib` ``
+  (would crash with `ValueError` instead of reporting the real error) — now an
+  f-string; `batch.py` re-annotated `argv` in the NISAR branch (mypy
+  `no-redef` error). `licsbas.extras` (optional `viewer` extras) is now
+  tolerated by `test_imports.py` when pygmt is absent.
+
 ## [unreleased] — branch `towards-v3`
 
 ### 2026-12-19 (phase bias correction operator — optional 02op step)

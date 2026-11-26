@@ -22,6 +22,8 @@ OK_EXIT = {
     "licsbas.steps._02to05_unwrap",
     "licsbas.scripts._get_eqoffsets",
     "licsbas.steps._17_plot_corrections",
+    # optional 'viewer' extras (pygmt + system GMT) not installed
+    "licsbas.extras",
 }
 
 
