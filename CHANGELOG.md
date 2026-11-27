@@ -17,6 +17,17 @@
 
 ## [unreleased] — branch `towards-v3`
 
+### 2026-12-20 (02op_phasebias: start/end from the pair list)
+`licsbas-02op-phasebias` now **derives the `start`/`end` acquisition dates
+in the generated `config.txt` from the dataset**: the first date of the
+*first* pair in `-i` (e.g. first pair `20200505_20210101` → `start=20200505`)
+and the last date of the *last* pair (e.g. `20241230_20250120` →
+`end=20250120`). Explicit `--start`/`--end` still override; if no
+`yyyymmdd_yyyymmdd` entries are found it errors and asks for `--start/--end`.
+`main(argv)` now accepts both `["prog", ...]` and `["-i", ...]` calling
+conventions. New tests: `tests/test_02op_phasebias.py` (4, stubbed — no
+`phasebias` install needed). Full suite: **96 passed, 2 skipped**.
+
 ### 2026-12-20 (NISAR step rename + slc.mli.par + “Output files” in -h)
 - The NISAR download step is renamed to follow the “01 get geotiff” family
   convention: `licsbas/steps/_01_get_geotiff_nisar.py`, entry point

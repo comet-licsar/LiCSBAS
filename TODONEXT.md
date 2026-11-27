@@ -58,6 +58,9 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 - [x] NISAR step renamed to `01_get_geotiff_nisar` convention; “Output files”
       data structure shown in `-h`; `--max` size filter; real `lisar_extra`
       API (top-level `nisar_data`/`lics_proc_tools`, ASF session streaming).
+- [x] `02op_phasebias`: start/end dates in the generated config are now
+      **derived from the pair list in `-i`** (first date of the first pair,
+      last date of the last pair); `--start/--end` still override.
 - [x] `nisar2geoc` now writes `slc.mli.par` (`radar_frequency` [Hz] +
       `center_time` when available) — needed by 03 GACOS / 130 / 132.
 - [x] GUNW-only + frame handling (see CHANGELOG 2026-12-20).

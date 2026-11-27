@@ -33,8 +33,12 @@ Usage
 Options (default in parentheses, overridable as in the standalone tool):
  --config path   Use an existing phasebias config.txt instead of generating one
  --frame name    LiCSAR frame (default: basename of -i's parent dir)
- --start date    First acquisition date, yyyymmdd (default: 20170522)
- --end date      Last acquisition date, yyyymmdd (default: 20210501)
+ --start date    First acquisition date, yyyymmdd (default: derived from the
+                 first date of the first pair in -i, e.g. first pair
+                 20200505_20210101 -> start 20200505)
+ --end date      Last acquisition date, yyyymmdd (default: derived from the
+                 last date of the last pair in -i, e.g. last pair
+                 20241230_20250120 -> end 20250120)
  --interval n    Interferogram time span (days; default: 6)
  --nlook n       Multilooking factor (default: 1)
  --coh-thresh f  Coherence threshold (default: 0.5)
@@ -86,6 +90,43 @@ estimate_an_values={estimate_an}
 """
 
 
+def _derive_dates_from_pairs(dirpath):
+    """Derive (start, end) acquisition dates from the interference-pair names
+    found in *dirpath* (GEOC-style layout: pair subfolders and/or
+    ``<pair>.<ext>`` files named ``yyyymmdd_yyyymmdd...``).
+
+    start = first date of the first (earliest) pair
+    end   = last date of the last (latest) pair
+
+    Returns ``(start, end, n_pairs)`` or ``(None, None, 0)`` if no pair-like
+    names are present.
+    """
+    import re
+    pairs = set()
+    try:
+        names = os.listdir(dirpath)
+    except OSError:
+        return None, None, 0
+    for name in names:
+        m = re.match(r"^(\d{8})_(\d{8})", name)
+        if m:
+            pairs.add((m.group(1), m.group(2)))
+    if pairs:
+        pairs = sorted(pairs)
+        return pairs[0][0], pairs[-1][1], len(pairs)
+    # one level deeper (e.g. in_dir/interferograms/<pair>/...)
+    found = None
+    for name in names:
+        sub = os.path.join(dirpath, name)
+        if not os.path.isdir(sub):
+            continue
+        found2 = _derive_dates_from_pairs(sub)
+        if found2[0] is not None:
+            if found is None or found2[2] > found[2]:
+                found = found2
+    return found if found else (None, None, 0)
+
+
 def parse_args(argv):
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -95,8 +136,12 @@ def parse_args(argv):
     ap.add_argument("--config", default=None,
                     help="Existing phasebias config.txt to use (overrides all other options)")
     ap.add_argument("--frame", default=None, help="LiCSAR frame")
-    ap.add_argument("--start", default="20170522", help="First acquisition date (yyyymmdd)")
-    ap.add_argument("--end", default="20210501", help="Last acquisition date (yyyymmdd)")
+    ap.add_argument("--start", default=None,
+                    help="First acquisition date (yyyymmdd); default: derived from the "
+                         "first date of the first pair in -i")
+    ap.add_argument("--end", default=None,
+                    help="Last acquisition date (yyyymmdd); default: derived from the "
+                         "last date of the last pair in -i")
     ap.add_argument("--interval", type=int, default=6, help="Interferogram span (days)")
     ap.add_argument("--nlook", type=int, default=1, help="Multilooking factor")
     ap.add_argument("--coh-thresh", type=float, default=0.5, help="Coherence threshold")
@@ -118,6 +163,11 @@ def parse_args(argv):
 
 
 def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    # accept both `main()`, `main(["prog", ...])` and `main(["-i", ...])`
+    if argv and not argv[0].startswith("-") and len(argv) > 1:
+        argv = argv[1:]
     args = parse_args(argv)
 
     try:
@@ -141,6 +191,23 @@ def main(argv=None):
     if not frame:
         frame = os.path.basename(in_dir)
 
+    # start/end: explicit values win; otherwise derive from the pair list in -i
+    start, end = args.start, args.end
+    if args.config is None:
+        if not start or not end:
+            d_start, d_end, n_pairs = _derive_dates_from_pairs(in_dir)
+            if d_start is None:
+                print("ERROR: could not find pair folders/files (yyyymmdd_yyyymmdd) in "
+                      f"{in_dir}; cannot derive start/end dates. "
+                      "Use --start/--end (or --config) to specify them.", file=sys.stderr)
+                return 1
+            print(f"Derived start/end from {n_pairs} pair(s) in {in_dir}")
+        if not start:
+            start = d_start
+        if not end:
+            end = d_end
+        print(f"  start={start}  end={end}")
+
     if args.config:
         config_path = os.path.abspath(args.config)
         if not os.path.isfile(config_path):
@@ -156,8 +223,8 @@ def main(argv=None):
                 filtered_ifgs=args.filtered_ifgs,
                 frame=frame,
                 landmask=args.landmask,
-                start=args.start,
-                end=args.end,
+                end=end,
+                start=start,
                 interval=args.interval,
                 nlook=args.nlook,
                 coh_thresh=args.coh_thresh,
