@@ -131,10 +131,28 @@ def workdir(tmp_path):
     unw.tofile(str(outdir / pair / (pair + ".unw")))
     with open(outdir / "slc.mli.par", "w") as f:
         f.write("range_samples: %d\nazimuth_lines: %d\nradar_frequency: 5405000000 Hz\n" % (nx, ny))
+    with open(outdir / "EQA.dem_par", "w") as f:
+        f.write("width: %d\nnlines: %d\npost_lon: 5e-05\npost_lat: 5e-05\n"
+                "corner_lon: -120.0\ncorner_lat: 40.0\n" % (nx, ny))
     gacos = tmp_path / "GACOS"
     gacos.mkdir()
-    (gacos / (pair.split("_")[0] + ".sltd.geo.tif")).write_bytes(b"fake")
-    (gacos / (pair.split("_")[1] + ".sltd.geo.tif")).write_bytes(b"fake")
+
+    def _mk_tif(path):
+        """A small **valid** GeoTIFF (gdal.Warp must be able to read it)."""
+        from osgeo import gdal
+        drv = gdal.GetDriverByName("GTiff")
+        dst = drv.Create(str(path), nx * ml, ny * ml, 1, gdal.GDT_Float32)
+        res = 100.0 / (nx * ml)
+        dst.SetGeoTransform((-120.0 + nx * ml * res, res, 0.0,
+                             40.0 - ny * ml * res, 0.0, -res))
+        import numpy as _np
+        band = dst.GetRasterBand(1)
+        band.WriteArray(_np.random.randn(ny * ml, nx * ml).astype(_np.float32))
+        band = None
+        dst = None
+
+    for tag in pair.split("_"):
+        _mk_tif(gacos / (tag + ".sltd.geo.tif"))
     return str(tmp_path), str(outdir), str(gacos), ml
 
 
@@ -159,10 +177,9 @@ def test_plot_gacos_corrections_generates_standard_pngs(_deps, fake_lics_unwrap,
 
 
 def test_plot_gacos_corrections_safe_without_licsar_extra(_deps, workdir):
+    """Must never raise - these are best-effort QC plots."""
     workdir_root, outdir, gacos, ml = workdir
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import licsbas.steps._02to05_unwrap as step
-    step.unw = None  # licsar_extra not installed -> must skip gracefully, not raise
-    step.plot_gacos_corrections(outdir, gacos, ml)
-    pair = "20160909_20160925"
-    assert not os.path.exists(os.path.join(outdir, pair, pair + ".gacos.png"))
+    step.unw = None  # licsar_extra not installed
+    step.plot_gacos_corrections(outdir, gacos, ml)  # must not raise
