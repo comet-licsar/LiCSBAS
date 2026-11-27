@@ -17,6 +17,26 @@
 
 ## [unreleased] — branch `towards-v3`
 
+### 2026-12-20 (NISAR step rename + slc.mli.par + “Output files” in -h)
+- The NISAR download step is renamed to follow the “01 get geotiff” family
+  convention: `licsbas/steps/_01_get_geotiff_nisar.py`, entry point
+  `licsbas-01-get-geotiff-nisar`, wrapper `bin/LiCSBAS01_get_geotiff_NISAR.py`
+  (next to `LiCSBAS01_get_geotiff.py` / `LiCSBAS01_get_geotiff_ALOS.py`).
+  All references (batch, docs, tutorial, examples, tests, SKILL) updated.
+- The step now documents the **output data structure** in its docstring
+  (`NISAR_GUNW/<frame>/*.h5` + the `GEOC/` GeoTIFF layout of
+  `nisar2geoc`), and prints it as an “Output files” section in `-h`
+  (RawDescription epilog), like the other step-01 scripts.
+- **`licsbas-nisar2geoc` now writes `slc.mli.par`** into `GEOC/`
+  (`radar_frequency: <Hz>` for band A/B from `-f`; `center_time` when the
+  product provides it). Previously the NISAR route produced no `slc.mli.par`,
+  but downstream steps (03 GACOS, 130/132) derive the wavelength from
+  `radar_frequency` there — this closes that gap.
+- Step rewritten against the real `lisar_extra` API (`lisar_extra` top-level
+  `nisar_data` + `lics_proc_tools`, `get_asf_session().get(..., stream=True)`
+  streaming, `sizeMB` filter with `--max`); re-runs skip existing products;
+  `--dry_run` only reports. Tests stub this API exactly (`tests/test_nisar_step.py`).
+
 ### 2026-12-20 (NISAR: GUNW-only + frame handling; portrait flowcharts)
 **NISAR data access is now GUNW-only.** LiCSBAS does not use GSLC products, so
 GSLC support was **removed entirely** from the NISAR chain: `nisar2geoc -E`

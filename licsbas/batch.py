@@ -58,7 +58,7 @@ _STEP_MODULES = {
     "eqoffs":     ("licsbas.scripts._get_eqoffsets",         "LiCSBAS_get_eqoffsets.py"),
     "residcheck": ("licsbas.scripts._resid_check",           "LiCSBAS_resid_check.py"),
     # NISAR data-access route (alternative to the LiCSAR step-01 download)
-    "01nisar":    ("licsbas.steps._01_get_nisar_data",        "LiCSBAS01_get_NISAR_data.py"),
+    "01nisar":    ("licsbas.steps._01_get_geotiff_nisar",        "LiCSBAS01_get_geotiff_NISAR.py"),
     "nisar2geoc": ("licsbas.scripts._nisar2geoc",             "LiCSBAS_nisar2geoc.py"),
     "asf2geoc":   ("licsbas.scripts._asf2geoc",               "LiCSBAS_asf2geoc.py"),
 }
@@ -150,7 +150,7 @@ class BatchConfig:
 
     # --- NISAR data access (alternative to the LiCSAR step-01 download) ---
     # When enabled, LiCSAR step 01 is replaced by:
-    #   01nisar  = licsbas-01-get-nisar-data (ASF search + download of NISAR GUNW .h5,
+    #   01nisar  = licsbas-01-get-geotiff-nisar (ASF search + download of NISAR GUNW .h5,
     #             per frame; --list-frames / --frame supported)
     #   nisar2geoc = licsbas-nisar2geoc (.h5 -> LiCSBAS GEOC/ layout, iono+offsets
     #                corrected, shared WGS-84 grid, baselines + metadata.txt)
@@ -379,7 +379,7 @@ def _wf_sbovl_abs():
 
 
 @register_workflow("nisar",
-                   "NISAR chain: 01-get-nisar-data + nisar2geoc -> 02-05 -> 11-16 "
+                   "NISAR chain: 01-get-geotiff-nisar + nisar2geoc -> 02-05 -> 11-16 "
                    "(set pNISAR_bbox!)")
 def _wf_nisar():
     return BatchConfig(
@@ -902,11 +902,11 @@ def main(argv=None):
     ap.add_argument("--sbovl", action="store_true", help="SBOI/SBOVL chain (--sbovl options)")
     ap.add_argument("--sbovl-abs", action="store_true", help="SBOI absolute (close referencing, ICC+ESD, abs corr)")
     ap.add_argument("--nisar", action="store_true",
-                    help="NISAR data access: 01-get-nisar-data + nisar2geoc instead of step 01")
+                    help="NISAR data access: 01-get-geotiff-nisar + nisar2geoc instead of step 01")
     ap.add_argument("--nisar-bbox", dest="nisar_bbox", default="",
                     help="NISAR bbox lon1/lon2/lat1/lat2 (with --nisar)")
     ap.add_argument("--nisar-frames", dest="nisar_frames", default="",
-                    help="NISAR frame id(s) FID[,FID2,...] for 01-get-nisar-data --frame "
+                    help="NISAR frame id(s) FID[,FID2,...] for 01-get-geotiff-nisar --frame "
                          "(e.g. 018A_01234); see its --list-frames")
     ap.add_argument("--reunw", action="store_true", help="use LiCSBAS02to05_unwrap.py (re-unwrapping workflow)")
     ap.add_argument("--gacos", action="store_true", help="enable optional GACOS step (03op)")

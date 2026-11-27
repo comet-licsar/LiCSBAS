@@ -1,4 +1,4 @@
-"""Tests for licsbas/steps/_01_get_nisar_data.py (no network, no asf_search).
+"""Tests for licsbas/steps/_01_get_geotiff_nisar.py (no network, no asf_search).
 
 We stub the licsar_extra helpers (nisar_data, lics_proc_tools) with an in-memory
 fake that mimics the real API (get_nisar_data -> product collection, get_frameid,
@@ -59,14 +59,14 @@ def _install_fake_nisar(tmpdir, scene_urls):
 @pytest.fixture(autouse=True)
 def _reset_modules():
     saved = {m: sys.modules.get(m) for m in ("lics_proc_tools", "nisar_data",
-                                             "licsbas.steps._01_get_nisar_data")}
+                                             "licsbas.steps._01_get_geotiff_nisar")}
     yield
     for m, mod in saved.items():
         if mod is None:
             sys.modules.pop(m, None)
         else:
             sys.modules[m] = mod
-    import licsbas.steps._01_get_nisar_data as step
+    import licsbas.steps._01_get_geotiff_nisar as step
     importlib.reload(step)
 
 
@@ -78,7 +78,7 @@ def test_groups_by_frame_and_downloads(tmp_path):
             ("NISAR_L2_PR_GUNW_009_018_A_007_20250615.h5", "07_2025", 42, "https://asf/f2.h5"),
             ("NISAR_L2_PR_GUNW_009_021_B_008_20250601.h5", "08_2025", 41, "https://asf/f3.h5"),
         ])
-    mod = importlib.import_module("licsbas.steps._01_get_nisar_data")
+    mod = importlib.import_module("licsbas.steps._01_get_geotiff_nisar")
     outdir = str(tmp_path / "NISAR_GUNW")
     rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-o", outdir, "--max", "500"])
     assert rc == 0
@@ -107,7 +107,7 @@ def test_list_frames_only(tmp_path, capsys):
             ("NISAR_L2_PR_GUNW_009_018_A_007_20250601.h5", "07_2025", 40, "https://asf/f1.h5"),
             ("NISAR_L2_PR_GUNW_009_021_B_008_20250601.h5", "08_2025", 41, "https://asf/f3.h5"),
         ])
-    mod = importlib.import_module("licsbas.steps._01_get_nisar_data")
+    mod = importlib.import_module("licsbas.steps._01_get_geotiff_nisar")
     outdir = str(tmp_path / "NISAR_GUNW")
     rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-o", outdir,
                    "--list-frames",
@@ -127,7 +127,7 @@ def test_frame_filter(tmp_path, capsys):
             ("NISAR_L2_PR_GUNW_009_018_A_007_20250601.h5", "07_2025", 40, "https://asf/f1.h5"),
             ("NISAR_L2_PR_GUNW_009_021_B_008_20250601.h5", "08_2025", 41, "https://asf/f3.h5"),
         ])
-    mod = importlib.import_module("licsbas.steps._01_get_nisar_data")
+    mod = importlib.import_module("licsbas.steps._01_get_geotiff_nisar")
     outdir = str(tmp_path / "NISAR_GUNW")
     # keep frame 07_2025 only
     rc = mod.main(["prog", "-g", "-118.4/-118.2/33.8/33.7", "-o", outdir,
@@ -144,7 +144,7 @@ def test_frame_filter(tmp_path, capsys):
 
 
 def test_missing_bbox(tmp_path, capsys):
-    mod = importlib.import_module("licsbas.steps._01_get_nisar_data")
+    mod = importlib.import_module("licsbas.steps._01_get_geotiff_nisar")
     rc = mod.main(["prog"])
     assert rc == 1
     assert "required" in capsys.readouterr().err

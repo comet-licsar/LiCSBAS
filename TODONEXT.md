@@ -39,7 +39,7 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
       becomes `pip install insar-phasebias`.
 
 ## NISAR data access (new, optional) — added 2026-11
-- [x] `licsbas-01-get-nisar-data` (ASF bbox search + **GUNW** `.h5` download — **GUNW-only: GSLC was removed 2026-12-20** — per-frame subfolders;
+- [x] `licsbas-01-get-geotiff-nisar` (ASF bbox search + **GUNW** `.h5` download — **GUNW-only: GSLC was removed 2026-12-20** — per-frame subfolders;
       **`--list-frames` / `--frame FID[,FID2,...]`** for frame selection).
 - [x] `licsbas-nisar2geoc` (NISAR GUNW `.h5` → `GEOC/`: iono + range-offset corrections,
       rasterio WGS-84 export on a single shared grid, `baselines` + `metadata.txt`,
@@ -48,13 +48,18 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
       which we do not use).**
 - [x] `licsbas-asf2geoc` (ASF/NIISAR pre-processed GeoTIFF → `GEOC/`).
 - [x] `docs/05_nisar.md` + README NISAR section / doc-table row.
-- [x] `bin/LiCSBAS01_get_NISAR_data.py`, `bin/LiCSBAS_nisar2geoc.py`, `bin/LiCSBAS_asf2geoc.py`.
+- [x] `bin/LiCSBAS01_get_geotiff_NISAR.py`, `bin/LiCSBAS_nisar2geoc.py`, `bin/LiCSBAS_asf2geoc.py`.
 - [x] Tests: `tests/test_nisar_step.py`, `tests/test_nisar2geoc.py` (stubbed, no network/HDF5).
 - [ ] `licsar_extra`: publish the NISAR extras (`asf_search`, `geopandas`, `shapely`, `pyproj`)
       + `nisar_data.py` / `lics_proc_tools.py` (pushed separately in that repo).
 - [ ] End-to-end NISAR run on real GUNW `.h5` (CI tests are stubbed / no network yet).
 
 ## NISAR follow-up (2026-12-20)
+- [x] NISAR step renamed to `01_get_geotiff_nisar` convention; “Output files”
+      data structure shown in `-h`; `--max` size filter; real `lisar_extra`
+      API (top-level `nisar_data`/`lics_proc_tools`, ASF session streaming).
+- [x] `nisar2geoc` now writes `slc.mli.par` (`radar_frequency` [Hz] +
+      `center_time` when available) — needed by 03 GACOS / 130 / 132.
 - [x] GUNW-only + frame handling (see CHANGELOG 2026-12-20).
 - [x] Portrait (TB) tutorial flowcharts; `--flowchart-landscape` removed.
 - [x] Original `batch_LiCSBAS.sh` shell script restored from `main` — **both**
@@ -78,7 +83,7 @@ notebooks, README/CHANGELOG updates, `.agents/skills/licsbas/SKILL.md`.
 ### DONE: tutorial & documentation restructure — 2026-12-19
 - [x] `tutorial.ipynb` kept as **master single-file template** (marked as such in its title cell); the published tutorials are now composed from it:
       - [x] `tutorial/tutorial_0.ipynb` — Module 0, LiCSAR data (steps `0-1` → `0-5`) **+ the `02to05_unwrap` alternative-route cell** (starts from the *wrapped* phase and substitutes steps `0-2` → `0-5`).
-      - [x] `tutorial/tutorial_0_nisar.ipynb` — Module 0, NISAR data (`licsbas-01-get-nisar-data` → `licsbas-nisar2geoc` (+ `licsbas-asf2geoc` alternative) → steps `0-2` → `0-5`).
+      - [x] `tutorial/tutorial_0_nisar.ipynb` — Module 0, NISAR data (`licsbas-01-get-geotiff-nisar` → `licsbas-nisar2geoc` (+ `licsbas-asf2geoc` alternative) → steps `0-2` → `0-5`).
       - [x] `tutorial/tutorial_0_sbovl.ipynb` — SBOVNL (SBOI) chain, steps `0-1` → `1-6` all with `--sbovl`.
       - [x] `tutorial/tutorial_1.ipynb` — Module 1: time series, steps `11` → `16` + viewers/exports (works from Binder *and* Colab; cross-linked with the Module-0 notebooks in the same session).
 - [x] **PNG flowcharts** (landscape, Graphviz `dot`; the long SBOVNL chain is portrait): `tutorial/0_licsar.png`, `0_nisar.png`, `0_sbovl.png`, `1_ts.png`, shown just before the first script of each notebook. Regenerate with `python3 tutorial/make_flowchart.py` (configs in `tutorial/tutorial_cfg/*.json`).

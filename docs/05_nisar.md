@@ -11,7 +11,7 @@ provide the following tools:
 
 | Tool | Entry point | What it does |
 | --- | --- | --- |
-| `licsbas-01-get-nisar-data` | `licsbas.steps._01_get_nisar_data` | Search ASF for NISAR GUNW in a bbox (per frame; `--list-frames` / `--frame` to select) and **download** the `.h5`, grouped into per-frame subfolders |
+| `licsbas-01-get-geotiff-nisar` | `licsbas.steps._01_get_geotiff_nisar` | Search ASF for NISAR GUNW in a bbox (per frame; `--list-frames` / `--frame` to select) and **download** the `.h5`, grouped into per-frame subfolders |
 | `licsbas-asf2geoc` | `licsbas.scripts._asf2geoc` | Convert ASF *pre-processed* product directories (`*_unw_phase.tif`, `*_corr.tif`, `*_lv_*`, `*_dem.tif`, `*_amp.tif`) into a LiCSBAS `GEOC/` layout |
 
 Both use LiCSBAS conventions (`long/lat` bounding boxes as `lon1/lon2/lat1/lat2`,
@@ -35,20 +35,20 @@ ASF_PASSWORD=...
 
 Without credentials the step will still fetch publicly accessible scene URLs.
 
-## 5.2 `licsbas-01-get-nisar-data` (search + download)
+## 5.2 `licsbas-01-get-geotiff-nisar` (search + download)
 
 ```bash
 # GUNW interferograms for a study area (LiCSBAS bbox: lon1/lon2/lat1/lat2)
-licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 -s 20250101 -e 20251231 -o NISAR_GUNW
+licsbas-01-get-geotiff-nisar -g -118.4/-118.2/33.8/33.7 -s 20250101 -e 20251231 -o NISAR_GUNW
 
 # Only list the selection (no download)
-licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 --dry_run
+licsbas-01-get-geotiff-nisar -g -118.4/-118.2/33.8/33.7 --dry_run
 
 # Which frames (tracks) are available here?
-licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 --list-frames
+licsbas-01-get-geotiff-nisar -g -118.4/-118.2/33.8/33.7 --list-frames
 
 # Download only one (or a few) frame(s)
-licsbas-01-get-nisar-data -g -118.4/-118.2/33.8/33.7 --frame 018A_01234 -o NISAR_GUNW
+licsbas-01-get-geotiff-nisar -g -118.4/-118.2/33.8/33.7 --frame 018A_01234 -o NISAR_GUNW
 ```
 
 Options:
@@ -150,7 +150,7 @@ minus `baselines`).
 ## 5.4 Feeding LiCSBAS
 
 The `GEOC/` directory produced in §5.3 is what `licsbas-ml-prep` (step 02)
-consumes. For NISAR, the recommended route is §5.2 (`_01_get_nisar_data`) →
+consumes. For NISAR, the recommended route is §5.2 (`_01_get_geotiff_nisar`) →
 §5.3 (`_nisar2geoc`) → `licsbas-ml-prep` → the rest of the workflow
 ([02_workflow.md](02_workflow.md)).
 

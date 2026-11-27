@@ -13,7 +13,7 @@ README badge links must use the `towards-v3` branch until the v3 release).
   - `licsbas/{meta,tools_lib,io_lib,loop_lib,inv_lib,plot_lib,extras,extras_light}.py`
   - `licsbas/steps/_NN_*.py` — ~56 step modules, each `def main()` +
     `if __name__ == "__main__"` guard (runnable via `python -m licsbas.steps.<stem>`)
-    + the NISAR access step `licsbas/steps/_01_get_nisar_data.py`.
+    + the NISAR access step `licsbas/steps/_01_get_geotiff_nisar.py`.
   - `licsbas/scripts/` — heavy *script* steps (not per-IFG steps):
     `_asf2geoc.py` (ASF GeoTIFF → `GEOC/`), `_nisar2geoc.py` (NISAR GUNW `.h5` →
     `GEOC/`: iono + range-offset removal, coherence mask, rasterio/rioxarray
@@ -33,7 +33,7 @@ README badge links must use the `towards-v3` branch until the v3 release).
     "(optional - switched off)".
   - `licsbas/colormaps/` — bundled Scientific Colour Maps.
 - `bin/` — thin legacy wrappers (`LiCSBAS*.py`, also `LiCSBAS_asf2geoc.py`,
-  `LiCSBAS_nisar2geoc.py`, `LiCSBAS01_get_NISAR_data.py`); import the module and
+  `LiCSBAS_nisar2geoc.py`, `LiCSBAS01_get_geotiff_NISAR.py`); import the module and
   call `main()`. **Preserve** `bin/` and `bashrc_LiCSBAS.sh` (user requirement).
 - `examples/` — dry-run batch templates that also write a PNG flowchart:
   `example_1_standard.py`, `example_2_reunw_02to05.py`, `example_3_sbovl.py`,
@@ -61,7 +61,7 @@ README badge links must use the `towards-v3` branch until the v3 release).
    manual installs (libcomcat). Any module-level import of them must be inside
    `try/except` or inside a function, with a helpful error
    (`pip install 'licsbas[<extra>]'`) raised only at runtime use. NISAR modules
-   are imported lazily (`_get_nds()` in `_01_get_nisar_data`, `_nd` in
+   are imported lazily (`_get_nds()` in `_01_get_geotiff_nisar`, `_nd` in
    `_nisar2geoc`) so `-h` works without the extras.
 2. **No module-level `sys.exit()`** in step files (breaks `importlib` discovery).
 3. **SNAPHU** is a system binary, checked lazily in `_02to05_unwrap` only.
@@ -70,7 +70,7 @@ README badge links must use the `towards-v3` branch until the v3 release).
 5. Entry points live only in `pyproject.toml` `[project.scripts]`, all named
    `licsbas-*` (the `licbas-*` spelling was a typo — never reintroduce it).
    Every target must be an existing module with a callable `main()`.
-   New NISAR/ASF entry points: `licsbas-01-get-nisar-data`, `licsbas-nisar2geoc`,
+   New NISAR/ASF entry points: `licsbas-01-get-geotiff-nisar`, `licsbas-nisar2geoc`,
    `licsbas-asf2geoc`.
 6. License is PEP 639: `license = "GPL-3.0-or-later"` (no `License ::` classifier).
 7. `bin/` wrappers are **supported legacy CLI** (user requirement — never remove). The
@@ -91,7 +91,7 @@ detection (`fcd0b6d`). **The 02to05 route was audited and needs none of them.**
 regenerated after an upgrade.
 
 ## NISAR data access (optional, experimental)
-- `licsbas-01-get-nisar-data`: ASF bbox search + streamed download of NISAR
+- `licsbas-01-get-geotiff-nisar`: ASF bbox search + streamed download of NISAR
   CSL2 **GUNW `.h5`** (LiCSBAS uses GUNW only — **GSLC is not used at all**)
   into per-frame subfolders. **`--frame FID[,FID2,...]`** restricts to selected
   frames; **`--list-frames`** lists the available frames + GUNW count per frame
@@ -104,7 +104,10 @@ regenerated after an upgrade.
   `earthquake_responder.py`), applies coherence mask, writes `unw/cc` per IFG,
   **`X.geo.E/N/U.tif` once, from the first GUNW's own `radarGrid` metadata**,
   `+ hgt` with `-D`, one shared WGS-84 grid (first IFG defines it; later ones
-  re-registered), standard **`baselines`** (4-col) and `metadata.txt`.
+  re-registered), writes **`slc.mli.par`** (`radar_frequency` [Hz] from
+  `-f`; `center_time` when the product provides it — downstream 03/130/132
+  derive the wavelength from it), standard **`baselines`** (4-col) and
+  `metadata.txt`.
   `-i <frame_folder>`, `-t cc_thre`, `-f A|B`, `--no_iono/--no_offsets/
   --no_deramp_quad`, `-D`, `--dry_run`.
 - `licsbas-asf2geoc`: ASF pre-exported GeoTIFF (unw/cc/E/N/U/hgt/mli) → `GEOC/`

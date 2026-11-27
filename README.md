@@ -49,7 +49,7 @@ The main wiki pages have been ported to local markdown under [docs/](docs/) and 
 | [**02 — Workflow & quick start**](docs/02_workflow.md) | End-to-end chain (01 → 02-05 → 11–16), step-by-step command reference, `02to05` re-unwrapping, SBOI notes |
 | [**03 — Visualization**](docs/03_visualization.md) | `licsbas-disp-img`, `licsbas-plot-ts`, `licsbas-plot-network`, tiles, NetCDF export |
 | [**04 — Other tools**](docs/04_other_tools.md) | `cum2vel`, dense network, contours, COMET extras, misc. utilities |
-| [**05 — NISAR data**](docs/05_nisar.md) *(experimental)* | `licsbas-01-get-nisar-data` (ASF search + download of NISAR GUNW, per frame — `--list-frames`/`--frame`), `licsbas-nisar2geoc` (NISAR GUNW → `GEOC/` + `baselines`; one frame per GEOC), `licsbas-asf2geoc` (ASF GeoTIFF → `GEOC/`) |
+| [**05 — NISAR data**](docs/05_nisar.md) *(experimental)* | `licsbas-01-get-geotiff-nisar` (ASF search + download of NISAR GUNW, per frame — `--list-frames`/`--frame`), `licsbas-nisar2geoc` (NISAR GUNW → `GEOC/` + `baselines`; one frame per GEOC), `licsbas-asf2geoc` (ASF GeoTIFF → `GEOC/`) |
 | [File structure](docs/file_structure.md) | Output products and per-step naming conventions (`GEOC → TS_* → results_*`) |
 | [Links](docs/links.md) | Data sources (ALOS/F3), tools (SNAPHU, GMT, ...), references, community |
 

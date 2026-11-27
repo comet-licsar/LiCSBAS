@@ -81,7 +81,7 @@ Changelog = "https://github.com/comet-licsar/LiCSBAS/blob/main/CHANGELOG.md"
 licsbas-batch = "licsbas.batch:main"
 # Main pipeline steps (legacy names)
 licsbas-01-get-geotiff = "licsbas.steps._01_get_geotiff:main"
-licsbas-01-get-nisar-data = "licsbas.steps._01_get_nisar_data:main"   # NISAR (optional; needs licsar_extra[nisar])
+licsbas-01-get-geotiff-nisar = "licsbas.steps._01_get_geotiff_nisar:main"   # NISAR (optional; needs licsar_extra[nisar])
 licsbas-02-ml-prep = "licsbas.steps._02_ml_prep:main"
 licsbas-02to05-unwrap = "licsbas.steps._02to05_unwrap:main"
 licsbas-02op-phasebias = "licsbas.steps._02op_phasebias:main"   # optional; needs the standalone `phasebias` package

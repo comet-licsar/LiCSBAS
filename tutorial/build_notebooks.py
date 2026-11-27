@@ -208,7 +208,7 @@ It unwraps (Goldstein filter, stability/constancy threshold `--thres`, optional 
         setup_cell(c),
         md("## The processing chain of this module (NISAR route)\n" + _img("0_nisar.png")),
         # ------------- step 0-1n: ASF search + download -------------
-        md("""## Step 0-1 (NISAR): **search ASF + download NISAR GUNW** — `LiCSBAS01_get_NISAR_data.py`
+        md("""## Step 0-1 (NISAR): **search ASF + download NISAR GUNW** — `LiCSBAS01_get_geotiff_NISAR.py`
 
 Searches [ASF](https://asf.alaska.edu) for NISAR CSL2 GUNW over a bbox and streams them (via an ASF session, no shell `wget`) into **per-frame subfolders** (the NISAR frame id, e.g. `018A_01234`):
 
@@ -227,14 +227,14 @@ Useful options (see `-h` for all):
 > **Prerequisite:** `pip install licsar_extra[nisar]` (the `nisar_data` module with ASF search + download). The `-h` below works even without it.
 >
 > **One frame per time series** — each frame folder is its own LiCSBAS dataset (its own `GEOC/`), processed with the steps below and with the time series module."""),
-        code("![-h help] licsbas-01-get-nisar-data -h"),
+        code("![-h help] licsbas-01-get-geotiff-nisar -h"),
         code("""# EXAMPLES (not run in this tutorial — needs the NISAR deps)
 # 1) which frames are available here? (no download)
-# licsbas-01-get-nisar-data -g 14.00/14.25/40.75/40.95 --list-frames
+# licsbas-01-get-geotiff-nisar -g 14.00/14.25/40.75/40.95 --list-frames
 # 2) dry-run: what would be downloaded (all frames in the bbox)
-# licsbas-01-get-nisar-data -g 14.00/14.25/40.75/40.95 -s 20250101 --dry_run
+# licsbas-01-get-geotiff-nisar -g 14.00/14.25/40.75/40.95 -s 20250101 --dry_run
 # 3) download one frame only
-# licsbas-01-get-nisar-data -o NISAR_GUNW -g 14.00/14.25/40.75/40.95 --frame 018A_01234 -s 20250101"""),
+# licsbas-01-get-geotiff-nisar -o NISAR_GUNW -g 14.00/14.25/40.75/40.95 --frame 018A_01234 -s 20250101"""),
         # ------------- nisar2geoc -------------
         md("""## NISAR → GEOC conversion — `LiCSBAS_nisar2geoc.py`
 

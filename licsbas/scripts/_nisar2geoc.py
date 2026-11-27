@@ -5,7 +5,7 @@
 Overview
 =========
 Convert **NISAR L2 PR GUNW** products (HDF5, as downloaded by
-``licsbas-01-get-nisar-data``) into a LiCSBAS ``GEOC/`` layout.
+``licsbas-01-get-geotiff-nisar``) into a LiCSBAS ``GEOC/`` layout.
 
 This is the NISAR analogue of :mod:`licsbas.scripts._asf2geoc` (which converts
 ASF / other pre-processed GeoTIFFs into ``GEOC/``). The *structure* and the
@@ -47,6 +47,8 @@ Output files
      - yyyymmdd_yyyymmdd.geo.cc.tif
    - X.geo.E.tif / X.geo.N.tif / X.geo.U.tif   (from the **first** GUNW product's radarGrid metadata; written once)
    - X.geo.hgt.tif                            (if a DEM is available / downloaded)
+   - slc.mli.par                              (radar_frequency from -f; center_time if the
+                                               product provides it — needed by 03/130/132)
    - baselines                                (bperp per pair — LiCSBAS standard)
    - metadata.txt                             (center_time, radar_freq)
 
@@ -452,6 +454,30 @@ def _write_hgt(out_geoc, ref, wsen):
         return False
 
 
+def _write_slcpar(out_geoc, freq_code, first_h5):
+    """Write ``slc.mli.par`` — the downstream steps (03 GACOS, 130/132) derive
+    the wavelength from ``radar_frequency``; on the NISAR route nothing else
+    writes it. ``center_time`` is included when the product provides it."""
+    os.makedirs(out_geoc, exist_ok=True)
+    parfile = os.path.join(out_geoc, "slc.mli.par")
+    lines = ["", "radar_frequency: {} Hz".format(NISAR_FREQ_HZ.get(freq_code, NISAR_FREQ_HZ["A"]))]
+    center_time = None
+    if first_h5:
+        try:
+            ds = _get_nds().get_unwrapped(first_h5, chunk=None)
+            center_time = ds.attrs.get("center_time") or ds.attrs.get("time")
+        except Exception:
+            pass
+    if center_time is not None:
+        lines.append("center_time: {}".format(center_time))
+    with open(parfile, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    print("wrote slc.mli.par (radar_frequency={:.3e} Hz{})".format(
+        NISAR_FREQ_HZ.get(freq_code, NISAR_FREQ_HZ["A"]),
+        ", center_time=" + str(center_time) if center_time else ""))
+    return parfile
+
+
 def _write_metadata(out_geoc, records, freq_code):
     """Write metadata.txt in the asf2geoc style: center_time + radar_freq."""
     center_time = None
@@ -594,9 +620,10 @@ def main(indir=".", outdir="GEOC", crop_geo=None, cc_thresh=0.5,
     n_ok = sum(1 for r in records if r.get("ok"))
     print("\nunw/cc done: {0}/{1} IFG(s) processed".format(n_ok, len(records)))
 
-    # 3) top-level files (all on the shared grid) + baselines + metadata.txt
+    # 3) top-level files (all on the shared grid) + baselines + slc.mli.par + metadata.txt
     nbl = _write_baselines(out_geoc, records)
     print("wrote baselines ({0} pair(s))".format(nbl))
+    _write_slcpar(out_geoc, freq_code, h5files[0])
     # E/N/U are written **once**, from the first GUNW product of this frame
     _write_enu(out_geoc, h5files[0], ref, tmpdir)
     if download_dem:

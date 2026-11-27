@@ -4,7 +4,7 @@
 Direct python replacement for the new NISAR route (see ``docs/05_nisar.md``
 and the ``nisar`` predefined workflow):
 
-    01-get-nisar-data (ASF search + download of NISAR CSL2 GUNW .h5, per frame;
+    01-get-geotiff-nisar (ASF search + download of NISAR CSL2 GUNW .h5, per frame;
      use its --list-frames / --frame options)
     -> nisar2geoc (-> GEOC layout, shared WGS-84 grid, baselines, metadata)
     -> 02 ml prep -> 11 check unw -> 120 choose ref (optional)

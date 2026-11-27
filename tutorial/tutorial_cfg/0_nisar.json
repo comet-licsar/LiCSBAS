@@ -4,7 +4,7 @@
     {
       "label": "Step 0-1 (NISAR): search ASF + download",
       "steps": [
-        {"name": "LiCSBAS01_get_NISAR_data.py",
+        {"name": "LiCSBAS01_get_geotiff_NISAR.py",
          "details": "-g lon1/lon2/lat1/lat2 [--frame 018A_01234[,...]] [-s 20250101 -e <date>] [-o NISAR_GUNW] [--list-frames]",
          "note": "search ASF for NISAR CSL2 GUNW .h5 (LiCSBAS uses GUNW only — GSLC is not used) and stream them to per-frame subfolders; --list-frames only lists them. Needs licsar_extra[nisar]"}
       ]
@@ -14,7 +14,7 @@
       "steps": [
         {"name": "LiCSBAS_nisar2geoc.py",
          "details": "-i NISAR_GUNW/<FRAME> -o GEOC_<FRAME> [-D] [-t 0.5] [-f A|B]",
-         "note": "ONE frame per GEOC (frames/tracks cannot be combined; it warns if mixed). removes smooth iono + range-offset ramps, cc mask; shared WGS-84 grid; E/N/U written once from the first GUNW; baselines + metadata.txt. Alt. for pre-exported ASF GeoTIFFs: LiCSBAS_asf2geoc"}
+         "note": "ONE frame per GEOC (frames/tracks cannot be combined; it warns if mixed). removes smooth iono + range-offset ramps, cc mask; shared WGS-84 grid; E/N/U written once from the first GUNW; writes slc.mli.par (radar_frequency), baselines + metadata.txt. Alt. for pre-exported ASF GeoTIFFs: LiCSBAS_asf2geoc"}
       ]
     },
     {
