@@ -61,7 +61,8 @@ LiCSBAS02to05_unwrap.py -i WORKdir [-M nlook] [-g lon1/lon2/lat1/lat2] [--filter
            (e.g., 1.27e9 for ALOS, 1.2575e9 for ALOS-2/U, 1.2365e9 for ALOS-2/{F,W})
  --n_para <int> Number of parallel processing (Default: # of usable CPU)
  --nolandmask Do not apply landmask (ON by default)
- 
+ --nopngs  This would skip generating unw previews
+
 The command will run reunwrapping on interferograms inside WORKdir/GEOC.
 Outputs are stored inside WORKdir/GEOCmlX[GACOS][clip] where X is the multilooking factor (-M).
 For more information about the procedure, see e.g. https://ieeexplore.ieee.org/document/9884337
@@ -78,11 +79,14 @@ v1.14.2 20230628 Milan Lazecky, UniLeeds
 #%% Import
 from licsbas.meta import *
 import getopt
-import os
+import os, shutil, glob, tempfile
 import sys
 import time
 import numpy as np
 import multiprocessing as multi
+import cmcrameri.cm as cmc #SCM
+from licsbas import io_lib
+from licsbas import plot_lib
 
 # but should cancel if there is no snaphu installed (checked at runtime in main())
 def _require_snaphu():
@@ -132,7 +136,99 @@ def _find_gacos_tif(gacosdir, date):
     return None
 
 
-def plot_gacos_corrections(outdir, gacosdir, ml, cliparea_geo=None):
+def _parallel_map(func, tasks, nproc):
+    if nproc > 1 and len(tasks) > 1:
+        with multi.Pool(processes=min(nproc, len(tasks))) as pool:
+            return pool.map(func, tasks)
+    return [func(task) for task in tasks]
+
+
+def _plot_unw_preview(task):
+    unwfile, length, width, cycle = task
+    pairstr = os.path.basename(unwfile).split('.')[0]
+    unwdata = np.fromfile(unwfile, dtype=np.float32).reshape(length, width)
+    unwpngfile = unwfile + '.png'
+    plot_lib.make_im_png(np.angle(np.exp(1j * unwdata / cycle) * cycle), unwpngfile,
+                         cmc.romaO, pairstr, vmin=-np.pi, vmax=np.pi, cbar=False)
+
+
+def plot_unw_previews(outdir, nproc = 1):
+    mlipar = os.path.join(outdir, 'slc.mli.par')
+    if not os.path.exists(mlipar):
+        print('ERROR: No slc.mli.par file exists in ' + outdir)
+        return 2
+    #
+    width = int(io_lib.get_param_par(mlipar, 'range_samples'))
+    length = int(io_lib.get_param_par(mlipar, 'azimuth_lines'))
+    #
+    speed_of_light = 299792458  # m/s
+    radar_frequency = float(io_lib.get_param_par(mlipar, 'radar_frequency'))  # Hz
+    wavelength = speed_of_light / radar_frequency  # meter
+    if wavelength > 0.2:  ## L-band
+        cycle = 1.5  # 2pi/cycle for png
+    else:  ## C-band
+        cycle = 3  # 2pi*3/cycle for png
+    tasks = [(unwfile, length, width, cycle)
+             for unwfile in glob.glob(outdir+'/*/*.unw')]
+    _parallel_map(_plot_unw_preview, tasks, nproc)
+    return 0
+
+
+def _plot_gacos_correction(task):
+    pair, outdir, t1, t2, nx, ny, cycle = task
+    try:
+        from osgeo import gdal
+        unwf = np.fromfile(os.path.join(outdir, pair, pair + '.unw'),
+                           dtype=np.float32).reshape(ny, nx)
+        unw_after = np.where(unwf == 0, np.nan, unwf)
+        ds1 = gdal.Open(t1)
+        ds2 = gdal.Open(t2)
+        if ds1 is None or ds2 is None:
+            raise RuntimeError('cannot open warped GACOS raster')
+        dsltd = ds2.ReadAsArray().astype(np.float32) - ds1.ReadAsArray().astype(np.float32)
+        ds1 = ds2 = None
+        if tuple(dsltd.shape) != (ny, nx):
+            print('WARNING: pair {}: dsltd shape {} != unw {} - skipping plot'.format(
+                pair, dsltd.shape, (ny, nx)))
+            return None
+        # 03op convention: unw_after = unw_before - dsltd  ->  before = after + dsltd
+        unw_before = unw_after + dsltd
+        std_bef = float(np.nanstd(unw_before))
+        std_aft = float(np.nanstd(unw_after))
+        rate = (std_bef - std_aft) / std_bef * 100.0 if std_bef > 0 else 0.0
+        data3 = [np.angle(np.exp(1j * (data / cycle)) * cycle)
+                 for data in (unw_before, unw_after, dsltd)]
+        title3 = ['unw_org (STD: {:.1f} rad)'.format(std_bef),
+                  'unw_cor (STD: {:.1f} rad)'.format(std_aft),
+                  'dsltd ({:.1f}% reduced)'.format(rate)]
+        pngfile = os.path.join(outdir, pair, pair + '.gacos.png')
+        plot_lib.make_3im_png(data3, pngfile, cmc.romaO, title3,
+                              vmin=-np.pi, vmax=np.pi, cbar=False)
+        return [pair, std_bef, std_aft, rate]
+    except Exception as ex:
+        print('WARNING: GACOS correction plot for pair {} failed: {}'.format(pair, ex))
+        return None
+
+
+def _gacos_warp_grid(parfile):
+    width = int(io_lib.get_param_par(parfile, 'width'))
+    length = int(io_lib.get_param_par(parfile, 'nlines'))
+    dlat = float(io_lib.get_param_par(parfile, 'post_lat'))
+    dlon = float(io_lib.get_param_par(parfile, 'post_lon'))
+    latn = float(io_lib.get_param_par(parfile, 'corner_lat'))
+    lonw = float(io_lib.get_param_par(parfile, 'corner_lon'))
+    lats = latn + dlat * (length - 1)
+    lone = lonw + dlon * (width - 1)
+    bounds = (lonw - dlon / 2, lats + dlat / 2,
+              lone + dlon / 2, latn - dlat / 2)
+    return bounds, width, length
+
+
+def plot_gacos_corrections(outdir,
+                           gacosdir,
+                           ml,
+                           cliparea_geo=None,
+                           nproc = 1):
     """Generate the standard LiCSBAS-style per-ifg GACOS correction plots
     (``pair.gacos.png`` 3-panel before/after/difference, plus a per-ifg STD
     before/after ``GACOS_info2.png`` / ``.txt``).
@@ -141,17 +237,15 @@ def plot_gacos_corrections(outdir, gacosdir, ml, cliparea_geo=None):
     ``licsar_extra.lics_unwrap``, which exports only the corrected
     ``pair.unw``), so the correction plots normally produced by
     ``LiCSBAS03op_GACOS.py`` are built here post-hoc - using the exported
-    products and the same lics_unwrap helpers for multilook/clip (same grid
-    as ``pair.unw``), i.e. without modifying licsar_extra.
+    products. GACOS rasters are warped onto the exact grid described by the
+    output ``EQA.dem_par`` before differencing against the unwrapped rasters.
     All failures are non-fatal: these are QC plots only.
     """
     import re
-    if unw is None:
-        print('skip GACOS correction plots: licsar_extra (lics_unwrap) not available')
-        return
     try:
         from licsbas import plot_lib, io_lib
         import cmcrameri.cm as cmc
+        from osgeo import gdal
     except ImportError as e:
         print('skip GACOS correction plots (missing dependency: {})'.format(e))
         return
@@ -159,55 +253,71 @@ def plot_gacos_corrections(outdir, gacosdir, ml, cliparea_geo=None):
     if not os.path.exists(parfile):
         print('skip GACOS correction plots: '+parfile+' not found')
         return
+    dempar = os.path.join(outdir, 'EQA.dem_par')
+    if not os.path.exists(dempar):
+        print('skip GACOS correction plots: '+dempar+' not found')
+        return
     try:
         nx = int(io_lib.get_param_par(parfile, 'range_samples'))
         ny = int(io_lib.get_param_par(parfile, 'azimuth_lines'))
+        bounds, grid_width, grid_length = _gacos_warp_grid(dempar)
+        if (grid_width, grid_length) != (nx, ny):
+            raise ValueError(
+                'EQA.dem_par grid {}x{} does not match unw raster {}x{}'.format(
+                    grid_width, grid_length, nx, ny))
     except Exception as e:
-        print('skip GACOS correction plots: cannot read slc.mli.par ({})'.format(e))
+        print('skip GACOS correction plots: cannot read output grid ({})'.format(e))
         return
-
-    cycle = 3
-    cmap_wrap = cmc.romaO
-    info_rows = []
+    #
+    speed_of_light = 299792458  # m/s
+    radar_frequency = float(io_lib.get_param_par(parfile, 'radar_frequency'))  # Hz
+    wavelength = speed_of_light / radar_frequency  # meter
+    if wavelength > 0.2:  ## L-band
+        cycle = 1.5  # 2pi/cycle for png
+    else:  ## C-band
+        cycle = 3  # 2pi*3/cycle for png
     pairs = [d for d in sorted(os.listdir(outdir))
              if re.fullmatch(r'\d{8}_\d{8}', d)
              and os.path.exists(os.path.join(outdir, d, d + '.unw'))]
+    pair_dates = []
     for pair in pairs:
         e1, e2 = pair.split('_')
         t1 = _find_gacos_tif(gacosdir, e1)
         t2 = _find_gacos_tif(gacosdir, e2)
         if t1 is None or t2 is None:
             continue
+        pair_dates.append((pair, e1, t1, e2, t2))
+    info_rows = []
+    if pair_dates:
         try:
-            unwf = np.fromfile(os.path.join(outdir, pair, pair + '.unw'),
-                               dtype=np.float32).reshape(ny, nx)
-            unw_after = np.where(unwf == 0, np.nan, unwf)
-            # sltd pair-difference, multilooked (+clipped) with the *same*
-            # lics_unwrap helpers that were used internally -> same grid as pair.unw
-            dsltd = unw.load_tif2xr(t2, cliparea_geo=cliparea_geo) \
-                    - unw.load_tif2xr(t1, cliparea_geo=cliparea_geo)
-            dsltd = unw.multilook_xrda(dsltd, ml=ml, coords=('lon', 'lat')).where(dsltd != 0)
-            dsltd = dsltd.values
-            if tuple(dsltd.shape) != (ny, nx):
-                print('WARNING: pair {}: dsltd shape {} != unw {} - skipping plot'.format(
-                    pair, dsltd.shape, (ny, nx)))
-                continue
-            # 03op convention: unw_after = unw_before - dsltd  ->  before = after + dsltd
-            unw_before = unw_after + dsltd
-            std_bef = float(np.nanstd(unw_before))
-            std_aft = float(np.nanstd(unw_after))
-            rate = (std_bef - std_aft) / std_bef * 100.0 if std_bef > 0 else 0.0
-            data3 = [np.angle(np.exp(1j * (data / cycle)) * cycle)
-                     for data in (unw_before, unw_after, dsltd)]
-            title3 = ['unw_org (STD: {:.1f} rad)'.format(std_bef),
-                      'unw_cor (STD: {:.1f} rad)'.format(std_aft),
-                      'dsltd ({:.1f}% reduced)'.format(rate)]
-            pngfile = os.path.join(outdir, pair, pair + '.gacos.png')
-            plot_lib.make_3im_png(data3, pngfile, cmap_wrap, title3,
-                                 vmin=-np.pi, vmax=np.pi, cbar=True, cbar_label='rad')
-            info_rows.append([pair, std_bef, std_aft, rate])
+            with tempfile.TemporaryDirectory(prefix='.gacos_plot_', dir=outdir) as tempdir:
+                date_tifs = {}
+                for _, e1, t1, e2, t2 in pair_dates:
+                    date_tifs[e1] = t1
+                    date_tifs[e2] = t2
+                warped_tifs = {}
+                for date, src_tif in date_tifs.items():
+                    dst_tif = os.path.join(tempdir, date + '.sltd.geo.tif')
+                    try:
+                        warped = gdal.Warp(
+                            dst_tif, src_tif, format='GTiff', outputBounds=bounds,
+                            width=nx, height=ny, resampleAlg='average',
+                            srcNodata=0, dstNodata=np.nan)
+                        if warped is None:
+                            raise RuntimeError('GDAL could not warp {}'.format(src_tif))
+                        warped = None
+                        warped_tifs[date] = dst_tif
+                    except Exception as ex:
+                        print('WARNING: GACOS warp for {} failed: {}'.format(date, ex))
+                tasks = [
+                    (pair, outdir, warped_tifs[e1], warped_tifs[e2], nx, ny, cycle)
+                    for pair, e1, _, e2, _ in pair_dates
+                    if e1 in warped_tifs and e2 in warped_tifs
+                ]
+                info_rows = [row for row in _parallel_map(_plot_gacos_correction, tasks, nproc)
+                             if row is not None]
         except Exception as ex:
-            print('WARNING: GACOS correction plot for pair {} failed: {}'.format(pair, ex))
+            print('WARNING: GACOS correction plotting failed: {}'.format(ex))
     if info_rows:
         infofile = os.path.join(outdir, 'GACOS_info2.txt')
         with open(infofile, 'w') as f:
@@ -248,6 +358,7 @@ def main(argv=None):
     gacoscorr = False
     do_landmask = True
     spfilter = 'gold'
+    create_unw_previews = True
 
     try:
         nproc = len(os.sched_getaffinity(0))
@@ -257,7 +368,7 @@ def main(argv=None):
     #%% Read options
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "hi:g:M:", ["help", "gacos", "hgtcorr", "cascade", "cascade_full", "filter=","nolandmask", "thres=", "freq=", "n_para="])
+            opts, args = getopt.getopt(argv[1:], "hi:g:M:", ["help", "gacos", "nopngs", "hgtcorr", "cascade", "cascade_full", "filter=","nolandmask", "thres=", "freq=", "n_para="])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -265,7 +376,7 @@ def main(argv=None):
                 print(__doc__)
                 return 0
             elif o == '-i':
-                workdir = a
+                workdir = os.path.realpath(a)
             elif o == '-M':
                 ml = int(a)
             elif o == '-g':
@@ -292,7 +403,9 @@ def main(argv=None):
                 freq = float(a)
             elif o == '--n_para':
                 nproc = int(a)
-        
+            elif o == '--nopngs':
+                create_unw_previews = False
+
         if not workdir:
             raise Usage('No WORK directory given, -d is not optional!')
         elif not os.path.isdir(workdir):
@@ -352,18 +465,28 @@ def main(argv=None):
                 # keeping the 'not-to-be-changed'defaults:
                 lowpass = False, defomax = 0.3, dolocal = True, frame = 'dummy', specmag = True,
                 pairsetfile = None, subtract_gacos = True, export_to_tif = False,
-                keep_coh_debug = True, use_amp_coh = False, use_coh_stab = False, use_amp_stab = False, gacosdir = '../GACOS', do_landmask = do_landmask)
+                keep_coh_debug = True, use_amp_coh = False, use_coh_stab = False,
+                use_amp_stab = False, gacosdir = '../GACOS', do_landmask = do_landmask)
     
     #%% Generate the standard LiCSBAS-style GACOS correction plots (post-hoc,
     #%% same style as LiCSBAS03op_GACOS), because lics_unwrap applies the
     #%% correction internally and does not export the plots itself.
-    if gacoscorr:
-        try:
-            plot_gacos_corrections(outdir, os.path.join(workdir, 'GACOS'), ml, cliparea_geo)
-        except Exception as ex:
-            print('WARNING: GACOS correction plotting failed: {}'.format(ex))
-    
     os.chdir(workdir)
+    # clean residual tmp folders
+    for tmpdir in glob.glob(outdir + '/*/tmp*'):
+        shutil.rmtree(tmpdir)
+
+    # create previews
+    if create_unw_previews:
+        print('Creating preview images for unwrapped data')
+        plot_unw_previews(outdir, nproc=nproc)
+        if gacoscorr:
+            print('Creating GACOS preview images')
+            try:
+                plot_gacos_corrections(outdir, os.path.join(workdir, 'GACOS'), ml, cliparea_geo, nproc)
+            except Exception as ex:
+                print('WARNING: GACOS correction plotting failed: {}'.format(ex))
+
     #%% Finish
     elapsed_time = time.time()-start
     hour = int(elapsed_time/3600)
@@ -378,4 +501,3 @@ def main(argv=None):
 #%% main
 if __name__ == "__main__":
     sys.exit(main())
-
