@@ -79,7 +79,7 @@ v1.14.2 20230628 Milan Lazecky, UniLeeds
 #%% Import
 from licsbas.meta import *
 import getopt
-import os, shutil, glob
+import os, shutil, glob, tempfile
 import sys
 import time
 import numpy as np
@@ -175,16 +175,18 @@ def plot_unw_previews(outdir, nproc = 1):
 
 
 def _plot_gacos_correction(task):
-    pair, outdir, t1, t2, ml, cliparea_geo, nx, ny, cycle = task
+    pair, outdir, t1, t2, nx, ny, cycle = task
     try:
+        from osgeo import gdal
         unwf = np.fromfile(os.path.join(outdir, pair, pair + '.unw'),
                            dtype=np.float32).reshape(ny, nx)
         unw_after = np.where(unwf == 0, np.nan, unwf)
-        # Use the same lics_unwrap helpers as unwrapping to preserve the output grid.
-        dsltd = unw.load_tif2xr(t2, cliparea_geo=cliparea_geo) \
-                - unw.load_tif2xr(t1, cliparea_geo=cliparea_geo)
-        dsltd = unw.multilook_xrda(dsltd, ml=ml, coords=('lon', 'lat')).where(dsltd != 0)
-        dsltd = dsltd.values
+        ds1 = gdal.Open(t1)
+        ds2 = gdal.Open(t2)
+        if ds1 is None or ds2 is None:
+            raise RuntimeError('cannot open warped GACOS raster')
+        dsltd = ds2.ReadAsArray().astype(np.float32) - ds1.ReadAsArray().astype(np.float32)
+        ds1 = ds2 = None
         if tuple(dsltd.shape) != (ny, nx):
             print('WARNING: pair {}: dsltd shape {} != unw {} - skipping plot'.format(
                 pair, dsltd.shape, (ny, nx)))
@@ -208,6 +210,20 @@ def _plot_gacos_correction(task):
         return None
 
 
+def _gacos_warp_grid(parfile):
+    width = int(io_lib.get_param_par(parfile, 'width'))
+    length = int(io_lib.get_param_par(parfile, 'nlines'))
+    dlat = float(io_lib.get_param_par(parfile, 'post_lat'))
+    dlon = float(io_lib.get_param_par(parfile, 'post_lon'))
+    latn = float(io_lib.get_param_par(parfile, 'corner_lat'))
+    lonw = float(io_lib.get_param_par(parfile, 'corner_lon'))
+    lats = latn + dlat * (length - 1)
+    lone = lonw + dlon * (width - 1)
+    bounds = (lonw - dlon / 2, lats + dlat / 2,
+              lone + dlon / 2, latn - dlat / 2)
+    return bounds, width, length
+
+
 def plot_gacos_corrections(outdir,
                            gacosdir,
                            ml,
@@ -221,17 +237,15 @@ def plot_gacos_corrections(outdir,
     ``licsar_extra.lics_unwrap``, which exports only the corrected
     ``pair.unw``), so the correction plots normally produced by
     ``LiCSBAS03op_GACOS.py`` are built here post-hoc - using the exported
-    products and the same lics_unwrap helpers for multilook/clip (same grid
-    as ``pair.unw``), i.e. without modifying licsar_extra.
+    products. GACOS rasters are warped onto the exact grid described by the
+    output ``EQA.dem_par`` before differencing against the unwrapped rasters.
     All failures are non-fatal: these are QC plots only.
     """
     import re
-    if unw is None:
-        print('skip GACOS correction plots: licsar_extra (lics_unwrap) not available?')
-        return
     try:
         from licsbas import plot_lib, io_lib
         import cmcrameri.cm as cmc
+        from osgeo import gdal
     except ImportError as e:
         print('skip GACOS correction plots (missing dependency: {})'.format(e))
         return
@@ -239,11 +253,20 @@ def plot_gacos_corrections(outdir,
     if not os.path.exists(parfile):
         print('skip GACOS correction plots: '+parfile+' not found')
         return
+    dempar = os.path.join(outdir, 'EQA.dem_par')
+    if not os.path.exists(dempar):
+        print('skip GACOS correction plots: '+dempar+' not found')
+        return
     try:
         nx = int(io_lib.get_param_par(parfile, 'range_samples'))
         ny = int(io_lib.get_param_par(parfile, 'azimuth_lines'))
+        bounds, grid_width, grid_length = _gacos_warp_grid(dempar)
+        if (grid_width, grid_length) != (nx, ny):
+            raise ValueError(
+                'EQA.dem_par grid {}x{} does not match unw raster {}x{}'.format(
+                    grid_width, grid_length, nx, ny))
     except Exception as e:
-        print('skip GACOS correction plots: cannot read slc.mli.par ({})'.format(e))
+        print('skip GACOS correction plots: cannot read output grid ({})'.format(e))
         return
     #
     speed_of_light = 299792458  # m/s
@@ -256,16 +279,45 @@ def plot_gacos_corrections(outdir,
     pairs = [d for d in sorted(os.listdir(outdir))
              if re.fullmatch(r'\d{8}_\d{8}', d)
              and os.path.exists(os.path.join(outdir, d, d + '.unw'))]
-    tasks = []
+    pair_dates = []
     for pair in pairs:
         e1, e2 = pair.split('_')
         t1 = _find_gacos_tif(gacosdir, e1)
         t2 = _find_gacos_tif(gacosdir, e2)
         if t1 is None or t2 is None:
             continue
-        tasks.append((pair, outdir, t1, t2, ml, cliparea_geo, nx, ny, cycle))
-    info_rows = [row for row in _parallel_map(_plot_gacos_correction, tasks, nproc)
-                 if row is not None]
+        pair_dates.append((pair, e1, t1, e2, t2))
+    info_rows = []
+    if pair_dates:
+        try:
+            with tempfile.TemporaryDirectory(prefix='.gacos_plot_', dir=outdir) as tempdir:
+                date_tifs = {}
+                for _, e1, t1, e2, t2 in pair_dates:
+                    date_tifs[e1] = t1
+                    date_tifs[e2] = t2
+                warped_tifs = {}
+                for date, src_tif in date_tifs.items():
+                    dst_tif = os.path.join(tempdir, date + '.sltd.geo.tif')
+                    try:
+                        warped = gdal.Warp(
+                            dst_tif, src_tif, format='GTiff', outputBounds=bounds,
+                            width=nx, height=ny, resampleAlg='average',
+                            srcNodata=0, dstNodata=np.nan)
+                        if warped is None:
+                            raise RuntimeError('GDAL could not warp {}'.format(src_tif))
+                        warped = None
+                        warped_tifs[date] = dst_tif
+                    except Exception as ex:
+                        print('WARNING: GACOS warp for {} failed: {}'.format(date, ex))
+                tasks = [
+                    (pair, outdir, warped_tifs[e1], warped_tifs[e2], nx, ny, cycle)
+                    for pair, e1, _, e2, _ in pair_dates
+                    if e1 in warped_tifs and e2 in warped_tifs
+                ]
+                info_rows = [row for row in _parallel_map(_plot_gacos_correction, tasks, nproc)
+                             if row is not None]
+        except Exception as ex:
+            print('WARNING: GACOS correction plotting failed: {}'.format(ex))
     if info_rows:
         infofile = os.path.join(outdir, 'GACOS_info2.txt')
         with open(infofile, 'w') as f:
